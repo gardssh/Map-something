@@ -34,18 +34,19 @@ export default function Home() {
     const getActivities = async () => {
       const token = await getAccessToken()
 
-      let moreData = true
+      let moreData = 1
       let page = 1;
       const per_page = 200;
 
-      while (moreData) {
+      while (moreData < 4) {
+          moreData++
         const res = await fetch(`https://www.strava.com/api/v3/athlete/activities?access_token=${token.access_token}&page=${page}&per_page=${per_page}`)
           if (res.status !== 200) {
           console.log(res)
+          continue;
         }
           const newActivities = await res.json()
           setActivities([ ...activities, ...newActivities ])
-          if (newActivities.length < 200) moreData = false;
       }
       console.log(activities)
     }
