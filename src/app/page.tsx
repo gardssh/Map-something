@@ -1,7 +1,9 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import { MapComponent } from '@/components/MapComponent/index';
 import { signIn, signOut, useSession } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
 
 const TOKEN_ENDPOINT = 'https://www.strava.com/oauth/token';
 
@@ -18,19 +20,24 @@ export default function Home() {
 			const tempActivities = [];
 
 			while (moreData && page < maxCount + 1) {
-				const res = await fetch(
-					`https://www.strava.com/api/v3/athlete/activities?access_token=${session.accessToken}&page=${page}&per_page=${per_page}`
-				);
-				if (res.status !== 200) {
-					console.log(res);
-				}
-				const newActivities = await res.json();
-				tempActivities.push(...newActivities);
+				if (session) {
+					const res = await fetch(
+						`https://www.strava.com/api/v3/athlete/activities?access_token=${session.accessToken}&page=${page}&per_page=${per_page}`
+					);
+					if (res.status !== 200) {
+						console.log(res);
+					}
+					const newActivities = await res.json();
+					tempActivities.push(...newActivities);
 
-				if (newActivities < 5) {
-					moreData = false;
+					if (newActivities < 5) {
+						moreData = false;
+					}
+					page++;
+				} else {
+					// Handle the case where session is null
+					console.log('Session is null');
 				}
-				page++;
 			}
 			setActivities(tempActivities);
 		};
@@ -56,12 +63,9 @@ export default function Home() {
 								</button>
 							)}
 							{status === 'authenticated' && (
-								<button
-									className="bg-red-500 hover:bg-red-700 w-full text-white font-bold py-2 px-4 rounded"
-									onClick={() => signOut()}
-								>
+								<Button className=" w-full" onClick={() => signOut()}>
 									Sign out
-								</button>
+								</Button>
 							)}
 						</div>
 						<h1 className="text-2xl font-semibold mb-2">Your Story</h1>
