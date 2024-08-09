@@ -6,18 +6,38 @@ export const authOptions = {
 		StravaProvider({
 			clientId: process.env.NEXT_PUBLIC_STRAVA_ID,
 			clientSecret: process.env.NEXT_PUBLIC_STRAVA_CLIENT_SECRET,
-			token: {
-				url: 'https://www.strava.com/oauth/token',
+			authorization: {
+				url: 'https://www.strava.com/api/v3/oauth/authorize',
+				params: {
+					scope: 'activity:read_all',
+					approval_prompt: 'auto',
+					response_type: 'code',
+				},
+			},
+			profile(profile: any, tokens: any) {
+				return {
+					id: profile.id,
+					name: `${profile.firstname} ${profile.lastname}`,
+					image: profile.profile,
+					accessToken: tokens.access_token,
+					refreshToken: tokens.refresh_token,
+					email: null,
+				};
 			},
 		}),
 	],
 	callbacks: {
 		jwt: async ({ session, token, user }) => {
-			console.log(user);
-			console.log(token);
+			if (user) {
+				token.accessToken = user.accessToken;
+				token.refreshToken = user.refreshToken;
+				return token;
+			}
 			return token;
 		},
 		session: async ({ session, token, user }) => {
+			session.accessToken = token.accessToken;
+			session.refreshToken = token.refreshToken;
 			return session;
 		},
 	},
