@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { MapComponent } from '@/components/MapComponent/index';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
+import SideBar from '@/components/SideBar';
 
 const TOKEN_ENDPOINT = 'https://www.strava.com/oauth/token';
 
@@ -52,7 +53,7 @@ export default function Home() {
 		<>
 			<main className="h-screen w-screen">
 				<div className="flex h-screen">
-					<div className="min-w-80 p-4 pt-8 flex flex-col">
+					{/* <div className="min-w-80 p-4 pt-8 flex flex-col">
 						<div className="mb-4 w-full">
 							{status !== 'authenticated' && (
 								<button
@@ -82,7 +83,8 @@ export default function Home() {
 								</div>
 							))}
 						</div>
-					</div>
+					</div> */}
+					<SideBar></SideBar>
 					<MapComponent />
 				</div>
 			</main>
