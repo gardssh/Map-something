@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { MapComponent } from '@/components/MapComponent/index';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import SideBar from '@/components/SideBar';
 
@@ -53,38 +53,7 @@ export default function Home() {
 		<>
 			<main className="h-screen w-screen">
 				<div className="flex h-screen">
-					{/* <div className="min-w-80 p-4 pt-8 flex flex-col">
-						<div className="mb-4 w-full">
-							{status !== 'authenticated' && (
-								<button
-									className="bg-blue-500 hover:bg-blue-700 w-full text-white font-bold py-2 px-4 rounded"
-									onClick={() => signIn()}
-								>
-									Sign in
-								</button>
-							)}
-							{status === 'authenticated' && (
-								<Button className=" w-full" onClick={() => signOut()}>
-									Sign out
-								</Button>
-							)}
-						</div>
-						<h1 className="text-2xl font-semibold mb-2">Your Story</h1>
-						<div className="flex flex-col overflow-y-scroll scrollbar-hide">
-							{activities.map((activity) => (
-								<div key={activity.id} className="flex flex-col w-full mb-6 border-solid">
-									<p className="text-lg">{activity.name}</p>
-									<div className="flex">
-										<p>{activity.sport_type}</p>
-										<p className="ml-auto mr-4">
-											Time: {Math.floor(activity.moving_time / 60)}:{activity.moving_time % 60}
-										</p>
-									</div>
-								</div>
-							))}
-						</div>
-					</div> */}
-					<SideBar></SideBar>
+					<SideBar activities={activities} status={status}></SideBar>
 					<MapComponent />
 				</div>
 			</main>
