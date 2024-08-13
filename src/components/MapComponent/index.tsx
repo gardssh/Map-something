@@ -1,6 +1,7 @@
 'use client';
 import Map, { GeolocateControl, NavigationControl, Source, Layer } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
+import { getActivityColor } from '@/lib/utils';
 
 export const MapComponent = ({ activities }: { activities: any[] }) => {
 	return (
@@ -19,28 +20,25 @@ export const MapComponent = ({ activities }: { activities: any[] }) => {
 				<GeolocateControl position="bottom-right" />
 				<NavigationControl position="bottom-right" />
 				{activities.length > 0 &&
-					activities.map((activity) => {
-						console.log(activity);
-						return (
-							<Source
-								key={activity.id}
+					activities.map((activity) => (
+						<Source
+							key={activity.id}
+							id={'route-' + activity.id}
+							type="geojson"
+							data={{
+								type: 'Feature',
+								properties: {},
+								geometry: { type: 'LineString', coordinates: switchCoordinates(activity) },
+							}}
+						>
+							<Layer
 								id={'route-' + activity.id}
-								type="geojson"
-								data={{
-									type: 'Feature',
-									properties: {},
-									geometry: { type: 'LineString', coordinates: switchCoordinates(activity) },
-								}}
-							>
-								<Layer
-									id={'route-' + activity.id}
-									type="line"
-									layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-									paint={{ 'line-color': '#FF7B7B', 'line-width': 8, 'line-opacity': 0.5 }}
-								/>
-							</Source>
-						);
-					})}
+								type="line"
+								layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+								paint={{ 'line-color': getActivityColor(activity.type), 'line-width': 8, 'line-opacity': 0.5 }}
+							/>
+						</Source>
+					))}
 			</Map>
 		</div>
 	);

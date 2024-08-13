@@ -50,7 +50,6 @@ export default function Home() {
 		}
 	}, [activities, session, status]);
      */
-	console.log(activities);
 
 	return (
 		<>
