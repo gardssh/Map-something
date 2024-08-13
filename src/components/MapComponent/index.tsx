@@ -1,9 +1,8 @@
 'use client';
-import { useEffect } from 'react';
-import Map, { GeolocateControl, NavigationControl } from 'react-map-gl';
+import Map, { GeolocateControl, NavigationControl, Source, Layer } from 'react-map-gl';
+import { switchCoordinates } from '../activities/switchCor';
 
-export const MapComponent = () => {
-
+export const MapComponent = ({ activities }: { activities: any[] }) => {
 	return (
 		<div className="h-full w-full">
 			<Map
@@ -19,6 +18,29 @@ export const MapComponent = () => {
 			>
 				<GeolocateControl position="bottom-right" />
 				<NavigationControl position="bottom-right" />
+				{activities.length > 0 &&
+					activities.map((activity) => {
+						console.log(activity);
+						return (
+							<Source
+								key={activity.id}
+								id={'route-' + activity.id}
+								type="geojson"
+								data={{
+									type: 'Feature',
+									properties: {},
+									geometry: { type: 'LineString', coordinates: switchCoordinates(activity) },
+								}}
+							>
+								<Layer
+									id={'route-' + activity.id}
+									type="line"
+									layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+									paint={{ 'line-color': '#FF7B7B', 'line-width': 8, 'line-opacity': 0.5 }}
+								/>
+							</Source>
+						);
+					})}
 			</Map>
 		</div>
 	);

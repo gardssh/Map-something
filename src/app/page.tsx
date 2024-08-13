@@ -57,7 +57,7 @@ export default function Home() {
 			<main className="h-screen w-screen">
 				<div className="flex h-screen">
 					<SideBar activities={activities} status={status}></SideBar>
-					<MapComponent />
+					<MapComponent activities={activities} />
 				</div>
 			</main>
 		</>
