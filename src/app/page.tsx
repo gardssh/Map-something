@@ -12,6 +12,7 @@ const TOKEN_ENDPOINT = 'https://www.strava.com/oauth/token';
 export default function Home() {
 	//const [activities, setActivities] = useState<any[]>([]);
 	const { data: session, status } = useSession();
+	const [visibleActivities, setVisibleActivities] = useState<number[]>([]);
 
 	/* comment out to stop polling API too many times
 	useEffect(() => {
@@ -55,8 +56,8 @@ export default function Home() {
 		<>
 			<main className="h-screen w-screen">
 				<div className="flex h-screen">
-					<SideBar activities={activities} status={status}></SideBar>
-					<MapComponent activities={activities} />
+					<SideBar activities={activities} status={status} visibleActivities={visibleActivities}></SideBar>
+					<MapComponent activities={activities} setVisibleActivities={setVisibleActivities} />
 				</div>
 			</main>
 		</>

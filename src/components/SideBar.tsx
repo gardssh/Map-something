@@ -7,7 +7,17 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 import { signIn, signOut } from 'next-auth/react';
 
-export default function SideBar({ activities, status }) {
+export default function SideBar({
+	activities,
+	status,
+	visibleActivities,
+}: {
+	activities: any;
+	status: any;
+	visibleActivities: number[];
+}) {
+	const filteredActivities = activities.filter((activity) => visibleActivities.includes(activity.id));
+
 	return (
 		<div className="min-w-80 p-4 flex flex-col gap-4">
 			<div className=" flex flex-col gap-1">
@@ -40,7 +50,7 @@ export default function SideBar({ activities, status }) {
 			<div className="grow gap-2 overflow-auto">
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Nearby</h3>
 				{/* Disse kortene skal ta inn ting om aktiviteter */}
-				{activities.map((activity) => (
+				{filteredActivities.map((activity) => (
 					<Card className="mb-2" key={activity.id}>
 						<CardHeader>
 							<CardTitle>{activity.name}</CardTitle>

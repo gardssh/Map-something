@@ -2,11 +2,34 @@
 import Map, { GeolocateControl, NavigationControl, Source, Layer } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import { getActivityColor } from '@/lib/utils';
+import { useRef } from 'react';
+import type { MapRef } from 'react-map-gl';
 
-export const MapComponent = ({ activities }: { activities: any[] }) => {
+export const MapComponent = ({
+	activities,
+	setVisibleActivities,
+}: {
+	activities: any[];
+	setVisibleActivities: React.Dispatch<React.SetStateAction<number[]>>;
+}) => {
+	const mapRef = useRef<MapRef>();
+
+	const getVisibleActivities = (): any[] => {
+		return mapRef.current?.queryRenderedFeatures(undefined, {
+			layers: activities.map((activity) => {
+				return 'route-' + activity.id;
+			}),
+		});
+	};
+
+	const updateVisibleActivities = () => {
+		setVisibleActivities(getVisibleActivities().map((activity) => parseInt(activity.layer.id.replace('route-', ''))));
+	};
+
 	return (
 		<div className="h-full w-full">
 			<Map
+				ref={mapRef}
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
 				//mapLib={import('mapbox-gl')}
 				initialViewState={{
@@ -16,6 +39,8 @@ export const MapComponent = ({ activities }: { activities: any[] }) => {
 				}}
 				style={{ width: '100%', height: '100%' }}
 				mapStyle="mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm"
+				onMoveEnd={() => updateVisibleActivities()}
+				onLoad={() => updateVisibleActivities()}
 			>
 				<GeolocateControl position="bottom-right" />
 				<NavigationControl position="bottom-right" />
