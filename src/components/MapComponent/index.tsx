@@ -1,9 +1,11 @@
 'use client';
-import Map, { GeolocateControl, NavigationControl, Source, Layer } from 'react-map-gl';
+import Map, { GeolocateControl, NavigationControl, Source, Layer, Marker } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import { getActivityColor } from '@/lib/utils';
 import { useRef } from 'react';
 import type { MapRef } from 'react-map-gl';
+import AddMarker from './AddMarker';
+import { AddTrack } from './AddMarker';
 
 export const MapComponent = ({
 	activities,
@@ -44,7 +46,7 @@ export const MapComponent = ({
 			>
 				<GeolocateControl position="bottom-right" />
 				<NavigationControl position="bottom-right" />
-				{activities.length > 0 &&
+				 {activities.length > 0 &&
 					activities.map((activity) => (
 						<Source
 							key={activity.id}
@@ -63,7 +65,10 @@ export const MapComponent = ({
 								paint={{ 'line-color': getActivityColor(activity.type), 'line-width': 8, 'line-opacity': 0.5 }}
 							/>
 						</Source>
-					))}
+					))} 
+				{activities.length > 0 && activities.map((activity) => 
+				<AddMarker key={activity.id} activity={activity}/>
+				)}
 			</Map>
 		</div>
 	);

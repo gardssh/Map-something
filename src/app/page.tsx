@@ -14,6 +14,7 @@ export default function Home() {
 	const { data: session, status } = useSession();
 	const [visibleActivities, setVisibleActivities] = useState<number[]>([]);
 
+
 	/* comment out to stop polling API too many times
 	useEffect(() => {
 		const getActivities = async () => {
