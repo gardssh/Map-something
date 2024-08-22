@@ -5,7 +5,6 @@ import { getActivityColor } from '@/lib/utils';
 import { useRef } from 'react';
 import type { MapRef } from 'react-map-gl';
 import AddMarker from './AddMarker';
-import { AddTrack } from './AddMarker';
 
 export const MapComponent = ({
 	activities,
@@ -17,6 +16,7 @@ export const MapComponent = ({
 	const mapRef = useRef<MapRef>();
 
 	const getVisibleActivities = (): any[] => {
+		// @ts-ignore
 		return mapRef.current?.queryRenderedFeatures(undefined, {
 			layers: activities.map((activity) => {
 				return 'route-' + activity.id;
@@ -31,6 +31,7 @@ export const MapComponent = ({
 	return (
 		<div className="h-full w-full">
 			<Map
+				// @ts-ignore
 				ref={mapRef}
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
 				//mapLib={import('mapbox-gl')}
