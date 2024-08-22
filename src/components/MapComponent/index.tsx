@@ -1,6 +1,6 @@
 'use client';
-import { useRef, useCallback } from 'react';
-import Map, { GeolocateControl, NavigationControl, Source, Layer, Marker } from 'react-map-gl';
+import { useRef, useCallback, useState } from 'react';
+import Map, { GeolocateControl, NavigationControl, Source, Layer, Marker, Popup } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import { categorizeActivity, getActivityColor } from '@/lib/utils';
 import type { MapRef } from 'react-map-gl';
@@ -25,10 +25,23 @@ export const MapComponent = ({
 	const updateVisibleActivities = () => {
 		setVisibleActivities(getVisibleActivities().map((activity) => activity.id));
 	};
+	const [hoverInfo, setHoverInfo] = useState<any>(null);
+	const onHover = useCallback((event: any) => {
+		const activityLayer = event.features && event.features[0];
+		console.log(activities);
 
-	const onHover = useCallback((event) => {
-		if (event.features && event.features.length > 0) console.log(event.features);
+		const activity = activityLayer ? activities.find((activity) => activity.id === activityLayer.id) : undefined;
+
+		setHoverInfo({
+			id: activity && activity.id,
+			name: activity && activity.name,
+			longitude: event.lngLat.lng,
+			latitude: event.lngLat.lat,
+		});
 	}, []);
+
+	const selectedActivityId = (hoverInfo && hoverInfo.id) || '';
+	const selectedActivityName = (hoverInfo && hoverInfo.name) || '';
 
 	return (
 		<div className="h-full w-full">
@@ -118,6 +131,19 @@ export const MapComponent = ({
 					/>
 				</Source>
 				{activities.length > 0 && activities.map((activity) => <AddMarker key={activity.id} activity={activity} />)}
+				{selectedActivityId && (
+					<Popup
+						longitude={hoverInfo.longitude}
+						latitude={hoverInfo.latitude}
+						offset={[0, -10]}
+						closeButton={false}
+						className="activity-info"
+					>
+						Name: {selectedActivityName}
+						<p> </p>
+						ID: {selectedActivityId}
+					</Popup>
+				)}
 			</Map>
 		</div>
 	);
