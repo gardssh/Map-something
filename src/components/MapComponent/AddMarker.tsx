@@ -13,4 +13,5 @@ export default function AddMarker({ activity }: any) {
 
 		return <Marker longitude={long} latitude={lat}></Marker>;
 	}
+	return <></>;
 }
