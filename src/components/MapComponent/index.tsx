@@ -1,8 +1,8 @@
 'use client';
+import { useRef, useCallback } from 'react';
 import Map, { GeolocateControl, NavigationControl, Source, Layer, Marker } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
-import { getActivityColor } from '@/lib/utils';
-import { useRef } from 'react';
+import { categorizeActivity, getActivityColor } from '@/lib/utils';
 import type { MapRef } from 'react-map-gl';
 import AddMarker from './AddMarker';
 
@@ -18,15 +18,17 @@ export const MapComponent = ({
 	const getVisibleActivities = (): any[] => {
 		// @ts-ignore
 		return mapRef.current?.queryRenderedFeatures(undefined, {
-			layers: activities.map((activity) => {
-				return 'route-' + activity.id;
-			}),
+			layers: ['foot-sports', 'cycle-sports', 'water-sports', 'other-sports', 'unknown-sports'],
 		});
 	};
 
 	const updateVisibleActivities = () => {
-		setVisibleActivities(getVisibleActivities().map((activity) => parseInt(activity.layer.id.replace('route-', ''))));
+		setVisibleActivities(getVisibleActivities().map((activity) => activity.id));
 	};
+
+	const onHover = useCallback((event) => {
+		if (event.features && event.features.length > 0) console.log(event.features);
+	}, []);
 
 	return (
 		<div className="h-full w-full">
@@ -44,32 +46,78 @@ export const MapComponent = ({
 				mapStyle="mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm"
 				onMoveEnd={() => updateVisibleActivities()}
 				onLoad={() => updateVisibleActivities()}
+				onMouseMove={onHover}
+				interactiveLayerIds={[
+					'foot-sports',
+					'cycle-sports',
+					'water-sports',
+					'winter-sports',
+					'other-sports',
+					'unknown-sports',
+				]}
 			>
 				<GeolocateControl position="bottom-right" />
 				<NavigationControl position="bottom-right" />
-				 {activities.length > 0 &&
-					activities.map((activity) => (
-						<Source
-							key={activity.id}
-							id={'route-' + activity.id}
-							type="geojson"
-							data={{
+				<Source
+					id={'routes'}
+					type="geojson"
+					data={{
+						type: 'FeatureCollection',
+						features: activities.map((activity) => {
+							return {
+								id: activity.id,
 								type: 'Feature',
-								properties: {},
+								properties: { activityType: categorizeActivity(activity.sport_type) },
 								geometry: { type: 'LineString', coordinates: switchCoordinates(activity) },
-							}}
-						>
-							<Layer
-								id={'route-' + activity.id}
-								type="line"
-								layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-								paint={{ 'line-color': getActivityColor(activity.type), 'line-width': 8, 'line-opacity': 0.5 }}
-							/>
-						</Source>
-					))} 
-				{activities.length > 0 && activities.map((activity) => 
-				<AddMarker key={activity.id} activity={activity}/>
-				)}
+								paint: { 'line-color': getActivityColor(activity.type), 'line-width': 8, 'line-opacity': 0.5 },
+							};
+						}),
+					}}
+				>
+					<Layer
+						id={'foot-sports'}
+						type="line"
+						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+						paint={{ 'line-color': '#FF5733', 'line-width': 8, 'line-opacity': 0.5 }}
+						filter={['==', 'Foot Sports', ['get', 'activityType']]}
+					/>
+					<Layer
+						id={'cycle-sports'}
+						type="line"
+						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+						paint={{ 'line-color': '#33FF57', 'line-width': 8, 'line-opacity': 0.5 }}
+						filter={['==', 'Cycle Sports', ['get', 'activityType']]}
+					/>
+					<Layer
+						id={'water-sports'}
+						type="line"
+						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+						paint={{ 'line-color': '#3357FF', 'line-width': 8, 'line-opacity': 0.5 }}
+						filter={['==', 'Water Sports', ['get', 'activityType']]}
+					/>
+					<Layer
+						id={'winter-sports'}
+						type="line"
+						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+						paint={{ 'line-color': '#FF33A1', 'line-width': 8, 'line-opacity': 0.5 }}
+						filter={['==', 'Winter Sports', ['get', 'activityType']]}
+					/>
+					<Layer
+						id={'other-sports'}
+						type="line"
+						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+						paint={{ 'line-color': '#FFC300', 'line-width': 8, 'line-opacity': 0.5 }}
+						filter={['==', 'Other Sports', ['get', 'activityType']]}
+					/>
+					<Layer
+						id={'unknown-sports'}
+						type="line"
+						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+						paint={{ 'line-color': '#000000', 'line-width': 8, 'line-opacity': 0.5 }}
+						filter={['==', 'Unknown Category', ['get', 'activityType']]}
+					/>
+				</Source>
+				{activities.length > 0 && activities.map((activity) => <AddMarker key={activity.id} activity={activity} />)}
 			</Map>
 		</div>
 	);

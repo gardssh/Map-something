@@ -55,7 +55,7 @@ const categoryColors: { [name: string]: string } = {
 	'Unknown Category': '#000000', // Default color for unknown categories
 };
 
-function categorizeActivity(activityType: string) {
+export function categorizeActivity(activityType: string) {
 	for (const category in activityCategories) {
 		if (activityCategories[category].includes(activityType)) {
 			return category;
