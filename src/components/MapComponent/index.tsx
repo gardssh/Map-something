@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useCallback, useState } from 'react';
-import Map, { GeolocateControl, NavigationControl, Source, Layer, Marker, Popup } from 'react-map-gl';
+import Map, { GeolocateControl, NavigationControl, Source, Layer, Popup } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import { categorizeActivity, getActivityColor } from '@/lib/utils';
 import type { MapRef, MapLayerMouseEvent } from 'react-map-gl';
@@ -8,12 +8,12 @@ import AddMarker from './AddMarker';
 
 export const MapComponent = ({
 	activities,
-	setVisibleActivities,
+	setVisibleActivitiesId,
 	selectedRouteId,
 	setSelectedRouteId,
 }: {
 	activities: any[];
-	setVisibleActivities: React.Dispatch<React.SetStateAction<number[]>>;
+	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
 	selectedRouteId: number | null;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<number | null>>;
 }) => {
@@ -27,21 +27,24 @@ export const MapComponent = ({
 		});
 	};
 
-	const updateVisibleActivities = () => {
-		setVisibleActivities(getVisibleActivities().map((activity) => activity.id));
+	const updateVisibleActivitiesIds = () => {
+		setVisibleActivitiesId(getVisibleActivities().map((activity) => activity.id));
 	};
 
-	const onHover = useCallback((event: any) => {
-		const activityLayer = event.features && event.features[0];
-		const activity = activityLayer ? activities.find((activity) => activity.id === activityLayer.id) : undefined;
+	const onHover = useCallback(
+		(event: any) => {
+			const activityLayer = event.features && event.features[0];
+			const activity = activityLayer ? activities.find((activity) => activity.id === activityLayer.id) : undefined;
 
-		setHoverInfo({
-			id: activity && activity.id,
-			name: activity && activity.name,
-			longitude: event.lngLat.lng,
-			latitude: event.lngLat.lat,
-		});
-	}, []);
+			setHoverInfo({
+				id: activity && activity.id,
+				name: activity && activity.name,
+				longitude: event.lngLat.lng,
+				latitude: event.lngLat.lat,
+			});
+		},
+		[activities]
+	);
 
 	const selectedActivityId = (hoverInfo && hoverInfo.id) || '';
 	const selectedActivityName = (hoverInfo && hoverInfo.name) || '';
@@ -70,8 +73,8 @@ export const MapComponent = ({
 				}}
 				style={{ width: '100%', height: '100%' }}
 				mapStyle="mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm"
-				onMoveEnd={() => updateVisibleActivities()}
-				onLoad={() => updateVisibleActivities()}
+				onMoveEnd={() => updateVisibleActivitiesIds()}
+				onLoad={() => updateVisibleActivitiesIds()}
 				onMouseMove={onHover}
 				onClick={onClick}
 				interactiveLayerIds={[

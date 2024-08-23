@@ -4,22 +4,22 @@ import { useRef, useEffect, useCallback } from 'react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Route, MapPin, Medal } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 import { signIn, signOut } from 'next-auth/react';
 
 export default function SideBar({
 	activities,
 	status,
-	visibleActivities,
+	visibleActivitiesId,
 	selectedRouteId,
 }: {
 	activities: any;
 	status: any;
-	visibleActivities: number[];
+	visibleActivitiesId: number[];
 	selectedRouteId: number | null;
 }) {
-	const filteredActivities = activities.filter((activity: any) => visibleActivities.includes(activity.id));
+	const visibleActivities = activities.filter((activity: any) => visibleActivitiesId.includes(activity.id));
 	const scrollRef = useRef<HTMLDivElement>(null);
 
 	const scrollIntoView = useCallback(() => {
@@ -62,7 +62,7 @@ export default function SideBar({
 			<div className="grow gap-2 overflow-auto">
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Nearby</h3>
 				{/* Disse kortene skal ta inn ting om aktiviteter */}
-				{filteredActivities.map((activity) => (
+				{visibleActivities.map((activity) => (
 					<div key={activity.id}>
 						<Card className={'mb-2' + (activity.id === selectedRouteId && ' border-solid border-2 border-black')}>
 							<CardHeader>

@@ -3,17 +3,29 @@
 import { useState, useEffect } from 'react';
 import { MapComponent } from '@/components/MapComponent/index';
 import { useSession } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
 import SideBar from '@/components/SideBar';
 import activities from '../../public/aktiviteter.json';
+import { categorizeActivity } from '@/lib/utils';
+import { CategoryFilter } from '@/components/CategoryFilter/index';
 
 const TOKEN_ENDPOINT = 'https://www.strava.com/oauth/token';
 
 export default function Home() {
 	//const [activities, setActivities] = useState<any[]>([]);
 	const { data: session, status } = useSession();
-	const [visibleActivities, setVisibleActivities] = useState<number[]>([]);
+	const [visibleActivitiesId, setVisibleActivitiesId] = useState<number[]>([]);
 	const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
+	const [selectedCategories, setSelectedCategories] = useState<string[]>([
+		'Foot Sports',
+		'Cycle Sports',
+		'Water Sports',
+		'Winter Sports',
+		'Other Sports',
+	]);
+
+	const filters = [(activity: any) => selectedCategories.includes(categorizeActivity(activity.sport_type))];
+
+	const filteredActivities = filters.reduce((data, filter) => data.filter(filter), activities);
 
 	/* comment out to stop polling API too many times
 	useEffect(() => {
@@ -56,19 +68,20 @@ export default function Home() {
 	return (
 		<>
 			<main className="h-screen w-screen">
-				<div className="flex h-screen">
+				<div className="flex h-screen relative">
 					<SideBar
-						activities={activities}
+						activities={filteredActivities}
 						status={status}
-						visibleActivities={visibleActivities}
+						visibleActivitiesId={visibleActivitiesId}
 						selectedRouteId={selectedRouteId}
 					/>
 					<MapComponent
-						activities={activities}
-						setVisibleActivities={setVisibleActivities}
+						activities={filteredActivities}
+						setVisibleActivitiesId={setVisibleActivitiesId}
 						selectedRouteId={selectedRouteId}
 						setSelectedRouteId={setSelectedRouteId}
 					/>
+					<CategoryFilter selectedCategories={selectedCategories} setSelectedCategories={setSelectedCategories} />
 				</div>
 			</main>
 		</>
