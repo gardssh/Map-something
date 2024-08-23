@@ -31,7 +31,7 @@ export default function SideBar({
 	}, [selectedRouteId, scrollIntoView]);
 
 	return (
-		<div className="min-w-80 p-4 flex flex-col gap-4">
+		<div className="w-1/3 p-4 flex flex-col gap-4">
 			<div className=" flex flex-col gap-1">
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">Library</h3>
 				<Button variant={'ghost'} style={{ justifyContent: 'flex-start' }}>
