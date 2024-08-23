@@ -3,17 +3,22 @@ import { useRef, useCallback, useState } from 'react';
 import Map, { GeolocateControl, NavigationControl, Source, Layer, Marker, Popup } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import { categorizeActivity, getActivityColor } from '@/lib/utils';
-import type { MapRef } from 'react-map-gl';
+import type { MapRef, MapLayerMouseEvent } from 'react-map-gl';
 import AddMarker from './AddMarker';
 
 export const MapComponent = ({
 	activities,
 	setVisibleActivities,
+	selectedRouteId,
+	setSelectedRouteId,
 }: {
 	activities: any[];
 	setVisibleActivities: React.Dispatch<React.SetStateAction<number[]>>;
+	selectedRouteId: number | null;
+	setSelectedRouteId: React.Dispatch<React.SetStateAction<number | null>>;
 }) => {
 	const mapRef = useRef<MapRef>();
+	const [hoverInfo, setHoverInfo] = useState<any>(null);
 
 	const getVisibleActivities = (): any[] => {
 		// @ts-ignore
@@ -43,6 +48,16 @@ export const MapComponent = ({
 	const selectedActivityId = (hoverInfo && hoverInfo.id) || '';
 	const selectedActivityName = (hoverInfo && hoverInfo.name) || '';
 
+	const onClick = useCallback(
+		(event: MapLayerMouseEvent) => {
+			if (event.features.length > 0) setSelectedRouteId(event.features[0].id);
+			else {
+				setSelectedRouteId(null);
+			}
+		},
+		[setSelectedRouteId]
+	);
+
 	return (
 		<div className="h-full w-full">
 			<Map
@@ -60,6 +75,7 @@ export const MapComponent = ({
 				onMoveEnd={() => updateVisibleActivities()}
 				onLoad={() => updateVisibleActivities()}
 				onMouseMove={onHover}
+				onClick={onClick}
 				interactiveLayerIds={[
 					'foot-sports',
 					'cycle-sports',
@@ -128,6 +144,13 @@ export const MapComponent = ({
 						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
 						paint={{ 'line-color': '#000000', 'line-width': 8, 'line-opacity': 0.5 }}
 						filter={['==', 'Unknown Category', ['get', 'activityType']]}
+					/>
+					<Layer
+						id={'selected-route'}
+						type="line"
+						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+						paint={{ 'line-color': '#00FF00', 'line-width': 8, 'line-opacity': 0.5 }}
+						filter={['==', selectedRouteId, ['id']]}
 					/>
 				</Source>
 				{activities.length > 0 && activities.map((activity) => <AddMarker key={activity.id} activity={activity} />)}

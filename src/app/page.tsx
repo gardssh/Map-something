@@ -13,7 +13,7 @@ export default function Home() {
 	//const [activities, setActivities] = useState<any[]>([]);
 	const { data: session, status } = useSession();
 	const [visibleActivities, setVisibleActivities] = useState<number[]>([]);
-
+	const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
 
 	/* comment out to stop polling API too many times
 	useEffect(() => {
@@ -58,7 +58,12 @@ export default function Home() {
 			<main className="h-screen w-screen">
 				<div className="flex h-screen">
 					<SideBar activities={activities} status={status} visibleActivities={visibleActivities}></SideBar>
-					<MapComponent activities={activities} setVisibleActivities={setVisibleActivities} />
+					<MapComponent
+						activities={activities}
+						setVisibleActivities={setVisibleActivities}
+						selectedRouteId={selectedRouteId}
+						setSelectedRouteId={setSelectedRouteId}
+					/>
 				</div>
 			</main>
 		</>
