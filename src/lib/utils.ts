@@ -12,7 +12,7 @@ const activityCategories: { [name: string]: string[] } = {
 	'Cycle Sports': [
 		'Ride',
 		'Mountain Bike Ride',
-		'Gravel Ride',
+		'GravelRide',
 		'E-Bike Ride',
 		'E-Mountain Bike Ride',
 		'Velomobile',

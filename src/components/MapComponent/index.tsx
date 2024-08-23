@@ -23,18 +23,16 @@ export const MapComponent = ({
 	const getVisibleActivities = (): any[] => {
 		// @ts-ignore
 		return mapRef.current?.queryRenderedFeatures(undefined, {
-			layers: ['foot-sports', 'cycle-sports', 'water-sports', 'other-sports', 'unknown-sports'],
+			layers: ['foot-sports', 'cycle-sports', 'water-sports', 'winter-sports', 'other-sports', 'unknown-sports'],
 		});
 	};
 
 	const updateVisibleActivities = () => {
 		setVisibleActivities(getVisibleActivities().map((activity) => activity.id));
 	};
-	const [hoverInfo, setHoverInfo] = useState<any>(null);
+
 	const onHover = useCallback((event: any) => {
 		const activityLayer = event.features && event.features[0];
-		console.log(activities);
-
 		const activity = activityLayer ? activities.find((activity) => activity.id === activityLayer.id) : undefined;
 
 		setHoverInfo({
@@ -107,7 +105,11 @@ export const MapComponent = ({
 						id={'foot-sports'}
 						type="line"
 						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-						paint={{ 'line-color': '#FF5733', 'line-width': 8, 'line-opacity': 0.5 }}
+						paint={{
+							'line-color': '#FF5733',
+							'line-width': 8,
+							'line-opacity': 0.5,
+						}}
 						filter={['==', 'Foot Sports', ['get', 'activityType']]}
 					/>
 					<Layer
@@ -149,7 +151,12 @@ export const MapComponent = ({
 						id={'selected-route'}
 						type="line"
 						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-						paint={{ 'line-color': '#00FF00', 'line-width': 8, 'line-opacity': 0.5 }}
+						paint={{
+							'line-color': '#000000',
+							'line-gap-width': 8,
+							'line-width': 2,
+							'line-opacity': 1,
+						}}
 						filter={['==', selectedRouteId, ['id']]}
 					/>
 				</Source>

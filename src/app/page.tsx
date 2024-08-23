@@ -57,7 +57,12 @@ export default function Home() {
 		<>
 			<main className="h-screen w-screen">
 				<div className="flex h-screen">
-					<SideBar activities={activities} status={status} visibleActivities={visibleActivities}></SideBar>
+					<SideBar
+						activities={activities}
+						status={status}
+						visibleActivities={visibleActivities}
+						selectedRouteId={selectedRouteId}
+					/>
 					<MapComponent
 						activities={activities}
 						setVisibleActivities={setVisibleActivities}

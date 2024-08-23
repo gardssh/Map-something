@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useEffect, useCallback } from 'react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Route, MapPin, Medal } from 'lucide-react';
@@ -11,12 +12,23 @@ export default function SideBar({
 	activities,
 	status,
 	visibleActivities,
+	selectedRouteId,
 }: {
 	activities: any;
 	status: any;
 	visibleActivities: number[];
+	selectedRouteId: number | null;
 }) {
-	const filteredActivities = activities.filter((activity) => visibleActivities.includes(activity.id));
+	const filteredActivities = activities.filter((activity: any) => visibleActivities.includes(activity.id));
+	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const scrollIntoView = useCallback(() => {
+		scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	}, []);
+
+	useEffect(() => {
+		scrollIntoView();
+	}, [selectedRouteId, scrollIntoView]);
 
 	return (
 		<div className="min-w-80 p-4 flex flex-col gap-4">
@@ -51,17 +63,20 @@ export default function SideBar({
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Nearby</h3>
 				{/* Disse kortene skal ta inn ting om aktiviteter */}
 				{filteredActivities.map((activity) => (
-					<Card className="mb-2" key={activity.id}>
-						<CardHeader>
-							<CardTitle>{activity.name}</CardTitle>
-							<CardDescription>{activity.sport_type}</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<p>
-								Time: {Math.floor(activity.moving_time / 60)}:{activity.moving_time % 60}
-							</p>
-						</CardContent>
-					</Card>
+					<div key={activity.id}>
+						<Card className={'mb-2' + (activity.id === selectedRouteId && ' border-solid border-2 border-black')}>
+							<CardHeader>
+								<CardTitle>{activity.name}</CardTitle>
+								<CardDescription>{activity.sport_type}</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<p>
+									Time: {Math.floor(activity.moving_time / 60)}:{activity.moving_time % 60}
+								</p>
+							</CardContent>
+						</Card>
+						{activity.id === selectedRouteId && <div ref={scrollRef} />}
+					</div>
 				))}
 			</div>
 			<div>
