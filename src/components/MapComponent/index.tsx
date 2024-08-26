@@ -51,6 +51,7 @@ export const MapComponent = ({
 
 	const onClick = useCallback(
 		(event: MapLayerMouseEvent) => {
+			//@ts-ignore
 			if (event.features.length > 0) setSelectedRouteId(event.features[0].id);
 			else {
 				setSelectedRouteId(null);
