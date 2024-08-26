@@ -1,9 +1,9 @@
 'use client';
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import Map, { GeolocateControl, NavigationControl, Source, Layer, Popup } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import { categorizeActivity, getActivityColor } from '@/lib/utils';
-import type { MapRef, MapLayerMouseEvent } from 'react-map-gl';
+import type { MapRef, MapMouseEvent } from 'react-map-gl';
 import AddMarker from './AddMarker';
 
 export const MapComponent = ({
@@ -50,7 +50,7 @@ export const MapComponent = ({
 	const selectedActivityName = (hoverInfo && hoverInfo.name) || '';
 
 	const onClick = useCallback(
-		(event: MapLayerMouseEvent) => {
+		(event: MapMouseEvent) => {
 			//@ts-ignore
 			if (event.features.length > 0) setSelectedRouteId(event.features[0].id);
 			else {
@@ -89,6 +89,15 @@ export const MapComponent = ({
 			>
 				<GeolocateControl position="bottom-right" />
 				<NavigationControl position="bottom-right" />
+				{/* <Source
+					type="raster"
+					tiles={[
+						'https://openwms.statkart.no/skwms1/wms.kartdata?service=WMS&request=GetMap&version=1.3.0&layers=kartdata&styles=default&format=image/png&crs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
+					]}
+				>
+					<Layer id={'bakgrunn_norge'} type="raster" paint={{ 'raster-opacity': 1 }} />
+				</Source> */}
+
 				<Source
 					id={'routes'}
 					type="geojson"
@@ -161,9 +170,29 @@ export const MapComponent = ({
 							'line-width': 2,
 							'line-opacity': 1,
 						}}
+						//@ts-ignore
 						filter={['==', selectedRouteId, ['id']]}
 					/>
 				</Source>
+				<Source
+					type="raster"
+					tiles={[
+						'https://nve.geodataonline.no/arcgis/services/Bratthet/MapServer/WMSServer?service=WMS&request=GetMap&version=1.1.1&layers=Bratthet_snoskred&styles=&format=image/png&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
+					]}
+				>
+					<Layer id={'bratthet'} type="raster" paint={{ 'raster-opacity': 0.6 }} />
+				</Source>
+
+				
+				{/* <Source
+					type="raster"
+					tiles={[
+						'https://openwms.statkart.no/skwms1/wms.friluftsruter2?service=WMS&request=GetMap&version=1.3.0&layers=Ruter&styles=&format=image/png&crs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
+					]}
+				>
+					<Layer id={'stier'} type="raster" paint={{ 'raster-opacity': 1 }} />
+				</Source> */}
+
 				{activities.length > 0 && activities.map((activity) => <AddMarker key={activity.id} activity={activity} />)}
 				{selectedActivityId && (
 					<Popup
