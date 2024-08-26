@@ -26,6 +26,7 @@ export default function Home() {
 	const filters = [(activity: any) => selectedCategories.includes(categorizeActivity(activity.sport_type))];
 
 	const filteredActivities = filters.reduce((data, filter) => data.filter(filter), activities);
+	const selectedActivity = activities.find((activity) => activity.id === selectedRouteId);
 
 	/* comment out to stop polling API too many times
 	useEffect(() => {
@@ -74,6 +75,7 @@ export default function Home() {
 						status={status}
 						visibleActivitiesId={visibleActivitiesId}
 						selectedRouteId={selectedRouteId}
+						selectedActivity={selectedActivity}
 					/>
 					<MapComponent
 						activities={filteredActivities}
