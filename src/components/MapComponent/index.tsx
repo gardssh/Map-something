@@ -98,6 +98,16 @@ export const MapComponent = ({
 					<Layer id={'bakgrunn_norge'} type="raster" paint={{ 'raster-opacity': 1 }} />
 				</Source> */}
 
+				{/* <Source
+					type="raster"
+					tiles={[
+						'https://opencache.statkart.no/gatekeeper/gk/gk.open_wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=norgeskart_bakgrunn&STYLE=default&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:{z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png',
+					]}
+					tilesize="256"
+				>
+					<Layer id={'bakgrunn_norge'} type="raster" paint={{ 'raster-opacity': 1 }} />
+				</Source> */}
+
 				<Source
 					id={'routes'}
 					type="geojson"
@@ -183,7 +193,6 @@ export const MapComponent = ({
 					<Layer id={'bratthet'} type="raster" paint={{ 'raster-opacity': 0.6 }} />
 				</Source>
 
-				
 				{/* <Source
 					type="raster"
 					tiles={[
