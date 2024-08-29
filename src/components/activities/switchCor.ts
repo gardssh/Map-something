@@ -1,3 +1,4 @@
+//@ts-ignore
 import polyline from '@mapbox/polyline';
 
 // Changes coordinate position to fit mapbox'.

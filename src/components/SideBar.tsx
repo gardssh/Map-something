@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Route, MapPin, Medal } from 'lucide-react';
@@ -11,23 +11,8 @@ import { signIn, signOut } from 'next-auth/react';
 
 import { TrendingUp } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, XAxis } from 'recharts';
-
+import { switchCoordinates } from './activities/switchCor';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-
-const chartData = [
-	{ month: 'January', desktop: 186 },
-	{ month: 'February', desktop: 305 },
-	{ month: 'March', desktop: 237 },
-	{ month: 'April', desktop: 73 },
-	{ month: 'May', desktop: 209 },
-	{ month: 'June', desktop: 214 },
-];
-const chartConfig = {
-	desktop: {
-		label: 'Desktop',
-		color: 'hsl(var(--chart-1))',
-	},
-} satisfies ChartConfig;
 
 export default function SideBar({
 	activities,
@@ -52,6 +37,22 @@ export default function SideBar({
 	useEffect(() => {
 		scrollIntoView();
 	}, [selectedRouteId, scrollIntoView]);
+
+
+	const chartData = [
+		{ month: 'January', desktop: 186 },
+		{ month: 'February', desktop: 305 },
+		{ month: 'March', desktop: 237 },
+		{ month: 'April', desktop: 73 },
+		{ month: 'May', desktop: 209 },
+		{ month: 'June', desktop: 214 },
+	];
+	const chartConfig = {
+		desktop: {
+			label: 'Elevation',
+			color: 'hsl(var(--chart-1))',
+		},
+	} satisfies ChartConfig;
 
 	return (
 		<div className="w-1/3 flex flex-col gap-4 relative">
