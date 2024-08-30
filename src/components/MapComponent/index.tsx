@@ -108,6 +108,24 @@ export const MapComponent = ({
 					<Layer id={'bakgrunn_norge'} type="raster" paint={{ 'raster-opacity': 1 }} />
 				</Source> */}
 
+				{/* <Source
+					type="raster"
+					tiles={[
+						'https://openwms.statkart.no/skwms1/wms.friluftsruter2?service=WMS&request=GetMap&version=1.3.0&layers=Ruter&styles=&format=image/png&crs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
+					]}
+				>
+					<Layer id={'stier'} type="raster" paint={{ 'raster-opacity': 1 }} />
+				</Source> */}
+
+				<Source
+					type="raster"
+					tiles={[
+						'https://nve.geodataonline.no/arcgis/services/Bratthet/MapServer/WMSServer?service=WMS&request=GetMap&version=1.1.1&layers=Bratthet_snoskred&styles=&format=image/png&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
+					]}
+				>
+					<Layer id={'bratthet'} type="raster" paint={{ 'raster-opacity': 0.6 }} />
+				</Source>
+
 				<Source
 					id={'routes'}
 					type="geojson"
@@ -129,12 +147,13 @@ export const MapComponent = ({
 						type="line"
 						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
 						paint={{
-							'line-color': '#FF5733',
+							'line-color': '#F85E00',
 							'line-width': 8,
-							'line-opacity': 0.5,
+							'line-opacity': 0.8,
 						}}
 						filter={['==', 'Foot Sports', ['get', 'activityType']]}
 					/>
+
 					<Layer
 						id={'cycle-sports'}
 						type="line"
@@ -142,6 +161,7 @@ export const MapComponent = ({
 						paint={{ 'line-color': '#33FF57', 'line-width': 8, 'line-opacity': 0.5 }}
 						filter={['==', 'Cycle Sports', ['get', 'activityType']]}
 					/>
+
 					<Layer
 						id={'water-sports'}
 						type="line"
@@ -175,7 +195,7 @@ export const MapComponent = ({
 						type="line"
 						layout={{ 'line-join': 'round', 'line-cap': 'round' }}
 						paint={{
-							'line-color': '#000000',
+							'line-color': '#020122',
 							'line-gap-width': 8,
 							'line-width': 2,
 							'line-opacity': 1,
@@ -183,24 +203,22 @@ export const MapComponent = ({
 						//@ts-ignore
 						filter={['==', selectedRouteId, ['id']]}
 					/>
+					<Layer
+						id={'symbol-layer'}
+						type="symbol"
+						source="route"
+						layout={{
+							'symbol-placement': 'line',
+							'text-field': '▶',
+							'text-size': 20,
+							'symbol-spacing': 50,
+							'text-keep-upright': false,
+						}}
+						paint={{
+							'text-color': '#000000',
+						}}
+					/>
 				</Source>
-				<Source
-					type="raster"
-					tiles={[
-						'https://nve.geodataonline.no/arcgis/services/Bratthet/MapServer/WMSServer?service=WMS&request=GetMap&version=1.1.1&layers=Bratthet_snoskred&styles=&format=image/png&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
-					]}
-				>
-					<Layer id={'bratthet'} type="raster" paint={{ 'raster-opacity': 0.6 }} />
-				</Source>
-
-				{/* <Source
-					type="raster"
-					tiles={[
-						'https://openwms.statkart.no/skwms1/wms.friluftsruter2?service=WMS&request=GetMap&version=1.3.0&layers=Ruter&styles=&format=image/png&crs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
-					]}
-				>
-					<Layer id={'stier'} type="raster" paint={{ 'raster-opacity': 1 }} />
-				</Source> */}
 
 				{activities.length > 0 && activities.map((activity) => <AddMarker key={activity.id} activity={activity} />)}
 				{selectedActivityId && (
