@@ -11,11 +11,13 @@ export const MapComponent = ({
 	setVisibleActivitiesId,
 	selectedRouteId,
 	setSelectedRouteId,
+	onMapLoad,
 }: {
 	activities: any[];
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
 	selectedRouteId: number | null;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<number | null>>;
+	onMapLoad?: (map: mapboxgl.Map) => void;
 }) => {
 	const mapRef = useRef<MapRef>();
 	const [hoverInfo, setHoverInfo] = useState<any>(null);
@@ -60,13 +62,20 @@ export const MapComponent = ({
 		[setSelectedRouteId]
 	);
 
+	useEffect(() => {
+		if (mapRef.current) {
+			const map = mapRef.current.getMap();
+			if (onMapLoad) {
+				onMapLoad(map);
+			}
+		}
+	}, [onMapLoad]);
+
 	return (
 		<div className="h-full w-full">
 			<Map
-				// @ts-ignore
-				ref={mapRef}
+				ref={mapRef as React.RefObject<MapRef>}
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
-				//mapLib={import('mapbox-gl')}
 				initialViewState={{
 					longitude: 8.296987,
 					latitude: 61.375172,
@@ -75,7 +84,6 @@ export const MapComponent = ({
 				style={{ width: '100%', height: '100%' }}
 				mapStyle="mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm"
 				onMoveEnd={() => updateVisibleActivitiesIds()}
-				onLoad={() => updateVisibleActivitiesIds()}
 				onMouseMove={onHover}
 				onClick={onClick}
 				interactiveLayerIds={[
@@ -89,33 +97,14 @@ export const MapComponent = ({
 			>
 				<GeolocateControl position="bottom-right" />
 				<NavigationControl position="bottom-right" />
-				{/* <Source
-					type="raster"
-					tiles={[
-						'https://openwms.statkart.no/skwms1/wms.kartdata?service=WMS&request=GetMap&version=1.3.0&layers=kartdata&styles=default&format=image/png&crs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
-					]}
-				>
-					<Layer id={'bakgrunn_norge'} type="raster" paint={{ 'raster-opacity': 1 }} />
-				</Source> */}
 
-				{/* <Source
-					type="raster"
-					tiles={[
-						'https://opencache.statkart.no/gatekeeper/gk/gk.open_wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=norgeskart_bakgrunn&STYLE=default&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:{z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png',
-					]}
-					tilesize="256"
-				>
-					<Layer id={'bakgrunn_norge'} type="raster" paint={{ 'raster-opacity': 1 }} />
-				</Source> */}
-
-				{/* <Source
-					type="raster"
-					tiles={[
-						'https://openwms.statkart.no/skwms1/wms.friluftsruter2?service=WMS&request=GetMap&version=1.3.0&layers=Ruter&styles=&format=image/png&crs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
-					]}
-				>
-					<Layer id={'stier'} type="raster" paint={{ 'raster-opacity': 1 }} />
-				</Source> */}
+				<Source
+					id="mapbox-dem"
+					type="raster-dem"
+					url="mapbox://mapbox.mapbox-terrain-dem-v1"
+					tileSize={512}
+					maxzoom={14}
+				/>
 
 				<Source
 					type="raster"

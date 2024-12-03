@@ -22,6 +22,7 @@ export default function Home() {
 		'Winter Sports',
 		'Other Sports',
 	]);
+	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 
 	const filters = [(activity: any) => selectedCategories.includes(categorizeActivity(activity.sport_type))];
 
@@ -66,6 +67,16 @@ export default function Home() {
 	}, [activities, session, status]);
      */
 
+	useEffect(() => {
+		if (mapInstance) {
+			console.log('Map instance available:', {
+				isStyleLoaded: mapInstance.isStyleLoaded(),
+				hasTerrain: !!mapInstance.getTerrain(),
+				center: mapInstance.getCenter()
+			});
+		}
+	}, [mapInstance]);
+
 	return (
 		<>
 			<main className="h-screen w-screen">
@@ -76,12 +87,14 @@ export default function Home() {
 						visibleActivitiesId={visibleActivitiesId}
 						selectedRouteId={selectedRouteId}
 						selectedActivity={selectedActivity}
+						map={mapInstance}
 					/>
 					<MapComponent
 						activities={filteredActivities}
 						setVisibleActivitiesId={setVisibleActivitiesId}
 						selectedRouteId={selectedRouteId}
 						setSelectedRouteId={setSelectedRouteId}
+						onMapLoad={(map) => setMapInstance(map)}
 					/>
 					<CategoryFilter selectedCategories={selectedCategories} setSelectedCategories={setSelectedCategories} />
 				</div>

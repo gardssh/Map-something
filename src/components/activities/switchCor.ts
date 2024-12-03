@@ -1,14 +1,19 @@
-//@ts-ignore
 import polyline from '@mapbox/polyline';
 
-// Changes coordinate position to fit mapbox'.
+interface Activity {
+	map: {
+		summary_polyline: string;
+	};
+}
 
-export function switchCoordinates(activity: any) {
-	var coordinates = polyline.decode(activity.map.summary_polyline);
+type Coordinate = [number, number];
 
-	for (let i = 0; i < coordinates.length; i++) {
-		coordinates[i] = [coordinates[i][1], coordinates[i][0]];
+export function switchCoordinates(activity: Activity): Coordinate[] {
+	if (!activity?.map?.summary_polyline) {
+		return [];
 	}
 
-	return coordinates;
+	const decodedCoordinates = polyline.decode(activity.map.summary_polyline);
+	
+	return decodedCoordinates.map(([lat, lng]: [number, number]) => [lng, lat]);
 }
