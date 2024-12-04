@@ -13,7 +13,7 @@ export default function Home() {
 	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 
 	const filteredActivities = activities;
-	const selectedActivity = activities.find((activity) => activity.id === selectedRouteId);
+	const selectedActivity = activities.find((activity) => activity.id === selectedRouteId) || null;
 
 	useEffect(() => {
 		if (mapInstance) {

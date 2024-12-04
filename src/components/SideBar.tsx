@@ -42,8 +42,8 @@ interface Activity {
 	map: {
 		summary_polyline: string;
 	};
-	elev_low: number;
-	elev_high: number;
+	elev_low?: number;
+	elev_high?: number;
 }
 
 export default function SideBar({
@@ -52,12 +52,14 @@ export default function SideBar({
 	visibleActivitiesId,
 	selectedRouteId,
 	selectedActivity,
+	map,
 }: {
 	activities: Activity[];
 	status: 'authenticated' | 'loading' | 'unauthenticated';
 	visibleActivitiesId: number[];
 	selectedRouteId: number | null;
 	selectedActivity: Activity | null;
+	map: mapboxgl.Map | null;
 }) {
 	const visibleActivities = activities.filter((activity: any) => visibleActivitiesId.includes(activity.id));
 	const scrollRef = useRef<HTMLDivElement>(null);
