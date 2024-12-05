@@ -1,30 +1,7 @@
-import NextAuth, { DefaultSession, User as DefaultUser } from 'next-auth';
-import { JWT } from 'next-auth/jwt';
+import NextAuth from 'next-auth';
 import StravaProvider from 'next-auth/providers/strava';
 
-// Extend the built-in types
-declare module 'next-auth' {
-	interface Session extends DefaultSession {
-			accessToken?: string;
-			refreshToken?: string;
-	}
-}
-
-declare module 'next-auth/jwt' {
-	interface JWT {
-		accessToken?: string;
-		refreshToken?: string;
-	}
-}
-
-interface StravaProfile {
-	id: string;
-	firstname: string;
-	lastname: string;
-	profile: string;
-}
-
-const authOptions = {
+export const authOptions = {
 	providers: [
 		StravaProvider({
 			clientId: process.env.NEXT_PUBLIC_STRAVA_ID || '',
@@ -37,10 +14,7 @@ const authOptions = {
 					response_type: 'code',
 				},
 			},
-			profile(profile: StravaProfile, tokens: { access_token?: string; refresh_token?: string }) {
-				if (!tokens.access_token || !tokens.refresh_token) {
-					throw new Error('Missing access token or refresh token');
-				}
+			profile(profile: any, tokens: any) {
 				return {
 					id: profile.id,
 					name: `${profile.firstname} ${profile.lastname}`,
@@ -53,14 +27,14 @@ const authOptions = {
 		}),
 	],
 	callbacks: {
-		jwt: async ({ token, user }: { token: JWT; user: any }) => {
+		jwt: async ({ token, user }) => {
 			if (user) {
 				token.accessToken = user.accessToken;
 				token.refreshToken = user.refreshToken;
 			}
 			return token;
 		},
-		session: async ({ session, token }: { session: any; token: JWT }) => {
+		session: async ({ session, token }) => {
 			session.accessToken = token.accessToken;
 			session.refreshToken = token.refreshToken;
 			return session;
@@ -68,5 +42,4 @@ const authOptions = {
 	},
 };
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+export default NextAuth(authOptions);
