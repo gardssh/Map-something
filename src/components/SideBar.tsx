@@ -304,8 +304,12 @@ export default function SideBar({
 			)}
 			<div className="sticky bottom-0">
 				{status !== 'authenticated' && (
-					<Button variant={'secondary'} className="w-full" onClick={() => signIn()}>
-						Sign in
+					<Button 
+						variant={'secondary'} 
+						className="w-full" 
+						disabled
+					>
+						Sign in (coming soon)
 					</Button>
 				)}
 				{status === 'authenticated' && (
