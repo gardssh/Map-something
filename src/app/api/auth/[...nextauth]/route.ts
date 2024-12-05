@@ -1,7 +1,8 @@
 import NextAuth from 'next-auth';
 import StravaProvider from 'next-auth/providers/strava';
+import { AuthOptions } from 'next-auth';
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
 	providers: [
 		StravaProvider({
 			clientId: process.env.NEXT_PUBLIC_STRAVA_ID || '',
@@ -27,14 +28,14 @@ export const authOptions = {
 		}),
 	],
 	callbacks: {
-		jwt: async ({ token, user }) => {
+		jwt: async ({ token, user }: { token: any; user: any }) => {
 			if (user) {
 				token.accessToken = user.accessToken;
 				token.refreshToken = user.refreshToken;
 			}
 			return token;
 		},
-		session: async ({ session, token }) => {
+		session: async ({ session, token }: { session: any; token: any }) => {
 			session.accessToken = token.accessToken;
 			session.refreshToken = token.refreshToken;
 			return session;
@@ -42,4 +43,6 @@ export const authOptions = {
 	},
 };
 
-export default NextAuth(authOptions);
+const handler = NextAuth(authOptions);
+export const GET = handler.GET;
+export const POST = handler.POST;
