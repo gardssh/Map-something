@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Route, MapPin, Medal, Navigation } from 'lucide-react';
+import { Route, MapPin, Medal, Navigation, Trash2, Edit2, Check, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './ui/card';
 import './SideBar/styles.css';
 import { formatTime } from '@/lib/timeFormat';
@@ -17,6 +17,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { ACTIVITY_CATEGORIES, ActivityCategory, categorizeActivity } from '@/lib/categories';
 import { Activity } from '@/types/activity';
+import { DrawnRoute } from '@/types/route';
+import { Input } from '@/components/ui/input';
 
 interface ElevationPoint {
 	distance: number; // distance in km
@@ -36,6 +38,21 @@ interface RouteData {
 
 type ViewType = 'nearby' | 'activities' | 'routes' | 'waypoints';
 
+interface SideBarProps {
+	activities: Activity[];
+	status: 'authenticated' | 'loading' | 'unauthenticated';
+	visibleActivitiesId: number[];
+	selectedRouteId: number | null;
+	selectedActivity: Activity | null;
+	map: mapboxgl.Map | null;
+	onActivitySelect: (activity: Activity) => void;
+	selectedRoute?: DrawnRoute | null;
+	routes: DrawnRoute[];
+	onRouteSelect?: (route: DrawnRoute | null) => void;
+	onRouteDelete?: (routeId: string) => void;
+	onRouteRename?: (routeId: string, newName: string) => void;
+}
+
 export default function SideBar({
 	activities,
 	status,
@@ -44,15 +61,12 @@ export default function SideBar({
 	selectedActivity,
 	map,
 	onActivitySelect,
-}: {
-	activities: Activity[];
-	status: 'authenticated' | 'loading' | 'unauthenticated';
-	visibleActivitiesId: number[];
-	selectedRouteId: number | null;
-	selectedActivity: Activity | null;
-	map: mapboxgl.Map | null;
-	onActivitySelect: (activity: Activity) => void;
-}) {
+	selectedRoute,
+	routes,
+	onRouteSelect,
+	onRouteDelete,
+	onRouteRename,
+}: SideBarProps) {
 	const [selectedView, setSelectedView] = useState<ViewType>('nearby');
 	const visibleActivities = activities.filter((activity: any) => visibleActivitiesId.includes(activity.id));
 	const scrollRef = useRef<HTMLDivElement>(null);
@@ -164,9 +178,27 @@ export default function SideBar({
 		);
 	};
 
+	const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
+	const [editingName, setEditingName] = useState<string>('');
+
 	return (
 		<div className="w-1/3 flex flex-col gap-4 relative">
-			{selectedActivity ? (
+			{selectedRoute ? (
+				<div className="grow p-4 flex flex-col gap-4 relativeoverflow-y-auto">
+					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedRoute.name}</h3>
+					<Card>
+						<CardHeader>
+							<p>Distance: {selectedRoute.distance.toFixed(2)}km</p>
+						</CardHeader>
+					</Card>
+					<Card>
+						<CardHeader>
+							<p>Created: {new Date(selectedRoute.createdAt).toLocaleString()}</p>
+						</CardHeader>
+					</Card>
+					{/* Add elevation chart here similar to activities */}
+				</div>
+			) : selectedActivity ? (
 				<div id="slide" className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
 					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedActivity.name}</h3>
 					<div className="flex justify-between gap-2">
@@ -357,7 +389,97 @@ export default function SideBar({
 						<TabsContent value="routes" className="mt-4">
 							<div className="grow gap-2 overflow-y-auto">
 								<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Routes</h3>
-								<p className="text-muted-foreground">Coming soon</p>
+								{routes && routes.length > 0 ? (
+									routes.map((route) => (
+										<Card
+											key={route.id}
+											className={'mb-2 hover:bg-accent transition-colors'}
+										>
+											<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+												<div className="cursor-pointer flex-grow">
+													{editingRouteId === route.id ? (
+														<div className="flex items-center gap-2">
+															<Input
+																value={editingName}
+																onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingName(e.target.value)}
+																onClick={(e: React.MouseEvent) => e.stopPropagation()}
+																className="h-8"
+																autoFocus
+															/>
+															<Button
+																variant="ghost"
+																size="icon"
+																className="h-8 w-8 p-0"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	onRouteRename?.(route.id, editingName);
+																	setEditingRouteId(null);
+																}}
+															>
+																<Check className="h-4 w-4" />
+																<span className="sr-only">Save name</span>
+															</Button>
+															<Button
+																variant="ghost"
+																size="icon"
+																className="h-8 w-8 p-0"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	setEditingRouteId(null);
+																}}
+															>
+																<X className="h-4 w-4" />
+																<span className="sr-only">Cancel edit</span>
+															</Button>
+														</div>
+													) : (
+														<div onClick={() => onRouteSelect?.(route)}>
+															<CardTitle>{route.name}</CardTitle>
+															<CardDescription>Distance: {route.distance.toFixed(2)} km</CardDescription>
+														</div>
+													)}
+												</div>
+												{!editingRouteId && (
+													<div className="flex gap-1">
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-8 w-8 p-0"
+															onClick={(e) => {
+																e.stopPropagation();
+																setEditingRouteId(route.id);
+																setEditingName(route.name);
+															}}
+														>
+															<Edit2 className="h-4 w-4" />
+															<span className="sr-only">Edit route name</span>
+														</Button>
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-8 w-8 p-0"
+															onClick={(e) => {
+																e.stopPropagation();
+																onRouteDelete?.(route.id);
+															}}
+														>
+															<Trash2 className="h-4 w-4" />
+															<span className="sr-only">Delete route</span>
+														</Button>
+													</div>
+												)}
+											</CardHeader>
+											<CardContent 
+												className="cursor-pointer" 
+												onClick={() => !editingRouteId && onRouteSelect?.(route)}
+											>
+												<p>Created: {new Date(route.createdAt).toLocaleString()}</p>
+											</CardContent>
+										</Card>
+									))
+								) : (
+									<p className="text-muted-foreground">No routes yet</p>
+								)}
 							</div>
 						</TabsContent>
 
