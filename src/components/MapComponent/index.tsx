@@ -349,8 +349,6 @@ export const MapComponent = ({
 				}}
 				terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
 			>
-<<<<<<< Updated upstream
-=======
 				<DrawControl
 					position="top-left"
 					displayControlsDefault={false}
@@ -365,7 +363,6 @@ export const MapComponent = ({
 					onRouteSave={onRouteSave}
 					onRouteAdd={(route) => setLocalRoutes((prev) => [...prev, route])}
 				/>
->>>>>>> Stashed changes
 				<GeolocateControl position="bottom-right" />
 				<NavigationControl position="bottom-right" visualizePitch={true} showZoom={true} showCompass={true} />
 
