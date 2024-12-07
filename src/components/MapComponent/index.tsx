@@ -87,7 +87,7 @@ export const MapComponent = ({
 							? norgeTopoStyle
 							: 'mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm';
 
-				mapRef.current.getMap().setStyle(newStyle);
+				mapRef.current.getMap().setStyle(newStyle as string);
 
 				mapRef.current.getMap().once('style.load', () => {
 					mapRef.current?.getMap().addSource('bratthet', {
@@ -173,9 +173,12 @@ export const MapComponent = ({
 						);
 
 						// Fit the map to the route bounds with some padding
-						mapRef.current.fitBounds(bounds, {
+						mapRef.current.fitBounds([
+							[bounds.getWest(), bounds.getSouth()],
+							[bounds.getEast(), bounds.getNorth()]
+						], {
 							padding: 100,
-							duration: 1000,
+							duration: 1000
 						});
 					}
 				}
@@ -208,9 +211,9 @@ export const MapComponent = ({
 	// Add a function to handle terrain changes
 	const setTerrainExaggeration = (exaggeration: number) => {
 		if (mapRef.current) {
-			mapRef.current.getMap().setTerrain({ 
-				source: 'mapbox-dem', 
-				exaggeration: exaggeration 
+			mapRef.current.getMap().setTerrain({
+				source: 'mapbox-dem',
+				exaggeration: exaggeration,
 			});
 		}
 	};
@@ -219,7 +222,6 @@ export const MapComponent = ({
 		<div className="h-full w-full">
 			<Map
 				ref={mapRef as React.RefObject<MapRef>}
-				
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
 				initialViewState={{
 					longitude: 8.296987,
@@ -249,7 +251,7 @@ export const MapComponent = ({
 				onPitch={(evt) => {
 					// Adjust terrain exaggeration based on pitch
 					if (evt.viewState.pitch === 0) {
-						setTerrainExaggeration(0);  // Flat when viewed from top
+						setTerrainExaggeration(0); // Flat when viewed from top
 					} else {
 						setTerrainExaggeration(1.5); // Normal exaggeration otherwise
 					}
@@ -257,12 +259,7 @@ export const MapComponent = ({
 				terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
 			>
 				<GeolocateControl position="bottom-right" />
-				<NavigationControl
-					position="bottom-right"
-					visualizePitch={true}
-					showZoom={true}
-					showCompass={true}
-				/>
+				<NavigationControl position="bottom-right" visualizePitch={true} showZoom={true} showCompass={true} />
 
 				<Source
 					id="mapbox-dem"
@@ -316,8 +313,8 @@ export const MapComponent = ({
 						}}
 						paint={{
 							'line-color': '#D14A00',
-							'line-width': 5,
-							'line-opacity': 1,
+							'line-width': 3,
+							'line-opacity': ['case', ['==', ['id'], selectedRouteId], 1, 0.8],
 						}}
 						filter={['==', 'Foot Sports', ['get', 'activityType']]}
 					/>
@@ -332,8 +329,8 @@ export const MapComponent = ({
 						}}
 						paint={{
 							'line-color': '#2BD44A',
-							'line-width': 5,
-							'line-opacity': 1,
+							'line-width': 3,
+							'line-opacity': ['case', ['==', ['id'], selectedRouteId], 1, 0.8],
 						}}
 						filter={['==', 'Cycle Sports', ['get', 'activityType']]}
 					/>
@@ -346,7 +343,11 @@ export const MapComponent = ({
 							'line-cap': 'round',
 							visibility: selectedCategories.includes('Water Sports') ? 'visible' : 'none',
 						}}
-						paint={{ 'line-color': '#3357FF', 'line-width': 5, 'line-opacity': 0.5 }}
+						paint={{
+							'line-color': '#3357FF',
+							'line-width': 3,
+							'line-opacity': ['case', ['==', ['id'], selectedRouteId], 1, 0.8],
+						}}
 						filter={['==', 'Water Sports', ['get', 'activityType']]}
 					/>
 
@@ -358,7 +359,11 @@ export const MapComponent = ({
 							'line-cap': 'round',
 							visibility: selectedCategories.includes('Winter Sports') ? 'visible' : 'none',
 						}}
-						paint={{ 'line-color': '#FF33A1', 'line-width': 5, 'line-opacity': 0.5 }}
+						paint={{
+							'line-color': '#FF33A1',
+							'line-width': 3,
+							'line-opacity': ['case', ['==', ['id'], selectedRouteId], 1, 0.8],
+						}}
 						filter={['==', 'Winter Sports', ['get', 'activityType']]}
 					/>
 
@@ -370,7 +375,11 @@ export const MapComponent = ({
 							'line-cap': 'round',
 							visibility: selectedCategories.includes('Other Sports') ? 'visible' : 'none',
 						}}
-						paint={{ 'line-color': '#FFC300', 'line-width': 5, 'line-opacity': 0.5 }}
+						paint={{
+							'line-color': '#FFC300',
+							'line-width': 3,
+							'line-opacity': ['case', ['==', ['id'], selectedRouteId], 1, 0.8],
+						}}
 						filter={['==', 'Other Sports', ['get', 'activityType']]}
 					/>
 
@@ -472,7 +481,7 @@ export const MapComponent = ({
 					<Popup
 						longitude={hoverInfo.longitude}
 						latitude={hoverInfo.latitude}
-						offset={[0, -10]}
+						offset={[0, -10] as [number, number]}
 						closeButton={false}
 						className="activity-info"
 					>

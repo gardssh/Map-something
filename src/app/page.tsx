@@ -5,6 +5,8 @@ import { MapComponent } from '@/components/MapComponent/index';
 import { useSession } from 'next-auth/react';
 import SideBar from '@/components/SideBar';
 import activities from '../../public/aktiviteter.json';
+import { LngLatBounds } from 'mapbox-gl';
+import { switchCoordinates } from '@/components/activities/switchCor';
 
 export default function Home() {
 	const { data: session, status } = useSession();
@@ -15,15 +17,29 @@ export default function Home() {
 	const filteredActivities = activities;
 	const selectedActivity = activities.find((activity) => activity.id === selectedRouteId) || null;
 
-	useEffect(() => {
+	const handleActivitySelect = (activity: any) => {
+		setSelectedRouteId(activity.id);
+
 		if (mapInstance) {
-			console.log('Map instance available:', {
-				isStyleLoaded: mapInstance.isStyleLoaded(),
-				hasTerrain: !!mapInstance.getTerrain(),
-				center: mapInstance.getCenter()
+			// Create bounds from the route coordinates
+			const coordinates = switchCoordinates(activity);
+			const bounds = coordinates.reduce(
+				(bounds, coord) => {
+					return bounds.extend(coord as [number, number]);
+				},
+				new LngLatBounds(coordinates[0], coordinates[0])
+			);
+
+			// Fit the map to the route bounds with some padding
+			mapInstance.fitBounds([
+				[bounds.getWest(), bounds.getSouth()],
+				[bounds.getEast(), bounds.getNorth()]
+			], {
+				padding: 100,
+				duration: 1000
 			});
 		}
-	}, [mapInstance]);
+	};
 
 	return (
 		<>
@@ -36,6 +52,7 @@ export default function Home() {
 						selectedRouteId={selectedRouteId}
 						selectedActivity={selectedActivity}
 						map={mapInstance}
+						onActivitySelect={handleActivitySelect}
 					/>
 					<MapComponent
 						activities={filteredActivities}
