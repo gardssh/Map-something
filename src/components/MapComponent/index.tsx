@@ -8,6 +8,28 @@ import AddMarker from './AddMarker';
 import { LngLatBounds } from 'mapbox-gl';
 import { LayersControl } from './LayersControl';
 import type { StyleSpecification } from 'mapbox-gl';
+import DrawControl from './DrawControl';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import type { DrawnRoute } from '@/types/route';
+import type { LineString } from 'geojson';
+
+// Add a helper function to handle bounds
+const handleBounds = (mapRef: React.RefObject<MapRef>, coordinates: [number, number][]) => {
+	if (!mapRef.current) return;
+
+	const bounds = coordinates.reduce(
+		(bounds, coord) => bounds.extend(coord),
+		new LngLatBounds(coordinates[0], coordinates[0])
+	);
+
+	mapRef.current.fitBounds(
+		[
+			[bounds.getWest(), bounds.getSouth()],
+			[bounds.getEast(), bounds.getNorth()],
+		],
+		{ padding: 100, duration: 1000 }
+	);
+};
 
 export const MapComponent = ({
 	activities,
@@ -15,12 +37,18 @@ export const MapComponent = ({
 	selectedRouteId,
 	setSelectedRouteId,
 	onMapLoad,
+	onRouteSelect,
+	onRouteSave,
+	routes,
 }: {
 	activities: any[];
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
 	selectedRouteId: number | null;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<number | null>>;
 	onMapLoad?: (map: mapboxgl.Map) => void;
+	onRouteSelect?: (route: DrawnRoute | null) => void;
+	onRouteSave?: (route: DrawnRoute) => void;
+	routes?: DrawnRoute[];
 }) => {
 	const mapRef = useRef<MapRef>();
 	const [hoverInfo, setHoverInfo] = useState<any>(null);
@@ -32,6 +60,8 @@ export const MapComponent = ({
 		'Winter Sports',
 		'Other Sports',
 	]);
+	const [selectedRoute, setSelectedRoute] = useState<DrawnRoute | null>(null);
+	const [localRoutes, setLocalRoutes] = useState<DrawnRoute[]>(routes || []);
 
 	const availableLayers = [
 		{ id: 'default', name: 'Default Map', isBase: true },
@@ -125,7 +155,18 @@ export const MapComponent = ({
 	const getVisibleActivities = (): any[] => {
 		// @ts-ignore
 		return mapRef.current?.queryRenderedFeatures(undefined, {
-			layers: ['foot-sports', 'cycle-sports', 'water-sports', 'winter-sports', 'other-sports', 'unknown-sports'],
+			layers: [
+				'foot-sports',
+				'cycle-sports',
+				'water-sports',
+				'winter-sports',
+				'other-sports',
+				'unknown-sports',
+				'saved-routes-layer',
+				'saved-routes-border',
+				'selected-route',
+				'selected-route-border',
+			],
 		});
 	};
 
@@ -135,17 +176,39 @@ export const MapComponent = ({
 
 	const onHover = useCallback(
 		(event: any) => {
-			const activityLayer = event.features && event.features[0];
-			const activity = activityLayer ? activities.find((activity) => activity.id === activityLayer.id) : undefined;
+			const feature = event.features && event.features[0];
 
-			setHoverInfo({
-				id: activity && activity.id,
-				name: activity && activity.name,
-				longitude: event.lngLat.lng,
-				latitude: event.lngLat.lat,
-			});
+			if (!feature) {
+				setHoverInfo(null);
+				return;
+			}
+
+			// Handle activity hover
+			if (typeof feature.id === 'number') {
+				const activity = activities.find((activity) => activity.id === feature.id);
+				if (activity) {
+					setHoverInfo({
+						id: activity.id,
+						name: activity.name,
+						longitude: event.lngLat.lng,
+						latitude: event.lngLat.lat,
+					});
+				}
+			}
+			// Handle route hover
+			else if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
+				const route = routes?.find((r) => r.id === feature.properties.id);
+				if (route) {
+					setHoverInfo({
+						id: route.id,
+						name: route.name,
+						longitude: event.lngLat.lng,
+						latitude: event.lngLat.lat,
+					});
+				}
+			}
 		},
-		[activities]
+		[activities, routes]
 	);
 
 	const selectedActivityId = (hoverInfo && hoverInfo.id) || '';
@@ -154,39 +217,45 @@ export const MapComponent = ({
 	const onClick = useCallback(
 		(event: MapMouseEvent) => {
 			//@ts-ignore
-			if (event.features?.length > 0) {
-				//@ts-ignore
-				const clickedFeatureId = event.features[0].id;
-				if (typeof clickedFeatureId === 'number') {
-					setSelectedRouteId(clickedFeatureId);
+			const features = event.features;
+			console.log('Clicked features:', features);
 
-					const selectedActivity = activities.find((activity) => activity.id === clickedFeatureId);
+			if (features?.length > 0) {
+				const feature = features[0];
+				console.log('Selected feature:', feature);
 
-					if (selectedActivity && mapRef.current) {
-						// Create bounds from the route coordinates
+				// Handle activity clicks
+				if (typeof feature.id === 'number') {
+					setSelectedRouteId(feature.id);
+					setSelectedRoute(null);
+					const selectedActivity = activities.find((activity) => activity.id === feature.id);
+					if (selectedActivity) {
 						const coordinates = switchCoordinates(selectedActivity);
-						const bounds = coordinates.reduce(
-							(bounds, coord) => {
-								return bounds.extend(coord as [number, number]);
-							},
-							new LngLatBounds(coordinates[0], coordinates[0])
-						);
+						handleBounds(mapRef as React.RefObject<MapRef>, coordinates);
+					}
+				}
+				// Handle drawn route clicks - check for layer.id instead of feature.id
+				else if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
+					console.log('Route properties:', feature.properties);
+					const route = routes?.find((r) => r.id === feature.properties.id);
+					console.log('Found route:', route);
 
-						// Fit the map to the route bounds with some padding
-						mapRef.current.fitBounds([
-							[bounds.getWest(), bounds.getSouth()],
-							[bounds.getEast(), bounds.getNorth()]
-						], {
-							padding: 100,
-							duration: 1000
-						});
+					if (route) {
+						setSelectedRouteId(null);
+						setSelectedRoute(route);
+						onRouteSelect?.(route);
+						if ('coordinates' in route.geometry) {
+							handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
+						}
 					}
 				}
 			} else {
 				setSelectedRouteId(null);
+				setSelectedRoute(null);
+				onRouteSelect?.(null);
 			}
 		},
-		[setSelectedRouteId, activities]
+		[activities, routes, setSelectedRouteId, onRouteSelect]
 	);
 
 	useEffect(() => {
@@ -218,6 +287,26 @@ export const MapComponent = ({
 		}
 	};
 
+	const onDrawCreate = useCallback((evt: { features: any[] }) => {
+		console.log('draw.create', evt.features);
+	}, []);
+
+	const onDrawUpdate = useCallback((evt: { features: any[]; action: string }) => {
+		console.log('draw.update', evt.features);
+	}, []);
+
+	const onDrawDelete = useCallback((evt: { features: any[] }) => {
+		console.log('draw.delete', evt.features);
+	}, []);
+
+	useEffect(() => {
+		console.log('Selected route:', selectedRoute);
+	}, [selectedRoute]);
+
+	useEffect(() => {
+		setLocalRoutes(routes || []);
+	}, [routes]);
+
 	return (
 		<div className="h-full w-full">
 			<Map
@@ -241,6 +330,8 @@ export const MapComponent = ({
 					'winter-sports',
 					'other-sports',
 					'unknown-sports',
+					'saved-routes-layer',
+					'saved-routes-border',
 				]}
 				renderWorldCopies={false}
 				maxTileCacheSize={50}
@@ -258,6 +349,20 @@ export const MapComponent = ({
 				}}
 				terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
 			>
+				<DrawControl
+					position="top-left"
+					displayControlsDefault={false}
+					controls={{
+						line_string: true,
+						trash: true,
+					}}
+					defaultMode="draw_line_string"
+					onCreate={onDrawCreate}
+					onUpdate={onDrawUpdate}
+					onDelete={onDrawDelete}
+					onRouteSave={onRouteSave}
+					onRouteAdd={(route) => setLocalRoutes((prev) => [...prev, route])}
+				/>
 				<GeolocateControl position="bottom-right" />
 				<NavigationControl position="bottom-right" visualizePitch={true} showZoom={true} showCompass={true} />
 
@@ -473,11 +578,74 @@ export const MapComponent = ({
 					/>
 				</Source>
 
+				<Source
+					id="saved-routes"
+					type="geojson"
+					data={{
+						type: 'FeatureCollection',
+						features:
+							localRoutes.map((route) => ({
+								type: 'Feature',
+								geometry: route.geometry,
+								properties: {
+									id: route.id,
+									name: route.name,
+									distance: route.distance,
+									type: 'drawn-route',
+								},
+							})) || [],
+					}}
+				>
+					<Layer
+						id="saved-routes-border"
+						type="line"
+						layout={{
+							'line-join': 'round',
+							'line-cap': 'round',
+						}}
+						paint={{
+							'line-color': '#7B00D9',
+							'line-width': ['case', ['==', ['get', 'id'], selectedRoute?.id || ''], 9, 3],
+							'line-opacity': 0.8,
+						}}
+					/>
+
+					<Layer
+						id="saved-routes-layer"
+						type="line"
+						layout={{
+							'line-join': 'round',
+							'line-cap': 'round',
+						}}
+						paint={{
+							'line-color': '#A020F0',
+							'line-width': ['case', ['==', ['get', 'id'], selectedRoute?.id || ''], 5, 3],
+							'line-opacity': 0.8,
+						}}
+					/>
+
+					<Layer
+						id="saved-routes-symbols"
+						type="symbol"
+						layout={{
+							'symbol-placement': 'line',
+							'text-field': '▶',
+							'text-size': 14,
+							'symbol-spacing': 50,
+							'text-keep-upright': false,
+						}}
+						paint={{
+							'text-color': '#7B00D9',
+							'text-opacity': 0.8,
+						}}
+					/>
+				</Source>
+
 				{activities.length > 0 &&
 					activities
 						.filter((activity) => selectedCategories.includes(categorizeActivity(activity.sport_type)))
 						.map((activity) => <AddMarker key={activity.id} activity={activity} />)}
-				{selectedActivityId && (
+				{hoverInfo && (
 					<Popup
 						longitude={hoverInfo.longitude}
 						latitude={hoverInfo.latitude}
@@ -485,9 +653,9 @@ export const MapComponent = ({
 						closeButton={false}
 						className="activity-info"
 					>
-						Name: {selectedActivityName}
+						Name: {hoverInfo.name}
 						<p> </p>
-						ID: {selectedActivityId}
+						ID: {hoverInfo.id}
 					</Popup>
 				)}
 			</Map>
