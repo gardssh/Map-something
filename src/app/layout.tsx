@@ -4,6 +4,7 @@ import './globals.css';
 import Provider from '@/app/context/client-provider';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
+import HelpButton from '@/components/HelpButton';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,7 +23,10 @@ export default async function RootLayout({
 				<link href="https://api.tiles.mapbox.com/mapbox-gl-js/v3.5.2/mapbox-gl.css" rel="stylesheet" />
 			</head>
 			<body className={inter.className}>
-				<Provider session={session}>{children}</Provider>
+				<Provider session={session}>
+					{children}
+					<HelpButton />
+				</Provider>
 			</body>
 		</html>
 	);

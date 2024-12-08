@@ -19,6 +19,7 @@ import { ACTIVITY_CATEGORIES, ActivityCategory, categorizeActivity } from '@/lib
 import { Activity } from '@/types/activity';
 import { DrawnRoute } from '@/types/route';
 import { Input } from '@/components/ui/input';
+import { Waypoint } from '@/types/waypoint';
 
 interface ElevationPoint {
 	distance: number; // distance in km
@@ -51,6 +52,8 @@ interface SideBarProps {
 	onRouteSelect?: (route: DrawnRoute | null) => void;
 	onRouteDelete?: (routeId: string) => void;
 	onRouteRename?: (routeId: string, newName: string) => void;
+	waypoints?: Waypoint[];
+	onWaypointDelete?: (waypointId: string) => void;
 }
 
 export default function SideBar({
@@ -66,6 +69,8 @@ export default function SideBar({
 	onRouteSelect,
 	onRouteDelete,
 	onRouteRename,
+	waypoints,
+	onWaypointDelete,
 }: SideBarProps) {
 	const [selectedView, setSelectedView] = useState<ViewType>('nearby');
 	const visibleActivities = activities.filter((activity: any) => visibleActivitiesId.includes(activity.id));
@@ -486,7 +491,34 @@ export default function SideBar({
 						<TabsContent value="waypoints" className="mt-4">
 							<div className="grow gap-2 overflow-y-auto">
 								<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Waypoints</h3>
-								<p className="text-muted-foreground">Coming soon</p>
+								{waypoints && waypoints.length > 0 ? (
+									waypoints.map((waypoint) => (
+										<Card key={waypoint.id} className="mb-2">
+											<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+												<div>
+													<CardTitle>{waypoint.name}</CardTitle>
+													<CardDescription>
+														{waypoint.coordinates[0].toFixed(6)}, {waypoint.coordinates[1].toFixed(6)}
+													</CardDescription>
+												</div>
+												<Button
+													variant="ghost"
+													size="icon"
+													className="h-8 w-8 p-0"
+													onClick={() => onWaypointDelete?.(waypoint.id)}
+												>
+													<Trash2 className="h-4 w-4" />
+													<span className="sr-only">Delete waypoint</span>
+												</Button>
+											</CardHeader>
+											<CardContent>
+												<p>Created: {new Date(waypoint.createdAt).toLocaleString()}</p>
+											</CardContent>
+										</Card>
+									))
+								) : (
+									<p className="text-muted-foreground">No waypoints yet</p>
+								)}
 							</div>
 						</TabsContent>
 					</Tabs>

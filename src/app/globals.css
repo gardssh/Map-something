@@ -68,10 +68,6 @@
   }
 }
 
-.mapboxgl-ctrl-group {
-    margin-bottom: 10px !important;
-}
-
 .mapboxgl-ctrl-group:last-child {
     margin-bottom: 0 !important;
 }

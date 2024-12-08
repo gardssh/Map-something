@@ -13,11 +13,13 @@ type DrawControlProps = {
 		trash?: boolean;
 	};
 	defaultMode?: string;
+	className?: string;
 	onCreate?: (evt: { features: any[] }) => void;
 	onUpdate?: (evt: { features: any[]; action: string }) => void;
 	onDelete?: (evt: { features: any[] }) => void;
 	onRouteSave?: (route: DrawnRoute) => void;
 	onRouteAdd?: (route: DrawnRoute) => void;
+	onModeChange?: (evt: { mode: string }) => void;
 };
 
 const drawStyles = [
@@ -45,12 +47,46 @@ const drawStyles = [
 	},
 ];
 
-async function getMatch(start: [number, number], end: [number, number]) {
-	const coordinates = `${start.join(',')};${end.join(',')}`;
+function distanceInMeters(coord1: [number, number], coord2: [number, number]) {
+	const lon1 = (coord1[0] * Math.PI) / 180;
+	const lat1 = (coord1[1] * Math.PI) / 180;
+	const lon2 = (coord2[0] * Math.PI) / 180;
+	const lat2 = (coord2[1] * Math.PI) / 180;
+	const R = 6371e3; // Earth's radius in meters
+	const x = (lon2 - lon1) * Math.cos((lat1 + lat2) / 2);
+	const y = lat2 - lat1;
+	return Math.sqrt(x * x + y * y) * R;
+}
+
+function createHybridRoute(original: [number, number][], matched: [number, number][]) {
+	const thresholdMeters = 50; // Adjust this value (in meters) based on your needs
+	let hybridRoute = [];
+	let matchedIndex = 0;
+
+	for (let i = 0; i < original.length; i++) {
+		if (matchedIndex < matched.length && distanceInMeters(original[i], matched[matchedIndex]) < thresholdMeters) {
+			hybridRoute.push(matched[matchedIndex]);
+			matchedIndex++;
+		} else {
+			hybridRoute.push(original[i]);
+		}
+	}
+
+	return hybridRoute;
+}
+
+async function getMatch(coordinates: [number, number][]) {
+	// Set radius for each coordinate (in meters)
+	const radiuses = coordinates.map(() => 50); // 50 meter radius for each point
+
+	const coords = coordinates.map((coord) => coord.join(',')).join(';');
+	const radiusStr = radiuses.join(';');
+
 	const query = await fetch(
-		`https://api.mapbox.com/matching/v5/mapbox/walking/${coordinates}?geometries=geojson&steps=true&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`,
+		`https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`,
 		{ method: 'GET' }
 	);
+
 	const response = await query.json();
 
 	if (response.code !== 'Ok') {
@@ -58,11 +94,12 @@ async function getMatch(start: [number, number], end: [number, number]) {
 		return null;
 	}
 
-	return response.matchings[0].geometry;
+	return response.matchings[0].geometry.coordinates;
 }
 
 export default function DrawControl(props: DrawControlProps) {
 	const [currentRoute, setCurrentRoute] = useState<[number, number][]>([]);
+	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 
 	const draw = useControl(
 		() =>
@@ -78,7 +115,13 @@ export default function DrawControl(props: DrawControlProps) {
 				...props,
 			}) as any,
 		({ map }) => {
-			const mapInstance = (map as any).getMap();
+			const mapInst = (map as any).getMap();
+			setMapInstance(mapInst);
+
+			const controlContainer = map.getContainer().querySelector('.mapboxgl-ctrl-top-right');
+			if (controlContainer && props.className) {
+				controlContainer.classList.add(props.className);
+			}
 
 			const processRoute = async (coords: [number, number][], featureId: string) => {
 				let finalRoute: [number, number][] = [];
@@ -86,10 +129,10 @@ export default function DrawControl(props: DrawControlProps) {
 				for (let i = 0; i < coords.length - 1; i++) {
 					const start = coords[i];
 					const end = coords[i + 1];
-					const matchedGeometry = await getMatch(start, end);
+					const matchedGeometry = await getMatch([start, end]);
 
 					if (matchedGeometry) {
-						finalRoute.push(...matchedGeometry.coordinates);
+						finalRoute.push(...matchedGeometry);
 					} else {
 						finalRoute.push(start, end);
 					}
@@ -120,15 +163,25 @@ export default function DrawControl(props: DrawControlProps) {
 				draw.delete(featureId);
 			};
 
-			mapInstance.on('draw.create', (e: any) => {
+			mapInst.on('draw.create', (e: any) => {
 				const feature = e.features[0];
 				const coords = feature.geometry.coordinates as [number, number][];
 				processRoute(coords, feature.id);
 			});
 
-			mapInstance.on('draw.delete', props.onDelete || (() => {}));
+			mapInst.on('draw.delete', props.onDelete || (() => {}));
 		}
 	);
+
+	useEffect(() => {
+		if (draw && mapInstance && props.onModeChange) {
+			const handler = (e: any) => props.onModeChange?.({ mode: e.mode });
+			mapInstance.on('draw.modechange', handler);
+			return () => {
+				mapInstance.off('draw.modechange', handler);
+			};
+		}
+	}, [draw, mapInstance, props.onModeChange]);
 
 	return null;
 }

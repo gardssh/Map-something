@@ -1,6 +1,11 @@
 'use client';
 import { Layers, Footprints, Bike, Waves, Snowflake, CircleHelp } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { createPortal } from 'react-dom';
 
 interface LayerOption {
@@ -18,34 +23,62 @@ interface LayersControlProps {
 	onCategoryToggle: (categories: string[]) => void;
 }
 
-export const LayersControl = ({ 
-	layers, 
-	activeLayers, 
+export const LayersControl = ({
+	layers,
+	activeLayers,
 	onLayerToggle,
 	selectedCategories,
-	onCategoryToggle 
+	onCategoryToggle,
 }: LayersControlProps) => {
-	const [isOpen, setIsOpen] = useState(false);
-	const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-	const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
-
 	const baseLayers = layers.filter(l => l.isBase);
 	const overlays = layers.filter(l => !l.isBase);
+	const [isOpen, setIsOpen] = useState(false);
+	const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
 
 	useEffect(() => {
 		const container = document.createElement('div');
-		document.body.appendChild(container);
-		setPortalContainer(container);
-		return () => {
-			document.body.removeChild(container);
-		};
-	}, []);
+		container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
+		const controlGroup = document.querySelector('.mapboxgl-ctrl-top-right');
+		if (controlGroup) {
+			controlGroup.appendChild(container);
 
-	const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-		const rect = e.currentTarget.getBoundingClientRect();
-		setButtonRect(rect);
-		setIsOpen(!isOpen);
-	};
+			// Add button to container
+			const button = document.createElement('button');
+			button.className = 'w-[29px] h-[29px] p-0 flex items-center justify-center bg-white cursor-pointer border-none';
+			button.innerHTML = `
+				<div class="flex items-center justify-center w-full h-full">
+					<svg 
+						width="18" 
+						height="18" 
+						viewBox="0 0 24 24" 
+						fill="none" 
+						stroke="currentColor" 
+						stroke-width="2" 
+						stroke-linecap="round" 
+						stroke-linejoin="round"
+						class="flex-shrink-0"
+					>
+						<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/>
+						<path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/>
+						<path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>
+					</svg>
+				</div>
+			`;
+			
+			const handleClick = () => {
+				setButtonRect(button.getBoundingClientRect());
+				setIsOpen(prev => !prev);
+			};
+			
+			button.addEventListener('click', handleClick);
+			container.appendChild(button);
+
+			return () => {
+					button.removeEventListener('click', handleClick);
+					controlGroup.removeChild(container);
+			};
+		}
+	}, []);
 
 	const sportCategories = [
 		{ id: 'Foot Sports', name: 'Foot Sports', icon: <Footprints className="h-4 w-4 mr-2" /> },
@@ -56,29 +89,13 @@ export const LayersControl = ({
 	];
 
 	return (
-		<div className="absolute bottom-[165px] right-[10px]">
-			<button
-				onClick={handleButtonClick}
-				className="mapboxgl-ctrl mapboxgl-ctrl-group"
-				
-				style={{
-					width: '29px',
-					height: '29px',
-					marginBottom: '8px',
-				}}
-			>
-				<div className="w-full h-full flex items-center justify-center">
-					<Layers className="h-[18px] w-[18px]" />
-				</div>
-			</button>
-
-			{isOpen && portalContainer && buttonRect && createPortal(
+		<>
+			{isOpen && buttonRect && (
 				<div 
 					className="fixed bg-white rounded-md shadow-lg p-4 min-w-[200px]"
 					style={{
-						right: window.innerWidth - buttonRect.left + 8,
-						bottom: window.innerHeight - buttonRect.bottom,
-						transform: 'translateY(0)',
+						right: window.innerWidth - buttonRect.left + 5,
+						top: buttonRect.top,
 						zIndex: 9999,
 					}}
 				>
@@ -144,9 +161,8 @@ export const LayersControl = ({
 							))}
 						</div>
 					</div>
-				</div>,
-				portalContainer
+				</div>
 			)}
-		</div>
+		</>
 	);
 };

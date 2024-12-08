@@ -8,6 +8,7 @@ import activities from '../../public/aktiviteter.json';
 import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
 import type { DrawnRoute } from '@/types/route';
+import type { Waypoint } from '@/types/waypoint';
 
 export default function Home() {
 	const { data: session, status } = useSession();
@@ -16,6 +17,7 @@ export default function Home() {
 	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 	const [routes, setRoutes] = useState<DrawnRoute[]>([]);
 	const [selectedRoute, setSelectedRoute] = useState<DrawnRoute | null>(null);
+	const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
 
 	useEffect(() => {
 		// Load routes on mount
@@ -173,6 +175,59 @@ export default function Home() {
 		}
 	};
 
+	const handleWaypointSave = async (newWaypoint: Waypoint) => {
+		try {
+			// First, get the current waypoints from the file
+			const currentResponse = await fetch('/waypoints.json');
+			const currentData = await currentResponse.json();
+			const currentWaypoints = currentData.waypoints || [];
+
+			// Add the new waypoint to the existing waypoints
+			const updatedWaypoints = [...currentWaypoints, newWaypoint];
+
+			// Save the updated waypoints
+			const response = await fetch('/api/waypoints', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ waypoints: updatedWaypoints }),
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to save waypoint');
+			}
+
+			// Update state with all waypoints
+			setWaypoints(updatedWaypoints);
+		} catch (error) {
+			console.error('Error saving waypoint:', error);
+		}
+	};
+
+	const handleWaypointDelete = async (waypointId: string) => {
+		try {
+			const currentResponse = await fetch('/waypoints.json');
+			const currentData = await currentResponse.json();
+			
+			const updatedWaypoints = currentData.waypoints.filter(
+				(waypoint: Waypoint) => waypoint.id !== waypointId
+			);
+
+			const response = await fetch('/api/waypoints', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ waypoints: updatedWaypoints }),
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to delete waypoint');
+			}
+
+			setWaypoints(updatedWaypoints);
+		} catch (error) {
+			console.error('Error deleting waypoint:', error);
+		}
+	};
+
 	return (
 		<>
 			<main className="h-screen w-screen">
@@ -190,6 +245,8 @@ export default function Home() {
 						onRouteSelect={handleRouteSelect}
 						onRouteDelete={handleRouteDelete}
 						onRouteRename={handleRouteRename}
+						waypoints={waypoints}
+						onWaypointDelete={handleWaypointDelete}
 					/>
 					<MapComponent
 						activities={filteredActivities}
@@ -200,6 +257,8 @@ export default function Home() {
 						onRouteSave={handleRouteSave}
 						onRouteSelect={handleRouteSelect}
 						routes={routes}
+						waypoints={waypoints}
+						onWaypointSave={handleWaypointSave}
 					/>
 				</div>
 			</main>

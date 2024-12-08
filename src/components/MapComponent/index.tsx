@@ -1,9 +1,9 @@
 'use client';
 import { useRef, useCallback, useState, useEffect } from 'react';
-import Map, { GeolocateControl, NavigationControl, Source, Layer, Popup } from 'react-map-gl';
+import Map, { GeolocateControl, NavigationControl, Source, Layer, Popup, Marker } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import { categorizeActivity, getActivityColor } from '@/lib/utils';
-import type { MapRef, MapMouseEvent } from 'react-map-gl';
+import type { MapRef, MapMouseEvent, MapLayerMouseEvent } from 'react-map-gl';
 import AddMarker from './AddMarker';
 import { LngLatBounds } from 'mapbox-gl';
 import { LayersControl } from './LayersControl';
@@ -12,6 +12,10 @@ import DrawControl from './DrawControl';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import type { DrawnRoute } from '@/types/route';
 import type { LineString } from 'geojson';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import type { Waypoint } from '@/types/waypoint';
 
 // Add a helper function to handle bounds
 const handleBounds = (mapRef: React.RefObject<MapRef>, coordinates: [number, number][]) => {
@@ -40,6 +44,8 @@ export const MapComponent = ({
 	onRouteSelect,
 	onRouteSave,
 	routes,
+	waypoints,
+	onWaypointSave,
 }: {
 	activities: any[];
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
@@ -49,6 +55,8 @@ export const MapComponent = ({
 	onRouteSelect?: (route: DrawnRoute | null) => void;
 	onRouteSave?: (route: DrawnRoute) => void;
 	routes?: DrawnRoute[];
+	waypoints?: Waypoint[];
+	onWaypointSave?: (waypoint: Waypoint) => void;
 }) => {
 	const mapRef = useRef<MapRef>();
 	const [hoverInfo, setHoverInfo] = useState<any>(null);
@@ -62,6 +70,11 @@ export const MapComponent = ({
 	]);
 	const [selectedRoute, setSelectedRoute] = useState<DrawnRoute | null>(null);
 	const [localRoutes, setLocalRoutes] = useState<DrawnRoute[]>(routes || []);
+	const [newWaypointCoords, setNewWaypointCoords] = useState<[number, number] | null>(null);
+	const [newWaypointName, setNewWaypointName] = useState('');
+	const [showWaypointDialog, setShowWaypointDialog] = useState(false);
+	const [drawMode, setDrawMode] = useState<string | null>(null);
+	const [isDrawing, setIsDrawing] = useState(false);
 
 	const availableLayers = [
 		{ id: 'default', name: 'Default Map', isBase: true },
@@ -69,6 +82,7 @@ export const MapComponent = ({
 		{ id: 'norge-topo', name: 'Norge Topo', isBase: true },
 		{ id: 'bratthet', name: 'Slope Angle', isBase: false },
 		{ id: 'snoskred', name: 'Snøskred Utløp', isBase: false },
+		{ id: 'custom-tileset', name: 'Heatmap 2000m Norge', isBase: false },
 	];
 
 	const handleLayerToggle = (layerId: string, isVisible: boolean) => {
@@ -100,6 +114,8 @@ export const MapComponent = ({
 							attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>',
 						},
 					},
+					glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}',
+					sprite: 'mapbox://sprites/mapbox/basic-v8',
 					layers: [
 						{
 							id: 'norge-topo-layer',
@@ -176,6 +192,12 @@ export const MapComponent = ({
 
 	const onHover = useCallback(
 		(event: any) => {
+			// Don't show hover info when drawing
+			if (isDrawing) {
+				setHoverInfo(null);
+				return;
+			}
+
 			const feature = event.features && event.features[0];
 
 			if (!feature) {
@@ -208,21 +230,21 @@ export const MapComponent = ({
 				}
 			}
 		},
-		[activities, routes]
+		[activities, routes, isDrawing]
 	);
 
 	const selectedActivityId = (hoverInfo && hoverInfo.id) || '';
 	const selectedActivityName = (hoverInfo && hoverInfo.name) || '';
 
 	const onClick = useCallback(
-		(event: MapMouseEvent) => {
-			//@ts-ignore
-			const features = event.features;
+		(event: MapLayerMouseEvent) => {
+			const features = event.features || [];
 			console.log('Clicked features:', features);
 
-			if (features?.length > 0) {
+			if (features.length > 0) {
 				const feature = features[0];
-				console.log('Selected feature:', feature);
+				const properties = feature?.properties;
+				if (!feature || !properties) return;
 
 				// Handle activity clicks
 				if (typeof feature.id === 'number') {
@@ -234,10 +256,10 @@ export const MapComponent = ({
 						handleBounds(mapRef as React.RefObject<MapRef>, coordinates);
 					}
 				}
-				// Handle drawn route clicks - check for layer.id instead of feature.id
+				// Handle drawn route clicks
 				else if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
 					console.log('Route properties:', feature.properties);
-					const route = routes?.find((r) => r.id === feature.properties.id);
+					const route = routes?.find((r) => r.id === properties.id);
 					console.log('Found route:', route);
 
 					if (route) {
@@ -307,6 +329,27 @@ export const MapComponent = ({
 		setLocalRoutes(routes || []);
 	}, [routes]);
 
+	// Add this to track draw mode changes
+	const onDrawModeChange = useCallback(({ mode }: { mode: string }) => {
+		setDrawMode(mode);
+		setIsDrawing(mode === 'draw_line_string');
+	}, []);
+
+	const handleWaypointSave = useCallback(() => {
+		if (newWaypointCoords && newWaypointName && onWaypointSave) {
+			const waypoint: Waypoint = {
+				id: crypto.randomUUID(),
+				name: newWaypointName,
+				coordinates: newWaypointCoords,
+				createdAt: new Date().toISOString(),
+			};
+			onWaypointSave(waypoint);
+			setNewWaypointName('');
+			setNewWaypointCoords(null);
+			setShowWaypointDialog(false);
+		}
+	}, [newWaypointCoords, newWaypointName, onWaypointSave]);
+
 	return (
 		<div className="h-full w-full">
 			<Map
@@ -322,17 +365,32 @@ export const MapComponent = ({
 				mapStyle="mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm"
 				onMoveEnd={() => updateVisibleActivitiesIds()}
 				onMouseMove={onHover}
-				onClick={onClick}
-				interactiveLayerIds={[
-					'foot-sports',
-					'cycle-sports',
-					'water-sports',
-					'winter-sports',
-					'other-sports',
-					'unknown-sports',
-					'saved-routes-layer',
-					'saved-routes-border',
-				]}
+				onClick={(e) => {
+					if (!isDrawing) {
+						onClick(e);
+					}
+				}}
+				onContextMenu={(e) => {
+					e.preventDefault();
+					if (!drawMode) {
+						setNewWaypointCoords([e.lngLat.lng, e.lngLat.lat]);
+						setShowWaypointDialog(true);
+					}
+				}}
+				interactiveLayerIds={
+					isDrawing
+						? []
+						: [
+								'foot-sports',
+								'cycle-sports',
+								'water-sports',
+								'winter-sports',
+								'other-sports',
+								'unknown-sports',
+								'saved-routes-layer',
+								'saved-routes-border',
+							]
+				}
 				renderWorldCopies={false}
 				maxTileCacheSize={50}
 				trackResize={false}
@@ -349,22 +407,30 @@ export const MapComponent = ({
 				}}
 				terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
 			>
+				<GeolocateControl position="top-right" />
+				<NavigationControl position="top-right" visualizePitch={true} showZoom={true} showCompass={true} />
+				<LayersControl
+					layers={availableLayers}
+					activeLayers={activeLayers}
+					onLayerToggle={handleLayerToggle}
+					selectedCategories={selectedCategories}
+					onCategoryToggle={setSelectedCategories}
+				/>
+
 				<DrawControl
-					position="top-left"
+					position="bottom-right"
 					displayControlsDefault={false}
 					controls={{
 						line_string: true,
-						trash: true,
+						trash: false,
 					}}
-					//defaultMode="draw_line_string" // will use the one specified in the DrawControl component
 					onCreate={onDrawCreate}
 					onUpdate={onDrawUpdate}
 					onDelete={onDrawDelete}
 					onRouteSave={onRouteSave}
 					onRouteAdd={(route) => setLocalRoutes((prev) => [...prev, route])}
+					onModeChange={onDrawModeChange}
 				/>
-				<GeolocateControl position="bottom-right" />
-				<NavigationControl position="bottom-right" visualizePitch={true} showZoom={true} showCompass={true} />
 
 				<Source
 					id="mapbox-dem"
@@ -390,6 +456,40 @@ export const MapComponent = ({
 					]}
 				>
 					<Layer id={'snoskred'} type="raster" paint={{ 'raster-opacity': 0.6 }} layout={{ visibility: 'none' }} />
+				</Source>
+
+				<Source id="custom-tileset" type="vector" url="mapbox://gardsh.dppfxauy">
+					<Layer
+						id="custom-tileset-layer"
+						type="line"
+						source-layer="fixedmore-5dbb12"
+						paint={{
+							'line-color': '#9333EA',
+							'line-width': 2,
+							'line-opacity': 0.2,
+							'line-blur': 1,
+						}}
+						layout={{
+							visibility: activeLayers.includes('custom-tileset') ? 'visible' : 'none',
+							'line-join': 'round',
+							'line-cap': 'round',
+						}}
+					/>
+					<Layer
+						id="custom-tileset-layer-overlap"
+						type="line"
+						source-layer="fixedmore-5dbb12"
+						paint={{
+							'line-color': '#6B21A8',
+							'line-width': 2,
+							'line-opacity': 0.1,
+						}}
+						layout={{
+							visibility: activeLayers.includes('custom-tileset') ? 'visible' : 'none',
+							'line-join': 'round',
+							'line-cap': 'round',
+						}}
+					/>
 				</Source>
 
 				<Source
@@ -645,7 +745,7 @@ export const MapComponent = ({
 					activities
 						.filter((activity) => selectedCategories.includes(categorizeActivity(activity.sport_type)))
 						.map((activity) => <AddMarker key={activity.id} activity={activity} />)}
-				{hoverInfo && (
+				{!isDrawing && hoverInfo && (
 					<Popup
 						longitude={hoverInfo.longitude}
 						latitude={hoverInfo.latitude}
@@ -658,14 +758,35 @@ export const MapComponent = ({
 						ID: {hoverInfo.id}
 					</Popup>
 				)}
+				{waypoints?.map((waypoint) => (
+					<Marker
+						key={waypoint.id}
+						longitude={waypoint.coordinates[0]}
+						latitude={waypoint.coordinates[1]}
+						color="#9333ea" // Purple to match the route color scheme
+					/>
+				))}
 			</Map>
-			<LayersControl
-				layers={availableLayers}
-				activeLayers={activeLayers}
-				onLayerToggle={handleLayerToggle}
-				selectedCategories={selectedCategories}
-				onCategoryToggle={setSelectedCategories}
-			/>
+			<Dialog open={showWaypointDialog} onOpenChange={setShowWaypointDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Add Waypoint</DialogTitle>
+					</DialogHeader>
+					<div className="grid gap-4 py-4">
+						<Input
+							placeholder="Waypoint name"
+							value={newWaypointName}
+							onChange={(e) => setNewWaypointName(e.target.value)}
+						/>
+					</div>
+					<DialogFooter>
+						<Button variant="ghost" onClick={() => setShowWaypointDialog(false)}>
+							Cancel
+						</Button>
+						<Button onClick={handleWaypointSave}>Save</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 };
