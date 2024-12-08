@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useCallback, useState, useEffect } from 'react';
-import Map, { GeolocateControl, NavigationControl, Source, Layer, Popup, Marker } from 'react-map-gl';
+import Map, { GeolocateControl, NavigationControl, Source, Layer, Popup, Marker, MapLayerTouchEvent, Point } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import { categorizeActivity, getActivityColor } from '@/lib/utils';
 import type { MapRef, MapMouseEvent, MapLayerMouseEvent } from 'react-map-gl';
@@ -192,8 +192,8 @@ export const MapComponent = ({
 
 	const onHover = useCallback(
 		(event: any) => {
-			// Don't show hover info when drawing
-			if (isDrawing) {
+			// Don't show hover info when drawing or on touch devices
+			if (isDrawing || 'ontouchstart' in window) {
 				setHoverInfo(null);
 				return;
 			}
@@ -370,6 +370,39 @@ export const MapComponent = ({
 						onClick(e);
 					}
 				}}
+				onTouchEnd={(e: MapLayerTouchEvent) => {
+					if (!isDrawing && e.target && mapRef.current) {
+						const map = mapRef.current.getMap();
+						const point = map.project(e.lngLat);
+						
+						const features = map.queryRenderedFeatures(point, {
+							layers: [
+								'foot-sports',
+								'cycle-sports',
+								'water-sports',
+								'winter-sports',
+								'other-sports',
+								'unknown-sports',
+								'saved-routes-layer',
+								'saved-routes-border',
+							]
+						});
+
+						if (features && features.length > 0) {
+							const mouseEvent = new MouseEvent('click');
+							const clickEvent = {
+								...e,
+								features,
+								type: 'click',
+								originalEvent: mouseEvent,
+								preventDefault: () => {},
+								stopPropagation: () => {},
+							} as unknown as MapLayerMouseEvent;
+							
+							onClick(clickEvent);
+						}
+					}
+				}}
 				onContextMenu={(e) => {
 					e.preventDefault();
 					if (!drawMode) {
@@ -377,6 +410,8 @@ export const MapComponent = ({
 						setShowWaypointDialog(true);
 					}
 				}}
+				touchZoomRotate={true}
+				touchPitch={true}
 				interactiveLayerIds={
 					isDrawing
 						? []
