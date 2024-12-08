@@ -11,13 +11,17 @@ export default function HelpButton() {
 				<Button
 					variant="outline"
 					size="icon"
-					className="mapboxgl-ctrl mapboxgl-ctrl-group"
-					style={{ position: 'absolute', bottom: '50px', right: '10px', width: '29px', height: '29px' }}
+					className="mapboxgl-ctrl mapboxgl-ctrl-group absolute bottom-[50px] right-[10px] w-[40px] h-[40px] md:w-[29px] md:h-[29px]"
 				>
-					<QuestionMarkCircledIcon className="h-4 w-4" />
+					<QuestionMarkCircledIcon className="h-6 w-6 md:h-4 md:w-4" />
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent className="w-[686px] p-6 space-y-6" side="left" align="end">
+			<PopoverContent 
+				className="w-[80vw] md:w-[686px] p-6 space-y-6 ml-4" 
+				side="left" 
+				align="end"
+				sideOffset={20}
+			>
 				<h2 className="text-xl font-semibold">Hjelp</h2>
 
 				<p className="text-sm">
@@ -54,7 +58,7 @@ export default function HelpButton() {
 				</p>
 
 				<p className="text-sm italic">
-					<strong>PS2:</strong> Det er ikke gratis å hverken drive eller bygge dette kartet. {' '}
+					<strong>PS2:</strong> Det er ikke gratis å hverken drive eller bygge dette kartet.{' '}
 					<a href="https://buymeacoffee.com/gardsh" target="_blank" rel="noopener noreferrer" className="underline">
 						Kjøp meg gjerne en kaffe
 					</a>{' '}
