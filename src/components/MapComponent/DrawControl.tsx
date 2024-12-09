@@ -76,25 +76,31 @@ function createHybridRoute(original: [number, number][], matched: [number, numbe
 }
 
 async function getMatch(coordinates: [number, number][]) {
-	// Set radius for each coordinate (in meters)
-	const radiuses = coordinates.map(() => 50); // 50 meter radius for each point
+	try {
+		// Set radius for each coordinate (in meters)
+		const radiuses = coordinates.map(() => 50);
+		const coords = coordinates.map((coord) => coord.join(',')).join(';');
+		const radiusStr = radiuses.join(';');
+		
+		const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`;
+		
+		console.log('Matching API URL:', url.replace(process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN!, 'HIDDEN'));
+		
+		const query = await fetch(url);
+		const response = await query.json();
 
-	const coords = coordinates.map((coord) => coord.join(',')).join(';');
-	const radiusStr = radiuses.join(';');
+		console.log('Matching API Response:', response);
 
-	const query = await fetch(
-		`https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`,
-		{ method: 'GET' }
-	);
+		if (response.code !== 'Ok') {
+			console.error('Matching API Error:', response);
+			return null;
+		}
 
-	const response = await query.json();
-
-	if (response.code !== 'Ok') {
-		console.error(`${response.code} - ${response.message}`);
+		return response.matchings[0].geometry.coordinates;
+	} catch (error) {
+		console.error('Error in getMatch:', error);
 		return null;
 	}
-
-	return response.matchings[0].geometry.coordinates;
 }
 
 export default function DrawControl(props: DrawControlProps) {
