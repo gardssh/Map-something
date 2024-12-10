@@ -28,6 +28,15 @@ export default function Home() {
 				setRoutes(data.routes);
 			})
 			.catch((error) => console.error('Error loading routes:', error));
+
+		// Load waypoints on mount
+		fetch('/waypoints.json')
+			.then((res) => res.json())
+			.then((data) => {
+				console.log('Loaded waypoints:', data.waypoints);
+				setWaypoints(data.waypoints);
+			})
+			.catch((error) => console.error('Error loading waypoints:', error));
 	}, []);
 
 	const filteredActivities = activities;
@@ -231,7 +240,7 @@ export default function Home() {
 	return (
 		<>
 			<main className="h-screen w-screen">
-				<div className="flex h-screen relative">
+				<div className="flex h-screen">
 					<SideBar
 						activities={filteredActivities}
 						status={status}
@@ -248,18 +257,20 @@ export default function Home() {
 						waypoints={waypoints}
 						onWaypointDelete={handleWaypointDelete}
 					/>
-					<MapComponent
-						activities={filteredActivities}
-						setVisibleActivitiesId={setVisibleActivitiesId}
-						selectedRouteId={selectedRouteId}
-						setSelectedRouteId={setSelectedRouteId}
-						onMapLoad={(map) => setMapInstance(map)}
-						onRouteSave={handleRouteSave}
-						onRouteSelect={handleRouteSelect}
-						routes={routes}
-						waypoints={waypoints}
-						onWaypointSave={handleWaypointSave}
-					/>
+					<div className="flex-1">
+						<MapComponent
+							activities={filteredActivities}
+							setVisibleActivitiesId={setVisibleActivitiesId}
+							selectedRouteId={selectedRouteId}
+							setSelectedRouteId={setSelectedRouteId}
+							onMapLoad={(map) => setMapInstance(map)}
+							onRouteSave={handleRouteSave}
+							onRouteSelect={handleRouteSelect}
+							routes={routes}
+							waypoints={waypoints}
+							onWaypointSave={handleWaypointSave}
+						/>
+					</div>
 				</div>
 			</main>
 		</>

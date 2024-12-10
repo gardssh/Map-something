@@ -195,24 +195,20 @@ export default function SideBar({
 				className={`
 					fixed left-4 top-4 z-50 md:hidden
 					transition-all duration-300
-					${isOpen ? 'translate-x-[19rem]' : 'translate-x-0'}
+					${isOpen ? 'translate-x-[23rem]' : 'translate-x-0'}
 					bg-background/95 shadow-md hover:bg-background
 				`}
 				onClick={() => setIsOpen(!isOpen)}
 			>
 				{isOpen ? <ArrowLeft className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
 			</Button>
-			<div 
-				className={`
-					fixed inset-y-0 left-0 
-					w-80 md:w-1/3 
-					transform transition-transform duration-300 ease-in-out
-					${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-					bg-background border-r
-					flex flex-col gap-4 
-					overflow-hidden
-					z-40
-				`}
+			<div
+				className={cn(
+					'bg-background w-96 border-r h-full overflow-hidden transition-transform duration-300 ease-in-out',
+					'md:relative md:translate-x-0',
+					'absolute -translate-x-full z-50',
+					isOpen && 'translate-x-0'
+				)}
 			>
 				{selectedRoute ? (
 					<div className="grow p-4 flex flex-col gap-4 relativeoverflow-y-auto">
