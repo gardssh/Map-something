@@ -85,21 +85,25 @@ async function getMatch(coordinates: [number, number][]) {
 		
 		const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`;
 		
-		console.log('Matching API URL:', url.replace(process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN!, 'HIDDEN'));
-		
+		console.log('Attempting map matching...');
 		const query = await fetch(url);
+		
+		if (!query.ok) {
+			console.error('Map matching API error:', query.status, await query.text());
+			return null;
+		}
+
 		const response = await query.json();
+		console.log('Map matching response:', response);
 
-		console.log('Matching API Response:', response);
-
-		if (response.code !== 'Ok') {
-			console.error('Matching API Error:', response);
+		if (response.code !== 'Ok' || !response.matchings?.length) {
+			console.error('Invalid matching response:', response);
 			return null;
 		}
 
 		return response.matchings[0].geometry.coordinates;
 	} catch (error) {
-		console.error('Error in getMatch:', error);
+		console.error('Map matching error:', error);
 		return null;
 	}
 }
