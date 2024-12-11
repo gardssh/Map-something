@@ -3,26 +3,23 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  // Protect API routes that require authentication
-  if (req.nextUrl.pathname.startsWith('/api/') && !session) {
-    return NextResponse.json(
-      { error: 'Authentication required' },
-      { status: 401 }
-    )
+  // Skip middleware for webpack-hmr
+  if (req.url.includes('webpack-hmr') || req.url.includes('_next/webpack')) {
+    return NextResponse.next()
   }
 
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req, res })
+  await supabase.auth.getSession()
   return res
 }
 
 export const config = {
   matcher: [
-    '/api/:path*',  // Only run middleware on API routes
+    // Only match specific paths we want to protect
+    '/dashboard/:path*',
+    '/profile/:path*',
+    '/api/protected/:path*',
+    '/',
   ],
 } 
