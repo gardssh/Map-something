@@ -85,7 +85,7 @@ async function getMatch(coordinates: [number, number][]) {
 		
 		const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`;
 		
-		console.log('Attempting map matching...');
+		console.log('Attempting map matching with URL:', url);
 		const query = await fetch(url);
 		
 		if (!query.ok) {
