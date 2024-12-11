@@ -78,6 +78,13 @@ function createHybridRoute(original: [number, number][], matched: [number, numbe
 
 async function getMatch(coordinates: [number, number][]) {
 	try {
+		// Log environment and initial data
+		console.log('Environment:', {
+			isDev: process.env.NODE_ENV === 'development',
+			mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN?.slice(0, 10) + '...',
+		});
+		console.log('Coordinates to match:', coordinates);
+
 		// Set radius for each coordinate (in meters)
 		const radiuses = coordinates.map(() => 50);
 		const coords = coordinates.map((coord) => coord.join(',')).join(';');
@@ -86,24 +93,46 @@ async function getMatch(coordinates: [number, number][]) {
 		const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`;
 		
 		console.log('Attempting map matching with URL:', url);
+		
+		// Log the request details
+		const requestStart = Date.now();
 		const query = await fetch(url);
+		console.log('Request completed in:', Date.now() - requestStart, 'ms');
+		console.log('Response status:', query.status);
 		
 		if (!query.ok) {
-			console.error('Map matching API error:', query.status, await query.text());
+			const errorText = await query.text();
+			console.error('Map matching API error:', {
+				status: query.status,
+				statusText: query.statusText,
+				error: errorText,
+				headers: Object.fromEntries(query.headers.entries()),
+			});
 			return null;
 		}
 
 		const response = await query.json();
-		console.log('Map matching response:', response);
+		console.log('Map matching response:', JSON.stringify(response, null, 2));
 
 		if (response.code !== 'Ok' || !response.matchings?.length) {
-			console.error('Invalid matching response:', response);
+			console.error('Invalid matching response:', {
+				code: response.code,
+				hasMatchings: !!response.matchings,
+				matchingsLength: response.matchings?.length,
+				fullResponse: response,
+			});
 			return null;
 		}
 
-		return response.matchings[0].geometry.coordinates;
+		const matchedCoordinates = response.matchings[0].geometry.coordinates;
+		console.log('Successfully matched coordinates:', matchedCoordinates);
+		return matchedCoordinates;
 	} catch (error) {
-		console.error('Map matching error:', error);
+		console.error('Map matching error:', {
+			error,
+			message: error instanceof Error ? error.message : 'Unknown error',
+			stack: error instanceof Error ? error.stack : undefined,
+		});
 		return null;
 	}
 }
@@ -129,22 +158,35 @@ export default function DrawControl(props: DrawControlProps) {
 			const mapInst = (map as any).getMap();
 			setMapInstance(mapInst);
 
+			console.log('DrawControl initialized with props:', {
+				controls: props.controls,
+				userId: props.userId,
+				position: props.position,
+			});
+
 			const controlContainer = map.getContainer().querySelector('.mapboxgl-ctrl-top-right');
 			if (controlContainer && props.className) {
 				controlContainer.classList.add(props.className);
 			}
 
 			const processRoute = async (coords: [number, number][], featureId: string) => {
+				console.log('Processing route:', {
+					coordsLength: coords.length,
+					featureId,
+					firstCoord: coords[0],
+					lastCoord: coords[coords.length - 1],
+				});
+
 				let finalRoute: [number, number][] = [];
 
 				try {
-					// Try to match the entire route at once first
 					const matchedGeometry = await getMatch(coords);
 					
 					if (matchedGeometry && matchedGeometry.length > 0) {
+						console.log('Route matched successfully');
 						finalRoute = matchedGeometry;
 					} else {
-						// Fallback: use original coordinates if matching fails
+						console.log('Using original coordinates as fallback');
 						finalRoute = coords;
 					}
 
@@ -160,11 +202,22 @@ export default function DrawControl(props: DrawControlProps) {
 						distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
 					};
 
+					console.log('Saving new route:', {
+						routeId: newRoute.id,
+						coordinates: finalRoute.length,
+						distance: newRoute.distance,
+					});
+
 					props.onRouteSave?.(newRoute);
 					props.onRouteAdd?.(newRoute);
 					draw.delete(featureId);
 				} catch (error) {
-					console.error('Error processing route:', error);
+					console.error('Error processing route:', {
+						error,
+						message: error instanceof Error ? error.message : 'Unknown error',
+						coords: coords.length,
+					});
+					
 					// Still save the original route if processing fails
 					const newRoute: DrawnRoute = {
 						id: `route-${Date.now()}`,
@@ -184,12 +237,20 @@ export default function DrawControl(props: DrawControlProps) {
 			};
 
 			mapInst.on('draw.create', (e: any) => {
+				console.log('Draw create event:', {
+					features: e.features,
+					type: e.type,
+				});
 				const feature = e.features[0];
 				const coords = feature.geometry.coordinates as [number, number][];
+				
 				processRoute(coords, feature.id);
 			});
 
-			mapInst.on('draw.delete', props.onDelete || (() => {}));
+			mapInst.on('draw.delete', (e: any) => {
+				console.log('Draw delete event:', e);
+				props.onDelete?.(e);
+			});
 		}
 	);
 
