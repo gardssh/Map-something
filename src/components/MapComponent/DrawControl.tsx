@@ -133,42 +133,50 @@ export default function DrawControl(props: DrawControlProps) {
 			const processRoute = async (coords: [number, number][], featureId: string) => {
 				let finalRoute: [number, number][] = [];
 
-				for (let i = 0; i < coords.length - 1; i++) {
-					const start = coords[i];
-					const end = coords[i + 1];
-					const matchedGeometry = await getMatch([start, end]);
-
-					if (matchedGeometry) {
-						finalRoute.push(...matchedGeometry);
+				try {
+					// Try to match the entire route at once first
+					const matchedGeometry = await getMatch(coords);
+					
+					if (matchedGeometry && matchedGeometry.length > 0) {
+						finalRoute = matchedGeometry;
 					} else {
-						finalRoute.push(start, end);
+						// Fallback: use original coordinates if matching fails
+						finalRoute = coords;
 					}
+
+					const newRoute: DrawnRoute = {
+						id: `route-${Date.now()}`,
+						name: `Route ${new Date().toLocaleDateString()}`,
+						user_id: props.userId,
+						geometry: {
+							type: 'LineString',
+							coordinates: finalRoute,
+						},
+						created_at: new Date().toISOString(),
+						distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
+					};
+
+					props.onRouteSave?.(newRoute);
+					props.onRouteAdd?.(newRoute);
+					draw.delete(featureId);
+				} catch (error) {
+					console.error('Error processing route:', error);
+					// Still save the original route if processing fails
+					const newRoute: DrawnRoute = {
+						id: `route-${Date.now()}`,
+						name: `Route ${new Date().toLocaleDateString()}`,
+						user_id: props.userId,
+						geometry: {
+							type: 'LineString',
+							coordinates: coords,
+						},
+						created_at: new Date().toISOString(),
+						distance: turf.length(turf.lineString(coords), { units: 'kilometers' }),
+					};
+					props.onRouteSave?.(newRoute);
+					props.onRouteAdd?.(newRoute);
+					draw.delete(featureId);
 				}
-
-				// Remove duplicate points
-				finalRoute = finalRoute.filter(
-					(point, index, self) => index === 0 || !turf.booleanEqual(turf.point(point), turf.point(self[index - 1]))
-				);
-
-				setCurrentRoute(finalRoute);
-
-				const newRoute: DrawnRoute = {
-					id: `route-${Date.now()}`,
-					name: `Route ${new Date().toLocaleDateString()}`,
-					user_id: props.userId,
-					geometry: {
-						type: 'LineString',
-						coordinates: finalRoute,
-					},
-					created_at: new Date().toISOString(),
-					distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
-				};
-
-				props.onRouteSave?.(newRoute);
-				props.onRouteAdd?.(newRoute);
-
-				// Delete the original drawn feature
-				draw.delete(featureId);
 			};
 
 			mapInst.on('draw.create', (e: any) => {

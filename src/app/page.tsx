@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { MapComponent } from '@/components/MapComponent';
-import { useAuth } from "@/contexts/AuthContext";
-import AuthComponent from "@/components/Auth/AuthComponent";
-import { Button } from "@/components/ui/button";
+import { useAuth } from '@/contexts/AuthContext';
+import AuthComponent from '@/components/Auth/AuthComponent';
+import { Button } from '@/components/ui/button';
 import SideBar from '@/components/SideBar';
 import activities from '../../public/aktiviteter.json';
 import { LngLatBounds } from 'mapbox-gl';
@@ -23,24 +23,26 @@ export default function Home() {
 	const [isOpen, setIsOpen] = useState(false);
 
 	useEffect(() => {
-		// Load routes on mount
-		fetch('/api/routes')
-			.then((res) => res.json())
-			.then((data) => {
-				console.log('Loaded routes:', data.routes);
-				setRoutes(data.routes || []);
-			})
-			.catch((error) => console.error('Error loading routes:', error));
+		if (user) {
+			// Load routes
+			fetch('/api/routes')
+				.then((res) => res.json())
+				.then((data) => {
+					console.log('Loaded routes:', data.routes);
+					setRoutes(data.routes || []);
+				})
+				.catch((error) => console.error('Error loading routes:', error));
 
-		// Load waypoints on mount
-		fetch('/api/waypoints')
-			.then((res) => res.json())
-			.then((data) => {
-				console.log('Loaded waypoints:', data.waypoints);
-				setWaypoints(data.waypoints || []);
-			})
-			.catch((error) => console.error('Error loading waypoints:', error));
-	}, []);
+			// Load waypoints
+			fetch('/api/waypoints')
+				.then((res) => res.json())
+				.then((data) => {
+					console.log('Loaded waypoints:', data.waypoints);
+					setWaypoints(data.waypoints || []);
+				})
+				.catch((error) => console.error('Error loading waypoints:', error));
+		}
+	}, [user]);
 
 	const filteredActivities = activities;
 	const currentActivity = activities.find((activity) => activity.id === selectedRouteId) || null;
@@ -78,7 +80,7 @@ export default function Home() {
 			const response = await fetch('/api/routes', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(newRoute),
+				body: JSON.stringify(newRoute),
 			});
 
 			if (!response.ok) {
@@ -132,7 +134,7 @@ export default function Home() {
 				throw new Error('Failed to delete route');
 			}
 
-			setRoutes(routes.filter(route => route.id !== routeId));
+			setRoutes(routes.filter((route) => route.id !== routeId));
 		} catch (error) {
 			console.error('Error deleting route:', error);
 		}
@@ -150,9 +152,7 @@ export default function Home() {
 				throw new Error('Failed to rename route');
 			}
 
-			setRoutes(routes.map(route => 
-				route.id === routeId ? { ...route, name: newName } : route
-			));
+			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, name: newName } : route)));
 		} catch (error) {
 			console.error('Error renaming route:', error);
 		}
@@ -176,7 +176,7 @@ export default function Home() {
 			if (!getResponse.ok) {
 				throw new Error('Failed to fetch updated waypoints');
 			}
-			
+
 			const data = await getResponse.json();
 			setWaypoints(data.waypoints || []);
 		} catch (error) {
@@ -197,7 +197,7 @@ export default function Home() {
 				throw new Error('Failed to delete waypoint');
 			}
 
-			setWaypoints(waypoints.filter(waypoint => waypoint.id !== waypointId));
+			setWaypoints(waypoints.filter((waypoint) => waypoint.id !== waypointId));
 		} catch (error) {
 			console.error('Error deleting waypoint:', error);
 		}
@@ -227,18 +227,18 @@ export default function Home() {
 					status="authenticated"
 					visibleActivitiesId={visibleActivitiesId}
 					selectedRouteId={selectedRouteId}
-						selectedActivity={currentActivity}
-						map={mapInstance}
-						onActivitySelect={handleActivitySelect}
-						selectedRoute={selectedRoute}
-						routes={routes}
-						onRouteSelect={handleRouteSelect}
-						onRouteDelete={handleRouteDelete}
-						onRouteRename={handleRouteRename}
-						waypoints={waypoints}
-						onWaypointDelete={handleWaypointDelete}
-						signOut={signOut}
-					/>
+					selectedActivity={currentActivity}
+					map={mapInstance}
+					onActivitySelect={handleActivitySelect}
+					selectedRoute={selectedRoute}
+					routes={routes}
+					onRouteSelect={handleRouteSelect}
+					onRouteDelete={handleRouteDelete}
+					onRouteRename={handleRouteRename}
+					waypoints={waypoints}
+					onWaypointDelete={handleWaypointDelete}
+					signOut={signOut}
+				/>
 				<div className="flex-1 relative">
 					<MapComponent
 						activities={filteredActivities}
