@@ -1,46 +1,49 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapComponent } from '@/components/MapComponent/index';
-import { useSession } from 'next-auth/react';
+import { MapComponent } from '@/components/MapComponent';
+import { useAuth } from "@/contexts/AuthContext";
+import AuthComponent from "@/components/Auth/AuthComponent";
+import { Button } from "@/components/ui/button";
 import SideBar from '@/components/SideBar';
 import activities from '../../public/aktiviteter.json';
 import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
-import type { DrawnRoute } from '@/types/route';
-import type { Waypoint } from '@/types/waypoint';
+import type { DbRoute, DbWaypoint } from '@/types/supabase';
+import HelpButton from '@/components/HelpButton';
 
 export default function Home() {
-	const { data: session, status } = useSession();
+	const { user, loading, signOut } = useAuth();
 	const [visibleActivitiesId, setVisibleActivitiesId] = useState<number[]>([]);
 	const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
 	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
-	const [routes, setRoutes] = useState<DrawnRoute[]>([]);
-	const [selectedRoute, setSelectedRoute] = useState<DrawnRoute | null>(null);
-	const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
+	const [selectedRoute, setSelectedRoute] = useState<DbRoute | null>(null);
+	const [routes, setRoutes] = useState<DbRoute[]>([]);
+	const [waypoints, setWaypoints] = useState<DbWaypoint[]>([]);
+	const [isOpen, setIsOpen] = useState(false);
 
 	useEffect(() => {
 		// Load routes on mount
-		fetch('/routes.json')
+		fetch('/api/routes')
 			.then((res) => res.json())
 			.then((data) => {
 				console.log('Loaded routes:', data.routes);
-				setRoutes(data.routes);
+				setRoutes(data.routes || []);
 			})
 			.catch((error) => console.error('Error loading routes:', error));
 
 		// Load waypoints on mount
-		fetch('/waypoints.json')
+		fetch('/api/waypoints')
 			.then((res) => res.json())
 			.then((data) => {
 				console.log('Loaded waypoints:', data.waypoints);
-				setWaypoints(data.waypoints);
+				setWaypoints(data.waypoints || []);
 			})
 			.catch((error) => console.error('Error loading waypoints:', error));
 	}, []);
 
 	const filteredActivities = activities;
-	const selectedActivity = activities.find((activity) => activity.id === selectedRouteId) || null;
+	const currentActivity = activities.find((activity) => activity.id === selectedRouteId) || null;
 
 	const handleActivitySelect = (activity: any) => {
 		setSelectedRouteId(activity.id);
@@ -70,42 +73,31 @@ export default function Home() {
 		);
 	};
 
-	const handleRouteSave = async (newRoute: DrawnRoute) => {
-		console.log('Handling route save:', newRoute);
-
+	const handleRouteSave = async (newRoute: DbRoute) => {
 		try {
-			// First, get the current routes from the file
-			const currentResponse = await fetch('/routes.json');
-			const currentData = await currentResponse.json();
-			const currentRoutes = currentData.routes || [];
-
-			// Add the new route to the existing routes
-			const updatedRoutes = [...currentRoutes, newRoute];
-
-			// Save the updated routes
 			const response = await fetch('/api/routes', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ routes: updatedRoutes }),
+					body: JSON.stringify(newRoute),
 			});
 
 			if (!response.ok) {
 				const errorData = await response.json();
-				throw new Error(`Failed to save route: ${errorData.error}`);
+				throw new Error(errorData.error || 'Failed to save route');
 			}
 
-			// Update state with all routes
-			setRoutes(updatedRoutes);
-			console.log('Route saved successfully');
+			// Fetch updated routes
+			const getResponse = await fetch('/api/routes');
+			const data = await getResponse.json();
+			setRoutes(data.routes || []);
 		} catch (error) {
 			console.error('Error saving route:', error);
 		}
 	};
 
-	const handleRouteSelect = (route: DrawnRoute | null) => {
+	const handleRouteSelect = (route: DbRoute | null) => {
 		setSelectedRoute(route);
 
-		// Zoom to route when selected
 		if (route && mapInstance && 'coordinates' in route.geometry) {
 			const coordinates = route.geometry.coordinates as [number, number][];
 			const bounds = coordinates.reduce(
@@ -130,26 +122,17 @@ export default function Home() {
 
 	const handleRouteDelete = async (routeId: string) => {
 		try {
-			// Get current routes
-			const currentResponse = await fetch('/routes.json');
-			const currentData = await currentResponse.json();
-
-			// Filter out the deleted route
-			const updatedRoutes = currentData.routes.filter((route: DrawnRoute) => route.id !== routeId);
-
-			// Save the updated routes
 			const response = await fetch('/api/routes', {
-				method: 'POST',
+				method: 'DELETE',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ routes: updatedRoutes }),
+				body: JSON.stringify({ routeId }),
 			});
 
 			if (!response.ok) {
 				throw new Error('Failed to delete route');
 			}
 
-			// Update state with filtered routes
-			setRoutes(updatedRoutes);
+			setRoutes(routes.filter(route => route.id !== routeId));
 		} catch (error) {
 			console.error('Error deleting route:', error);
 		}
@@ -157,96 +140,94 @@ export default function Home() {
 
 	const handleRouteRename = async (routeId: string, newName: string) => {
 		try {
-			// Get current routes
-			const currentResponse = await fetch('/routes.json');
-			const currentData = await currentResponse.json();
-
-			// Update the route name
-			const updatedRoutes = currentData.routes.map((route: DrawnRoute) =>
-				route.id === routeId ? { ...route, name: newName } : route
-			);
-
-			// Save the updated routes
 			const response = await fetch('/api/routes', {
-				method: 'POST',
+				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ routes: updatedRoutes }),
+				body: JSON.stringify({ routeId, newName }),
 			});
 
 			if (!response.ok) {
 				throw new Error('Failed to rename route');
 			}
 
-			// Update state with renamed routes
-			setRoutes(updatedRoutes);
+			setRoutes(routes.map(route => 
+				route.id === routeId ? { ...route, name: newName } : route
+			));
 		} catch (error) {
 			console.error('Error renaming route:', error);
 		}
 	};
 
-	const handleWaypointSave = async (newWaypoint: Waypoint) => {
+	const handleWaypointSave = async (newWaypoint: DbWaypoint) => {
 		try {
-			// First, get the current waypoints from the file
-			const currentResponse = await fetch('/waypoints.json');
-			const currentData = await currentResponse.json();
-			const currentWaypoints = currentData.waypoints || [];
-
-			// Add the new waypoint to the existing waypoints
-			const updatedWaypoints = [...currentWaypoints, newWaypoint];
-
-			// Save the updated waypoints
 			const response = await fetch('/api/waypoints', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ waypoints: updatedWaypoints }),
+				body: JSON.stringify({ waypoints: [newWaypoint] }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to save waypoint');
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Failed to save waypoint');
 			}
 
-			// Update state with all waypoints
-			setWaypoints(updatedWaypoints);
+			// Fetch updated waypoints
+			const getResponse = await fetch('/api/waypoints');
+			if (!getResponse.ok) {
+				throw new Error('Failed to fetch updated waypoints');
+			}
+			
+			const data = await getResponse.json();
+			setWaypoints(data.waypoints || []);
 		} catch (error) {
 			console.error('Error saving waypoint:', error);
+			throw error;
 		}
 	};
 
 	const handleWaypointDelete = async (waypointId: string) => {
 		try {
-			const currentResponse = await fetch('/waypoints.json');
-			const currentData = await currentResponse.json();
-			
-			const updatedWaypoints = currentData.waypoints.filter(
-				(waypoint: Waypoint) => waypoint.id !== waypointId
-			);
-
 			const response = await fetch('/api/waypoints', {
-				method: 'POST',
+				method: 'DELETE',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ waypoints: updatedWaypoints }),
+				body: JSON.stringify({ waypointId }),
 			});
 
 			if (!response.ok) {
 				throw new Error('Failed to delete waypoint');
 			}
 
-			setWaypoints(updatedWaypoints);
+			setWaypoints(waypoints.filter(waypoint => waypoint.id !== waypointId));
 		} catch (error) {
 			console.error('Error deleting waypoint:', error);
 		}
 	};
 
+	if (loading) {
+		return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+	}
+
+	if (!user) {
+		return <AuthComponent />;
+	}
+
 	return (
-		<>
-			<main className="h-screen w-screen">
-				<div className="flex h-screen">
-					<SideBar
-						activities={filteredActivities}
-						status={status}
-						visibleActivitiesId={visibleActivitiesId}
-						selectedRouteId={selectedRouteId}
-						selectedActivity={selectedActivity}
+		<main className="h-screen w-screen relative">
+			<div className="absolute top-4 right-4 z-50 bg-white/80 p-2 rounded-lg shadow-md">
+				<p className="text-sm mb-2">Logged in as: {user?.email}</p>
+				<Button onClick={signOut} variant="outline" size="sm">
+					Sign Out
+				</Button>
+			</div>
+			<div className="flex h-full">
+				<SideBar
+					isOpen={isOpen}
+					setIsOpen={setIsOpen}
+					activities={filteredActivities}
+					status="authenticated"
+					visibleActivitiesId={visibleActivitiesId}
+					selectedRouteId={selectedRouteId}
+						selectedActivity={currentActivity}
 						map={mapInstance}
 						onActivitySelect={handleActivitySelect}
 						selectedRoute={selectedRoute}
@@ -256,23 +237,24 @@ export default function Home() {
 						onRouteRename={handleRouteRename}
 						waypoints={waypoints}
 						onWaypointDelete={handleWaypointDelete}
+						signOut={signOut}
 					/>
-					<div className="flex-1">
-						<MapComponent
-							activities={filteredActivities}
-							setVisibleActivitiesId={setVisibleActivitiesId}
-							selectedRouteId={selectedRouteId}
-							setSelectedRouteId={setSelectedRouteId}
-							onMapLoad={(map) => setMapInstance(map)}
-							onRouteSave={handleRouteSave}
-							onRouteSelect={handleRouteSelect}
-							routes={routes}
-							waypoints={waypoints}
-							onWaypointSave={handleWaypointSave}
-						/>
-					</div>
+				<div className="flex-1 relative">
+					<MapComponent
+						activities={filteredActivities}
+						setVisibleActivitiesId={setVisibleActivitiesId}
+						selectedRouteId={selectedRouteId}
+						setSelectedRouteId={setSelectedRouteId}
+						onMapLoad={(map) => setMapInstance(map)}
+						onRouteSave={handleRouteSave}
+						onRouteSelect={handleRouteSelect}
+						routes={routes}
+						waypoints={waypoints}
+						onWaypointSave={handleWaypointSave}
+					/>
 				</div>
-			</main>
-		</>
+			</div>
+			<HelpButton />
+		</main>
 	);
 }

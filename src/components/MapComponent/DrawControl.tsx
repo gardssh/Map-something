@@ -20,6 +20,7 @@ type DrawControlProps = {
 	onRouteSave?: (route: DrawnRoute) => void;
 	onRouteAdd?: (route: DrawnRoute) => void;
 	onModeChange?: (evt: { mode: string }) => void;
+	userId: string;
 };
 
 const drawStyles = [
@@ -154,11 +155,12 @@ export default function DrawControl(props: DrawControlProps) {
 				const newRoute: DrawnRoute = {
 					id: `route-${Date.now()}`,
 					name: `Route ${new Date().toLocaleDateString()}`,
+					user_id: props.userId,
 					geometry: {
 						type: 'LineString',
 						coordinates: finalRoute,
 					},
-					createdAt: new Date().toISOString(),
+					created_at: new Date().toISOString(),
 					distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
 				};
 

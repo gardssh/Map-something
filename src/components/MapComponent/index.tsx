@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Waypoint } from '@/types/waypoint';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 
 // Add a helper function to handle bounds
 const handleBounds = (mapRef: React.RefObject<MapRef>, coordinates: [number, number][]) => {
@@ -75,6 +77,8 @@ export const MapComponent = ({
 	const [showWaypointDialog, setShowWaypointDialog] = useState(false);
 	const [drawMode, setDrawMode] = useState<string | null>(null);
 	const [isDrawing, setIsDrawing] = useState(false);
+	const { user } = useAuth();
+	const { data: session } = useSession();
 
 	const availableLayers = [
 		{ id: 'default', name: 'Default Map', isBase: true },
@@ -336,19 +340,20 @@ export const MapComponent = ({
 	}, []);
 
 	const handleWaypointSave = useCallback(() => {
-		if (newWaypointCoords && newWaypointName && onWaypointSave) {
+		if (newWaypointCoords && newWaypointName && onWaypointSave && user) {
 			const waypoint: Waypoint = {
 				id: crypto.randomUUID(),
+				user_id: user.id,
 				name: newWaypointName,
 				coordinates: newWaypointCoords,
-				createdAt: new Date().toISOString(),
+				created_at: new Date().toISOString(),
 			};
 			onWaypointSave(waypoint);
 			setNewWaypointName('');
 			setNewWaypointCoords(null);
 			setShowWaypointDialog(false);
 		}
-	}, [newWaypointCoords, newWaypointName, onWaypointSave]);
+	}, [newWaypointCoords, newWaypointName, onWaypointSave, user]);
 
 	return (
 		<div className="h-full w-full">
@@ -455,6 +460,7 @@ export const MapComponent = ({
 				<DrawControl
 					position="bottom-right"
 					displayControlsDefault={false}
+					userId={session?.user?.id || ''}
 					controls={{
 						line_string: true,
 						trash: false,

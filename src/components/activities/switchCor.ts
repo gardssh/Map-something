@@ -6,14 +6,16 @@ interface Activity {
 	};
 }
 
-type Coordinate = [number, number];
-
-export function switchCoordinates(activity: Activity): Coordinate[] {
+export function switchCoordinates(activity: Activity): [number, number][] {
+	// Only process if we have a polyline
 	if (!activity?.map?.summary_polyline) {
 		return [];
 	}
 
-	const decodedCoordinates = polyline.decode(activity.map.summary_polyline);
-	
-	return decodedCoordinates.map(([lat, lng]: [number, number]) => [lng, lat]);
+	try {
+		const coordinates = polyline.decode(activity.map.summary_polyline);
+		return coordinates.map(([lat, lng]) => [lng, lat]);
+	} catch (error) {
+		return [];
+	}
 }

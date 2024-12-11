@@ -1,29 +1,39 @@
-import { switchCoordinates } from '../activities/switchCor';
+'use client';
+
 import { Marker } from 'react-map-gl';
-import { useMemo } from 'react';
 
 interface Activity {
-	map: {
-		summary_polyline: string;
-	};
 	id: number;
+	start_latlng?: [number, number];
+	end_latlng?: [number, number];
+	name?: string;
 }
 
 export default function AddMarker({ activity }: { activity: Activity }) {
-	const coordinates = useMemo(() => switchCoordinates(activity), [activity]);
-
-	if (coordinates.length === 0) {
+	// Only show markers if we have both start and end coordinates
+	if (!activity?.start_latlng?.length || !activity?.end_latlng?.length) {
 		return null;
 	}
 
-	const [longStart, latStart] = coordinates[0];
-	const [longEnd, latEnd] = coordinates[coordinates.length - 1];
+	const [startLat, startLng] = activity.start_latlng;
+	const [endLat, endLng] = activity.end_latlng;
 
 	return (
 		<>
-			<Marker longitude={longStart} latitude={latStart} scale={0.5} color="#22c55e" anchor="center" />
-
-			<Marker longitude={longEnd} latitude={latEnd} scale={0.5} color="#ef4444" anchor="center" />
+			<Marker 
+				longitude={startLng} 
+				latitude={startLat} 
+				scale={0.5} 
+				color="#22c55e" 
+				anchor="center"
+			/>
+			<Marker 
+				longitude={endLng} 
+				latitude={endLat} 
+				scale={0.5} 
+				color="#ef4444" 
+				anchor="center"
+			/>
 		</>
 	);
 }
