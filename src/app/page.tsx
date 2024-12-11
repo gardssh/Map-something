@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import AuthComponent from '@/components/Auth/AuthComponent';
 import { Button } from '@/components/ui/button';
 import SideBar from '@/components/SideBar';
-import activities from '../../public/aktiviteter.json';
 import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
 import type { DbRoute, DbWaypoint } from '@/types/supabase';
@@ -14,6 +13,8 @@ import HelpButton from '@/components/HelpButton';
 
 export default function Home() {
 	const { user, loading, signOut } = useAuth();
+	const [activities, setActivities] = useState<any[]>([]);
+	const [activitiesLoading, setActivitiesLoading] = useState(true);
 	const [visibleActivitiesId, setVisibleActivitiesId] = useState<number[]>([]);
 	const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
 	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
@@ -24,6 +25,19 @@ export default function Home() {
 
 	useEffect(() => {
 		if (user) {
+			// Load activities
+			fetch('/api/activities')
+				.then((res) => res.json())
+				.then((data) => {
+					console.log('Loaded activities:', data.activities);
+					setActivities(data.activities || []);
+					setActivitiesLoading(false);
+				})
+				.catch((error) => {
+					console.error('Error loading activities:', error);
+					setActivitiesLoading(false);
+				});
+
 			// Load routes
 			fetch('/api/routes')
 				.then((res) => res.json())
@@ -55,12 +69,12 @@ export default function Home() {
 	const handleBounds = (activity: any) => {
 		if (!mapInstance) return;
 
-		const coordinates = switchCoordinates(activity);
-		const bounds = coordinates.reduce(
-			(bounds, coord) => {
-				return bounds.extend(coord as [number, number]);
-			},
-			new LngLatBounds(coordinates[0], coordinates[0])
+		const routePoints = switchCoordinates(activity);
+		if (routePoints.coordinates.length === 0) return;
+
+		const bounds = routePoints.coordinates.reduce(
+			(bounds, coord) => bounds.extend(coord),
+			new LngLatBounds(routePoints.coordinates[0], routePoints.coordinates[0])
 		);
 
 		mapInstance.fitBounds(
@@ -203,7 +217,7 @@ export default function Home() {
 		}
 	};
 
-	if (loading) {
+	if (loading || activitiesLoading) {
 		return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 	}
 
@@ -213,12 +227,6 @@ export default function Home() {
 
 	return (
 		<main className="h-screen w-screen relative">
-			<div className="absolute top-4 right-4 z-50 bg-white/80 p-2 rounded-lg shadow-md">
-				<p className="text-sm mb-2">Logged in as: {user?.email}</p>
-				<Button onClick={signOut} variant="outline" size="sm">
-					Sign Out
-				</Button>
-			</div>
 			<div className="flex h-full">
 				<SideBar
 					isOpen={isOpen}

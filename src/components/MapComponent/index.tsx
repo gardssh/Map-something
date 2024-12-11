@@ -127,8 +127,7 @@ export const MapComponent = ({
 							attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>',
 						},
 					},
-					glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}',
-					sprite: 'mapbox://sprites/mapbox/basic-v8',
+
 					layers: [
 						{
 							id: 'norge-topo-layer',
@@ -265,8 +264,8 @@ export const MapComponent = ({
 					setSelectedRoute(null);
 					const selectedActivity = activities.find((activity) => activity.id === feature.id);
 					if (selectedActivity) {
-						const coordinates = switchCoordinates(selectedActivity);
-						handleBounds(mapRef as React.RefObject<MapRef>, coordinates);
+						const routePoints = switchCoordinates(selectedActivity);
+						handleBounds(mapRef as React.RefObject<MapRef>, routePoints.coordinates);
 					}
 				}
 				// Handle drawn route clicks
@@ -419,7 +418,7 @@ export const MapComponent = ({
 				}}
 				onContextMenu={(e) => {
 					e.preventDefault();
-					if (!drawMode) {
+					if (!isDrawing) {
 						setNewWaypointCoords([e.lngLat.lng, e.lngLat.lat]);
 						setShowWaypointDialog(true);
 					}
@@ -548,11 +547,12 @@ export const MapComponent = ({
 					data={{
 						type: 'FeatureCollection',
 						features: activities.map((activity) => {
+							const routePoints = switchCoordinates(activity);
 							return {
 								id: activity.id,
 								type: 'Feature',
 								properties: { activityType: categorizeActivity(activity.sport_type) },
-								geometry: { type: 'LineString', coordinates: switchCoordinates(activity) },
+								geometry: { type: 'LineString', coordinates: routePoints.coordinates },
 								paint: { 'line-color': getActivityColor(activity.type), 'line-width': 8, 'line-opacity': 0.5 },
 							};
 						}),

@@ -1,22 +1,25 @@
 'use client';
 
 import { Marker } from 'react-map-gl';
+import { switchCoordinates } from '../activities/switchCor';
 
 interface Activity {
 	id: number;
-	start_latlng?: [number, number];
-	end_latlng?: [number, number];
-	name?: string;
+	map: {
+		summary_polyline: string;
+	};
 }
 
 export default function AddMarker({ activity }: { activity: Activity }) {
-	// Only show markers if we have both start and end coordinates
-	if (!activity?.start_latlng?.length || !activity?.end_latlng?.length) {
+	const { startPoint, endPoint } = switchCoordinates(activity);
+
+	// Only show markers if we have both start and end points
+	if (!startPoint || !endPoint) {
 		return null;
 	}
 
-	const [startLat, startLng] = activity.start_latlng;
-	const [endLat, endLng] = activity.end_latlng;
+	const [startLng, startLat] = startPoint;
+	const [endLng, endLat] = endPoint;
 
 	return (
 		<>

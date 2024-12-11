@@ -1,20 +1,28 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req, res })
 
-  // Refresh session if expired
-  await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
 
-  return res;
+  // Protect API routes that require authentication
+  if (req.nextUrl.pathname.startsWith('/api/') && !session) {
+    return NextResponse.json(
+      { error: 'Authentication required' },
+      { status: 401 }
+    )
+  }
+
+  return res
 }
 
-// Only run middleware on matched pages
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/api/:path*',  // Only run middleware on API routes
   ],
-}; 
+} 

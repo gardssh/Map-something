@@ -127,7 +127,8 @@ export default function SideBar({
 	const getElevationData = useCallback(async (activity: any) => {
 		if (!activity?.map?.summary_polyline) return [];
 
-		const coordinates = switchCoordinates(activity);
+		const routePoints = switchCoordinates(activity);
+		const coordinates = routePoints.coordinates;
 
 		// Limit number of waypoints (Geoapify has a limit)
 		const maxWaypoints = 10; // Reduced from 25 to stay within limits
@@ -241,7 +242,7 @@ export default function SideBar({
 			</Button>
 			<div
 				className={cn(
-					'bg-blue-100 w-96 border-r h-full overflow-hidden transition-transform duration-300 ease-in-out flex flex-col',
+					'bg-background w-96 border-r h-full overflow-hidden transition-transform duration-300 ease-in-out flex flex-col',
 					'md:relative md:translate-x-0',
 					'absolute -translate-x-full z-50',
 					isOpen && 'translate-x-0'
@@ -584,8 +585,8 @@ export default function SideBar({
 					)}
 				</div>
 
-				<div className="border-t bg-green-200 p-4 flex flex-col gap-4">
-					<div className="bg-yellow-200 p-2">
+				<div className="border-t bg-background p-4 flex flex-col gap-4">
+					<div className="bg-background p-2">
 						<StravaConnect />
 					</div>
 					{status === 'authenticated' ? (
