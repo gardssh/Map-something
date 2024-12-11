@@ -24,8 +24,8 @@ export default function AuthComponent() {
       });
       if (error) throw error;
       setMessage('Check your email for the confirmation link!');
-    } catch (error) {
-      setMessage(error.message);
+    } catch (error: any) {
+      setMessage(error?.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -39,8 +39,8 @@ export default function AuthComponent() {
         password,
       });
       if (error) throw error;
-    } catch (error) {
-      setMessage(error.message);
+    } catch (error: any) {
+      setMessage(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
