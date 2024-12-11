@@ -9,6 +9,8 @@ declare module 'next-auth' {
             id: string;
             stravaAthleteId?: number;
         } & DefaultSession["user"]
+        accessToken?: string;
+        refreshToken?: string;
     }
 
     interface User extends DefaultUser {
