@@ -1,6 +1,15 @@
 'use client';
 import { useRef, useCallback, useState, useEffect } from 'react';
-import Map, { GeolocateControl, NavigationControl, Source, Layer, Popup, Marker, MapLayerTouchEvent, Point } from 'react-map-gl';
+import Map, {
+	GeolocateControl,
+	NavigationControl,
+	Source,
+	Layer,
+	Popup,
+	Marker,
+	MapLayerTouchEvent,
+	Point,
+} from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import { categorizeActivity, getActivityColor } from '@/lib/utils';
 import type { MapRef, MapMouseEvent, MapLayerMouseEvent } from 'react-map-gl';
@@ -379,7 +388,7 @@ export const MapComponent = ({
 					if (!isDrawing && e.target && mapRef.current) {
 						const map = mapRef.current.getMap();
 						const point = map.project(e.lngLat);
-						
+
 						const features = map.queryRenderedFeatures(point, {
 							layers: [
 								'foot-sports',
@@ -390,7 +399,7 @@ export const MapComponent = ({
 								'unknown-sports',
 								'saved-routes-layer',
 								'saved-routes-border',
-							]
+							],
 						});
 
 						if (features && features.length > 0) {
@@ -403,7 +412,7 @@ export const MapComponent = ({
 								preventDefault: () => {},
 								stopPropagation: () => {},
 							} as unknown as MapLayerMouseEvent;
-							
+
 							onClick(clickEvent);
 						}
 					}
