@@ -217,12 +217,30 @@ export default function Home() {
 		}
 	};
 
-	if (loading || activitiesLoading) {
-		return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+	if (loading) {
+		return (
+			<div className="flex items-center justify-center min-h-screen">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+					<p>Loading authentication...</p>
+				</div>
+			</div>
+		);
 	}
 
 	if (!user) {
 		return <AuthComponent />;
+	}
+
+	if (activitiesLoading) {
+		return (
+			<div className="flex items-center justify-center min-h-screen">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+					<p>Loading activities...</p>
+				</div>
+			</div>
+		);
 	}
 
 	return (
