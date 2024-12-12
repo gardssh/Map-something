@@ -118,7 +118,8 @@ async function getMatch(coordinates: [number, number][]) {
 		}
 
 		return response.matchings[0].geometry.coordinates;
-	} catch (error) {
+	} catch (err: unknown) {
+		const error = err as Error;
 		console.error('Map matching error:', {
 			name: error.name,
 			message: error.message,
@@ -192,7 +193,8 @@ export default function DrawControl(props: DrawControlProps) {
 					props.onRouteSave?.(newRoute);
 					props.onRouteAdd?.(newRoute);
 					draw.delete(featureId);
-				} catch (error) {
+				} catch (err: unknown) {
+					const error = err as Error;
 					console.error('Error processing route:', {
 						name: error.name,
 						message: error.message,
