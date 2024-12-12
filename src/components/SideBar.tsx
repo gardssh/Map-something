@@ -25,6 +25,8 @@ import { type DbRoute, type DbWaypoint } from '@/types/supabase';
 import type { RouteWithDistance } from '@/types/route';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { StravaConnect } from './strava-connect';
+import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@supabase/supabase-js';
 
 interface ElevationPoint {
 	distance: number; // distance in km
@@ -224,6 +226,47 @@ export default function SideBar({
 
 	const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
 	const [editingName, setEditingName] = useState<string>('');
+
+	const { user } = useAuth();
+
+	const importStravaActivities = async () => {
+		if (!user) {
+			console.error('User not authenticated');
+			return;
+		}
+
+		try {
+			console.log('Starting Strava import for user:', user.id);
+			const response = await fetch('/api/strava/import', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					user_id: user.id
+				})
+			});
+
+			console.log('Response status:', response.status);
+			const data = await response.json();
+			console.log('Response data:', data);
+
+			if (!response.ok) {
+				throw new Error(`Failed to import activities: ${data.error || 'Unknown error'}`);
+			}
+
+			if (data.success) {
+				alert('Successfully imported Strava activities!');
+				// Optionally refresh the page or update the activities list
+				window.location.reload();
+			} else {
+				throw new Error(data.error || 'Failed to import activities');
+			}
+		} catch (error) {
+			console.error('Error importing activities:', error);
+			alert('Error importing activities. Check console for details.');
+		}
+	};
 
 	return (
 		<>
@@ -586,13 +629,10 @@ export default function SideBar({
 				</div>
 
 				<div className="border-t bg-background p-4 flex flex-col gap-4">
-					<div className="bg-background p-2">
-						<StravaConnect />
-					</div>
 					{status === 'authenticated' ? (
 						<Button variant="secondary" className="w-full" onClick={() => signOut?.()}>
-							Sign out
-						</Button>
+								Sign out
+							</Button>
 					) : (
 						<Button variant="secondary" className="w-full" disabled>
 							Sign in (coming soon)
