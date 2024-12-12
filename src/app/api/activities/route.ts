@@ -1,17 +1,25 @@
-import { createClient } from '@supabase/supabase-js';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { Database } from '@/types/supabase';
 import { switchCoordinates } from '@/components/activities/switchCor';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = createRouteHandlerClient<Database>({ cookies });
+        
+        // Get the current user
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+            console.error('Session error:', sessionError);
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
         // Fetch activities from strava_activities table
         const { data: activities, error } = await supabase
             .from('strava_activities')
-            .select('*');
+            .select('*')
+            .eq('user_id', session.user.id);
 
         if (error) {
             throw error;
@@ -61,7 +69,7 @@ export async function GET() {
 
         return NextResponse.json({ activities: formattedActivities });
     } catch (error) {
-        console.error('Error fetching activities:', error);
+        console.error('Activities fetch error:', error);
         return NextResponse.json({ error: 'Failed to fetch activities' }, { status: 500 });
     }
 } 

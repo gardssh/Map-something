@@ -113,8 +113,15 @@ export interface Database {
           moving_time: number
           total_elevation_gain: number
           average_speed: number
+          max_speed: number
           start_date: string
+          start_latlng: number[]
+          end_latlng: number[]
+          average_heartrate: number | null
+          max_heartrate: number | null
           summary_polyline: string
+          geometry: LineString | null
+          bounds: number[][]
           elev_low: number | null
           elev_high: number | null
           created_at: string
@@ -131,8 +138,15 @@ export interface Database {
           moving_time: number
           total_elevation_gain: number
           average_speed: number
+          max_speed: number
           start_date: string
+          start_latlng: number[]
+          end_latlng: number[]
+          average_heartrate?: number | null
+          max_heartrate?: number | null
           summary_polyline: string
+          geometry?: LineString | null
+          bounds: number[][]
           elev_low?: number | null
           elev_high?: number | null
           created_at?: string
@@ -149,8 +163,15 @@ export interface Database {
           moving_time?: number
           total_elevation_gain?: number
           average_speed?: number
+          max_speed?: number
           start_date?: string
+          start_latlng?: number[]
+          end_latlng?: number[]
+          average_heartrate?: number | null
+          max_heartrate?: number | null
           summary_polyline?: string
+          geometry?: LineString | null
+          bounds?: number[][]
           elev_low?: number | null
           elev_high?: number | null
           updated_at?: string
