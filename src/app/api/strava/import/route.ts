@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { switchCoordinates, type RoutePoints } from '@/components/activities/switchCor';
 import { type Activity } from '@/types/activity';
 import * as turf from '@turf/turf';
-import { Feature, LineString, Properties } from '@turf/turf';
+import type { Feature, LineString, GeoJsonProperties } from 'geojson';
 import polyline from 'polyline';
 
 interface ActivityMap {
@@ -62,10 +62,10 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
     const routePoints = activity.map?.summary_polyline ? switchCoordinates(activity) : null;
 
     // Create a GeoJSON LineString from routePoints
-    const geoJsonFeature: Feature<LineString, Properties> | null = routePoints ? {
-        type: 'Feature' as const,
+    const geoJsonFeature: Feature<LineString, GeoJsonProperties> | null = routePoints ? {
+        type: 'Feature',
         geometry: {
-            type: 'LineString' as const,
+            type: 'LineString',
             coordinates: routePoints.coordinates
         },
         properties: {
