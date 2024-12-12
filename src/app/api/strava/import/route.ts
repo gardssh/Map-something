@@ -5,6 +5,11 @@ import { type Activity } from '@/types/activity';
 import * as turf from '@turf/turf';
 import polyline from 'polyline';
 
+interface ActivityMap {
+    summary_polyline: string;
+    geometry: turf.Feature<turf.Geometry> | null;  // Updated to match the actual type from switchCoordinates
+}
+
 async function getAllActivities(accessToken: string) {
     console.log('Starting to fetch all activities...');
     let page = 1;
@@ -95,7 +100,7 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
         map: {
             summary_polyline: activity.map?.summary_polyline || '',
             geometry: routePoints || null
-        },
+        } as ActivityMap,
         athlete: {
             id: activity.athlete?.id
         },
