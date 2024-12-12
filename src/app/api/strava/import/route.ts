@@ -8,7 +8,6 @@ import polyline from 'polyline';
 
 interface ActivityMap {
     summary_polyline: string;
-    geometry: RoutePoints | null;
 }
 
 async function getAllActivities(accessToken: string) {
@@ -207,7 +206,6 @@ export async function POST(request: Request) {
                             start_latlng: formattedActivity.start_latlng,
                             end_latlng: formattedActivity.end_latlng,
                             summary_polyline: formattedActivity.map.summary_polyline,
-                            geometry: formattedActivity.map.geometry,
                             average_heartrate: formattedActivity.average_heartrate,
                             max_heartrate: formattedActivity.max_heartrate,
                             elev_low: formattedActivity.elev_low,
@@ -248,7 +246,6 @@ export async function POST(request: Request) {
                             start_latlng: formattedActivity.start_latlng,
                             end_latlng: formattedActivity.end_latlng,
                             summary_polyline: formattedActivity.map.summary_polyline,
-                            geometry: formattedActivity.map.geometry,
                             average_heartrate: formattedActivity.average_heartrate,
                             max_heartrate: formattedActivity.max_heartrate,
                             elev_low: formattedActivity.elev_low,
