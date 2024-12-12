@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { switchCoordinates, type RoutePoints } from '@/components/activities/switchCor';
 import { type Activity } from '@/types/activity';
 import * as turf from '@turf/turf';
+import { Feature, LineString, Properties } from '@turf/turf';
 import polyline from 'polyline';
 
 interface ActivityMap {
@@ -61,10 +62,10 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
     const routePoints = activity.map?.summary_polyline ? switchCoordinates(activity) : null;
 
     // Create a GeoJSON LineString from routePoints
-    const geoJsonFeature = routePoints ? {
-        type: 'Feature',
+    const geoJsonFeature: Feature<LineString, Properties> | null = routePoints ? {
+        type: 'Feature' as const,
         geometry: {
-            type: 'LineString',
+            type: 'LineString' as const,
             coordinates: routePoints.coordinates
         },
         properties: {
@@ -73,12 +74,12 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
             type: activity.type,
             distance: activity.distance,
             moving_time: activity.moving_time,
-            isRoute: false,          // Add this to distinguish from manual routes
-            isActivity: true,        // Add this to identify as activity
-            selected: false,         // Default to unselected
-            visible: true,           // Default to visible
-            source: 'strava',        // Identify source
-            color: '#ff4400'         // Strava orange color
+            isRoute: false,
+            isActivity: true,
+            selected: false,
+            visible: true,
+            source: 'strava',
+            color: '#ff4400'
         }
     } : null;
 
@@ -112,7 +113,7 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
         bounds: geoJsonFeature ? turf.bbox(geoJsonFeature) : null,
         elevation_data: formatElevationData(activity),
         feature: geoJsonFeature,
-        sourceId: 'routes',  // This is important - use the same source as routes
+        sourceId: 'routes',
         layerId: `route-${activity.id}`,
         isHovered: false
     };
