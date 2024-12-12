@@ -3,11 +3,12 @@ import { NextResponse } from 'next/server';
 import { switchCoordinates } from '@/components/activities/switchCor';
 import { type Activity } from '@/types/activity';
 import * as turf from '@turf/turf';
+import { Feature, Geometry } from '@turf/turf';
 import polyline from 'polyline';
 
 interface ActivityMap {
     summary_polyline: string;
-    geometry: turf.Feature<turf.Geometry> | null;  // Updated to match the actual type from switchCoordinates
+    geometry: Feature<Geometry> | null;  // Using imported types directly
 }
 
 async function getAllActivities(accessToken: string) {
