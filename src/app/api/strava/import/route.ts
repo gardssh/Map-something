@@ -60,17 +60,19 @@ function formatElevationData(activity: any) {
 async function formatStravaActivity(activity: any): Promise<Activity> {
     const routePoints = activity.map?.summary_polyline ? switchCoordinates(activity) : null;
 
-    // Create the feature for the "routes" source - match the route structure exactly
-    const feature = {
+    // Create a GeoJSON LineString from routePoints
+    const geoJsonFeature = routePoints ? {
         type: 'Feature',
-        geometry: routePoints,
+        geometry: {
+            type: 'LineString',
+            coordinates: routePoints.coordinates
+        },
         properties: {
             id: activity.id,
             name: activity.name,
             type: activity.type,
             distance: activity.distance,
             moving_time: activity.moving_time,
-            // These are the critical properties for map interaction
             isRoute: false,          // Add this to distinguish from manual routes
             isActivity: true,        // Add this to identify as activity
             selected: false,         // Default to unselected
@@ -78,7 +80,7 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
             source: 'strava',        // Identify source
             color: '#ff4400'         // Strava orange color
         }
-    };
+    } : null;
 
     return {
         id: activity.id,
@@ -107,11 +109,9 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
         selected: false,
         visible: true,
         coordinates: activity.start_latlng || null,
-        bounds: routePoints ? turf.bbox(routePoints) : null,
+        bounds: geoJsonFeature ? turf.bbox(geoJsonFeature) : null,
         elevation_data: formatElevationData(activity),
-        // Add the feature for the map source
-        feature: feature,
-        // These are used by the map component
+        feature: geoJsonFeature,
         sourceId: 'routes',  // This is important - use the same source as routes
         layerId: `route-${activity.id}`,
         isHovered: false
