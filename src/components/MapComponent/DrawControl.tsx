@@ -78,32 +78,52 @@ function createHybridRoute(original: [number, number][], matched: [number, numbe
 
 async function getMatch(coordinates: [number, number][]) {
 	try {
+		// Verify token exists
+		const token = process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN;
+		if (!token) {
+			console.error('Mapbox token is missing');
+			return null;
+		}
+
 		// Set radius for each coordinate (in meters)
 		const radiuses = coordinates.map(() => 50);
 		const coords = coordinates.map((coord) => coord.join(',')).join(';');
 		const radiusStr = radiuses.join(';');
 
-		const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`;
+		const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${token}`;
 
-		console.log('Attempting map matching...');
+		console.log('Map matching URL (without token):', url.split('access_token')[0]);
 		const query = await fetch(url);
 
 		if (!query.ok) {
-			console.error('Map matching API error:', query.status, await query.text());
+			const errorText = await query.text();
+			console.error('Map matching API error:', {
+				status: query.status,
+				statusText: query.statusText,
+				error: errorText
+			});
 			return null;
 		}
 
 		const response = await query.json();
-		console.log('Map matching response:', response);
+		console.log('Map matching response code:', response.code);
 
 		if (response.code !== 'Ok' || !response.matchings?.length) {
-			console.error('Invalid matching response:', response);
+			console.error('Invalid matching response:', {
+				code: response.code,
+				message: response.message,
+				matchingsLength: response.matchings?.length
+			});
 			return null;
 		}
 
 		return response.matchings[0].geometry.coordinates;
 	} catch (error) {
-		console.error('Map matching error:', error);
+		console.error('Map matching error:', {
+			name: error.name,
+			message: error.message,
+			stack: error.stack
+		});
 		return null;
 	}
 }
@@ -138,13 +158,16 @@ export default function DrawControl(props: DrawControlProps) {
 				let finalRoute: [number, number][] = [];
 
 				try {
+					console.log('Processing route with coordinates:', coords.length);
+					
 					// Try to match the entire route at once first
 					const matchedGeometry = await getMatch(coords);
 
 					if (matchedGeometry && matchedGeometry.length > 0) {
+						console.log('Successfully matched route with', matchedGeometry.length, 'points');
 						finalRoute = matchedGeometry;
 					} else {
-						// Fallback: use original coordinates if matching fails
+						console.log('Falling back to original coordinates');
 						finalRoute = coords;
 					}
 
@@ -160,11 +183,21 @@ export default function DrawControl(props: DrawControlProps) {
 						distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
 					};
 
+					console.log('Saving route:', {
+						id: newRoute.id,
+						coordinates: finalRoute.length,
+						distance: newRoute.distance
+					});
+
 					props.onRouteSave?.(newRoute);
 					props.onRouteAdd?.(newRoute);
 					draw.delete(featureId);
 				} catch (error) {
-					console.error('Error processing route:', error);
+					console.error('Error processing route:', {
+						name: error.name,
+						message: error.message,
+						stack: error.stack
+					});
 					// Still save the original route if processing fails
 					const newRoute: DrawnRoute = {
 						id: `route-${Date.now()}`,
