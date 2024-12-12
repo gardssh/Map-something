@@ -1,14 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { switchCoordinates } from '@/components/activities/switchCor';
+import { switchCoordinates, type RoutePoints } from '@/components/activities/switchCor';
 import { type Activity } from '@/types/activity';
 import * as turf from '@turf/turf';
-import { Feature, Geometry } from '@turf/turf';
 import polyline from 'polyline';
 
 interface ActivityMap {
     summary_polyline: string;
-    geometry: Feature<Geometry> | null;  // Using imported types directly
+    geometry: RoutePoints | null;
 }
 
 async function getAllActivities(accessToken: string) {
