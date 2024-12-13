@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Route, MapPin, Medal, Navigation, Trash2, Edit2, Check, X, Menu, ArrowLeft } from 'lucide-react';
+import { Route, MapPin, Medal, Navigation, Trash2, Edit2, Check, X, Menu, ArrowLeft, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './ui/card';
 import './SideBar/styles.css';
 import { formatTime } from '@/lib/timeFormat';
@@ -305,6 +305,40 @@ export default function SideBar({
 									<p>Created: {new Date(selectedRoute.created_at).toLocaleString()}</p>
 								</CardHeader>
 							</Card>
+							<Button 
+								variant="secondary" 
+								className="w-full flex gap-2"
+								onClick={() => {
+									if (!selectedRoute.geometry) return;
+									
+									// Create GPX content
+									const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Map Something">
+    <trk>
+        <name>${selectedRoute.name}</name>
+        <trkseg>
+            ${(selectedRoute.geometry.coordinates as [number, number][])
+                .map(([lon, lat]) => `            <trkpt lat="${lat}" lon="${lon}"></trkpt>`)
+                .join('\n')}
+        </trkseg>
+    </trk>
+</gpx>`;
+									
+									// Create and trigger download
+									const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+									const url = window.URL.createObjectURL(blob);
+									const a = document.createElement('a');
+									a.href = url;
+									a.download = `${selectedRoute.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.gpx`;
+									document.body.appendChild(a);
+									a.click();
+									document.body.removeChild(a);
+									window.URL.revokeObjectURL(url);
+								}}
+							>
+								<Download className="h-4 w-4" />
+								Download GPX
+							</Button>
 							{/* Add elevation chart here similar to activities */}
 						</div>
 					) : selectedActivity ? (
@@ -400,6 +434,43 @@ export default function SideBar({
 									</ChartContainer>
 								</CardContent>
 							</Card>
+							<Button 
+								variant="secondary" 
+								className="w-full flex gap-2"
+								onClick={() => {
+									if (!selectedActivity?.map?.summary_polyline) return;
+									
+									const routePoints = switchCoordinates(selectedActivity);
+									
+									// Create GPX content
+									const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Map Something">
+    <trk>
+        <name>${selectedActivity.name}</name>
+        <type>${selectedActivity.type}</type>
+        <trkseg>
+            ${routePoints.coordinates
+                .map(([lon, lat]) => `            <trkpt lat="${lat}" lon="${lon}"></trkpt>`)
+                .join('\n')}
+        </trkseg>
+    </trk>
+</gpx>`;
+									
+									// Create and trigger download
+									const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+									const url = window.URL.createObjectURL(blob);
+									const a = document.createElement('a');
+									a.href = url;
+									a.download = `${selectedActivity.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.gpx`;
+									document.body.appendChild(a);
+									a.click();
+									document.body.removeChild(a);
+									window.URL.revokeObjectURL(url);
+								}}
+							>
+								<Download className="h-4 w-4" />
+								Download GPX
+							</Button>
 						</div>
 					) : (
 						<div className="p-4 flex flex-col gap-4 relative grow overflow-y-auto">
