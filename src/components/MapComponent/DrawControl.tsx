@@ -131,25 +131,50 @@ export default function DrawControl(props: DrawControlProps) {
 			}
 
 			const processRoute = async (coords: [number, number][], featureId: string) => {
+				console.log('3. Starting to process route with', coords.length, 'points');
 				let finalRoute: [number, number][] = [];
+				let hasMatchingError = false;
 
 				for (let i = 0; i < coords.length - 1; i++) {
 					const start = coords[i];
 					const end = coords[i + 1];
-					const matchedGeometry = await getMatch([start, end]);
-
-					if (matchedGeometry) {
-						finalRoute.push(...matchedGeometry);
-					} else {
-						finalRoute.push(start, end);
+					console.log(`4. Processing segment ${i + 1}/${coords.length - 1}: ${start} to ${end}`);
+					
+					try {
+						const matchedGeometry = await getMatch([start, end]);
+						if (matchedGeometry) {
+							console.log(`5. Successfully matched segment ${i + 1}:`, matchedGeometry);
+							finalRoute.push(...matchedGeometry);
+						} else {
+							console.warn(`5. Failed to match segment ${i + 1}, using original coordinates`);
+							hasMatchingError = true;
+							finalRoute.push(start);
+							if (i === coords.length - 2) {
+								finalRoute.push(end);
+							}
+						}
+					} catch (error) {
+						console.error(`5. Error processing segment ${i + 1}:`, error);
+						hasMatchingError = true;
+						finalRoute.push(start);
+						if (i === coords.length - 2) {
+							finalRoute.push(end);
+						}
 					}
 				}
 
-				// Remove duplicate points
+				console.log('6. Removing duplicate points from route');
 				finalRoute = finalRoute.filter(
 					(point, index, self) => index === 0 || !turf.booleanEqual(turf.point(point), turf.point(self[index - 1]))
 				);
 
+				if (hasMatchingError) {
+					console.warn('7. Some segments had matching errors. Final route uses some original coordinates.');
+				} else {
+					console.log('7. All segments successfully matched to roads');
+				}
+
+				console.log('8. Setting current route with', finalRoute.length, 'points');
 				setCurrentRoute(finalRoute);
 
 				const newRoute: DrawnRoute = {
@@ -164,16 +189,34 @@ export default function DrawControl(props: DrawControlProps) {
 					distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
 				};
 
-				props.onRouteSave?.(newRoute);
-				props.onRouteAdd?.(newRoute);
+				console.log('9. Created new route object:', newRoute);
 
-				// Delete the original drawn feature
+				try {
+					console.log('10. Attempting to save route');
+					await props.onRouteSave?.(newRoute);
+					console.log('11. Route saved successfully');
+				} catch (error) {
+					console.error('11. Error saving route:', error);
+				}
+
+				try {
+					console.log('12. Attempting to add route to display');
+					props.onRouteAdd?.(newRoute);
+					console.log('13. Route added to display successfully');
+				} catch (error) {
+					console.error('13. Error adding route to display:', error);
+				}
+
+				console.log('14. Deleting original drawn feature:', featureId);
 				draw.delete(featureId);
+				console.log('15. Route processing complete');
 			};
 
 			mapInst.on('draw.create', (e: any) => {
+				console.log('1. Route drawing completed. Raw feature:', e.features[0]);
 				const feature = e.features[0];
 				const coords = feature.geometry.coordinates as [number, number][];
+				console.log('2. Extracted coordinates:', coords);
 				processRoute(coords, feature.id);
 			});
 
