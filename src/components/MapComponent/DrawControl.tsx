@@ -167,7 +167,7 @@ export default function DrawControl(props: DrawControlProps) {
 					const start = coords[i];
 					const end = coords[i + 1];
 					console.log(`4. Processing segment ${i + 1}/${coords.length - 1}: ${start} to ${end}`);
-					
+
 					try {
 						const matchedGeometry = await getMatch([start, end]);
 						if (matchedGeometry) {
