@@ -108,9 +108,16 @@ export default function DrawControl(props: DrawControlProps) {
 	const [currentRoute, setCurrentRoute] = useState<[number, number][]>([]);
 	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 
+	// Add debug logging for component lifecycle
+	useEffect(() => {
+		console.log('[DrawControl] Component mounted');
+		return () => console.log('[DrawControl] Component unmounted');
+	}, []);
+
 	const draw = useControl(
-		() =>
-			new MapboxDraw({
+		() => {
+			console.log('[DrawControl] Initializing draw control');
+			return new MapboxDraw({
 				displayControlsDefault: false,
 				controls: {
 					line_string: true,
@@ -120,89 +127,58 @@ export default function DrawControl(props: DrawControlProps) {
 				defaultMode: 'simple_select',
 				styles: drawStyles,
 				...props,
-			}) as any,
+			}) as any;
+		},
 		({ map }) => {
 			const mapInst = (map as any).getMap();
+			console.log('[DrawControl] Map instance obtained:', !!mapInst);
 			setMapInstance(mapInst);
-			console.log('DrawControl initialized');
 
 			const controlContainer = map.getContainer().querySelector('.mapboxgl-ctrl-top-right');
 			if (controlContainer && props.className) {
 				controlContainer.classList.add(props.className);
 			}
 
-			// Add listeners for all draw events
+			// Add debug logging for drawing events
 			mapInst.on('draw.modechange', (e: any) => {
-				console.log('Draw mode changed:', e.mode);
-				if (e.mode === 'draw_line_string') {
-					console.log('Started drawing line');
-				} else if (e.mode === 'simple_select') {
-					console.log('Finished drawing, switched to select mode');
-				}
+				console.log('[DrawControl] Draw mode changed:', e.mode);
 			});
 
-			mapInst.on('draw.selectionchange', (e: any) => {
-				console.log('Selection changed:', e);
-			});
-
-			mapInst.on('draw.actionable', (e: any) => {
-				console.log('Draw actionable state changed:', e);
-			});
-
-			mapInst.on('draw.render', (e: any) => {
-				console.log('Draw render event:', e);
-			});
-
-			// Log when points are added during drawing
-			mapInst.on('draw.add', (e: any) => {
-				console.log('Point added during drawing:', e);
+			mapInst.on('draw.create', (e: any) => {
+				console.log('[DrawControl] Draw create event:', {
+					featureCount: e?.features?.length,
+					coordinates: e?.features?.[0]?.geometry?.coordinates
+				});
+				const feature = e.features[0];
+				const coords = feature.geometry.coordinates as [number, number][];
+				processRoute(coords, feature.id);
 			});
 
 			const processRoute = async (coords: [number, number][], featureId: string) => {
-				console.log('3. Starting to process route with', coords.length, 'points');
+				console.log('[DrawControl] Processing route with coordinates:', coords);
 				let finalRoute: [number, number][] = [];
-				let hasMatchingError = false;
 
 				for (let i = 0; i < coords.length - 1; i++) {
 					const start = coords[i];
 					const end = coords[i + 1];
-					console.log(`4. Processing segment ${i + 1}/${coords.length - 1}: ${start} to ${end}`);
+					console.log(`[DrawControl] Processing segment ${i + 1}/${coords.length - 1}`);
+					const matchedGeometry = await getMatch([start, end]);
 
-					try {
-						const matchedGeometry = await getMatch([start, end]);
-						if (matchedGeometry) {
-							console.log(`5. Successfully matched segment ${i + 1}:`, matchedGeometry);
-							finalRoute.push(...matchedGeometry);
-						} else {
-							console.warn(`5. Failed to match segment ${i + 1}, using original coordinates`);
-							hasMatchingError = true;
-							finalRoute.push(start);
-							if (i === coords.length - 2) {
-								finalRoute.push(end);
-							}
-						}
-					} catch (error) {
-						console.error(`5. Error processing segment ${i + 1}:`, error);
-						hasMatchingError = true;
-						finalRoute.push(start);
-						if (i === coords.length - 2) {
-							finalRoute.push(end);
-						}
+					if (matchedGeometry) {
+						console.log(`[DrawControl] Segment ${i + 1} matched successfully`);
+						finalRoute.push(...matchedGeometry);
+					} else {
+						console.log(`[DrawControl] Segment ${i + 1} matching failed, using original coordinates`);
+						finalRoute.push(start, end);
 					}
 				}
 
-				console.log('6. Removing duplicate points from route');
+				console.log('[DrawControl] Removing duplicate points');
 				finalRoute = finalRoute.filter(
 					(point, index, self) => index === 0 || !turf.booleanEqual(turf.point(point), turf.point(self[index - 1]))
 				);
 
-				if (hasMatchingError) {
-					console.warn('7. Some segments had matching errors. Final route uses some original coordinates.');
-				} else {
-					console.log('7. All segments successfully matched to roads');
-				}
-
-				console.log('8. Setting current route with', finalRoute.length, 'points');
+				console.log('[DrawControl] Setting current route');
 				setCurrentRoute(finalRoute);
 
 				const newRoute: DrawnRoute = {
@@ -217,38 +193,18 @@ export default function DrawControl(props: DrawControlProps) {
 					distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
 				};
 
-				console.log('9. Created new route object:', newRoute);
+				console.log('[DrawControl] Saving route');
+				props.onRouteSave?.(newRoute);
+				props.onRouteAdd?.(newRoute);
 
-				try {
-					console.log('10. Attempting to save route');
-					await props.onRouteSave?.(newRoute);
-					console.log('11. Route saved successfully');
-				} catch (error) {
-					console.error('11. Error saving route:', error);
-				}
-
-				try {
-					console.log('12. Attempting to add route to display');
-					props.onRouteAdd?.(newRoute);
-					console.log('13. Route added to display successfully');
-				} catch (error) {
-					console.error('13. Error adding route to display:', error);
-				}
-
-				console.log('14. Deleting original drawn feature:', featureId);
+				console.log('[DrawControl] Deleting original feature');
 				draw.delete(featureId);
-				console.log('15. Route processing complete');
 			};
 
-			mapInst.on('draw.create', (e: any) => {
-				console.log('1. Route drawing completed. Raw feature:', e.features[0]);
-				const feature = e.features[0];
-				const coords = feature.geometry.coordinates as [number, number][];
-				console.log('2. Extracted coordinates:', coords);
-				processRoute(coords, feature.id);
-			});
-
 			mapInst.on('draw.delete', props.onDelete || (() => {}));
+		},
+		{
+			position: 'top-right'
 		}
 	);
 
