@@ -30,7 +30,6 @@ export default function Home() {
 			fetch('/api/activities')
 				.then((res) => res.json())
 				.then((data) => {
-					console.log('Loaded activities:', data.activities);
 					setActivities(data.activities || []);
 					setActivitiesLoading(false);
 				})
@@ -43,7 +42,6 @@ export default function Home() {
 			fetch('/api/routes')
 				.then((res) => res.json())
 				.then((data) => {
-					console.log('Loaded routes:', data.routes);
 					setRoutes(data.routes.map((route: DbRoute) => ({
 						...route,
 						distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' })
@@ -55,7 +53,6 @@ export default function Home() {
 				fetch('/api/waypoints')
 					.then((res) => res.json())
 					.then((data) => {
-						console.log('Loaded waypoints:', data.waypoints);
 						setWaypoints(data.waypoints || []);
 					})
 					.catch((error) => console.error('Error loading waypoints:', error));

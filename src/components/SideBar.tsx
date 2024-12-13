@@ -243,8 +243,8 @@ export default function SideBar({
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					user_id: user.id
-				})
+					user_id: user.id,
+				}),
 			});
 
 			console.log('Response status:', response.status);
@@ -631,8 +631,8 @@ export default function SideBar({
 				<div className="border-t bg-background p-4 flex flex-col gap-4">
 					{status === 'authenticated' ? (
 						<Button variant="secondary" className="w-full" onClick={() => signOut?.()}>
-								Sign out
-							</Button>
+							Sign out
+						</Button>
 					) : (
 						<Button variant="secondary" className="w-full" disabled>
 							Sign in (coming soon)

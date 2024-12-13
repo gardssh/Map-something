@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS public.strava_tokens (
     strava_athlete_id BIGINT
 );
 
+-- Add unique constraint for strava_athlete_id
+ALTER TABLE strava_tokens ADD CONSTRAINT unique_strava_athlete_id UNIQUE (strava_athlete_id);
+
 -- Create strava_activities table
 CREATE TABLE IF NOT EXISTS public.strava_activities (
     id TEXT PRIMARY KEY,

@@ -18,7 +18,7 @@ interface LayerOption {
 interface LayersControlProps {
 	layers: LayerOption[];
 	currentBaseLayer: string;
-	overlays: { [key: string]: boolean };
+	overlayStates: { [key: string]: boolean };
 	onLayerToggle: (layerId: string, isVisible: boolean) => void;
 	selectedCategories: string[];
 	onCategoryToggle: (categories: string[]) => void;
@@ -27,7 +27,7 @@ interface LayersControlProps {
 export const LayersControl = ({
 	layers,
 	currentBaseLayer,
-	overlays,
+	overlayStates,
 	onLayerToggle,
 	selectedCategories,
 	onCategoryToggle,
@@ -128,8 +128,8 @@ export const LayersControl = ({
 								<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
 									<input
 										type="checkbox"
-										checked={overlays[layer.id]}
-										onChange={() => onLayerToggle(layer.id, !overlays[layer.id])}
+										checked={overlayStates[layer.id]}
+										onChange={() => onLayerToggle(layer.id, !overlayStates[layer.id])}
 										className="form-checkbox h-4 w-4 text-blue-600"
 									/>
 									<span className="text-sm text-gray-700">{layer.name}</span>

@@ -78,12 +78,10 @@ function createHybridRoute(original: [number, number][], matched: [number, numbe
 
 async function getMatch(coordinates: [number, number][]): Promise<[number, number][] | null> {
 	try {
-		const coords = coordinates.map(coord => coord.join(',')).join(';');
+		const coords = coordinates.map((coord) => coord.join(',')).join(';');
 		const radiusStr = Array(coordinates.length).fill('25').join(';');
 
 		const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`;
-
-		console.log('[DrawControl] Matching API URL:', url.replace(process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN!, 'HIDDEN'));
 
 		const query = await fetch(url);
 		if (!query.ok) {
@@ -92,7 +90,6 @@ async function getMatch(coordinates: [number, number][]): Promise<[number, numbe
 		}
 
 		const response = await query.json();
-		console.log('[DrawControl] Matching API Response:', response);
 
 		if (response.code !== 'Ok' || !response.matchings?.[0]?.geometry?.coordinates) {
 			console.error('[DrawControl] Matching API Error:', response);
@@ -108,15 +105,13 @@ async function getMatch(coordinates: [number, number][]): Promise<[number, numbe
 
 export default function DrawControl(props: DrawControlProps) {
 	const [currentRoute, setCurrentRoute] = useState<[number, number][]>([]);
-	
+
 	useEffect(() => {
-		console.log('[DrawControl] Component mounted with props:', props);
-		return () => console.log('[DrawControl] Component unmounted');
+		return () => {};
 	}, [props]);
 
 	const draw = useControl<any>(
 		() => {
-			console.log('[DrawControl] Initializing MapboxDraw instance');
 			const drawInstance = new MapboxDraw({
 				displayControlsDefault: false,
 				controls: {
@@ -128,34 +123,27 @@ export default function DrawControl(props: DrawControlProps) {
 				styles: drawStyles,
 				...props,
 			});
-			console.log('[DrawControl] MapboxDraw instance created:', !!drawInstance);
 			return drawInstance;
 		},
 		({ map }) => {
-			console.log('[DrawControl] Draw control added to map');
 			const mapInst = map.getMap();
-			console.log('[DrawControl] Map instance obtained:', !!mapInst);
 
 			const processRoute = async (coords: [number, number][], featureId: string) => {
-				console.log('[DrawControl] Processing route with coordinates:', coords);
 				let finalRoute: [number, number][] = [];
 
 				try {
 					for (let i = 0; i < coords.length - 1; i++) {
 						const segmentCoords = [coords[i], coords[i + 1]];
-						console.log(`[DrawControl] Processing segment ${i}:`, segmentCoords);
-						
+
 						const matchedGeometry = await getMatch(segmentCoords);
 
 						if (matchedGeometry) {
-							console.log(`[DrawControl] Segment ${i} matched successfully`);
 							if (finalRoute.length === 0) {
 								finalRoute.push(...matchedGeometry);
 							} else {
 								finalRoute.push(...matchedGeometry.slice(1));
 							}
 						} else {
-							console.log(`[DrawControl] Segment ${i} not matched, using original coordinates`);
 							if (finalRoute.length === 0) {
 								finalRoute.push(segmentCoords[0]);
 							}
@@ -163,14 +151,10 @@ export default function DrawControl(props: DrawControlProps) {
 						}
 					}
 
-					console.log('[DrawControl] Removing duplicate points');
 					finalRoute = finalRoute.filter(
-						(point, index, self) => 
-							index === 0 || 
-							!turf.booleanEqual(turf.point(point), turf.point(self[index - 1]))
+						(point, index, self) => index === 0 || !turf.booleanEqual(turf.point(point), turf.point(self[index - 1]))
 					);
 
-					console.log('[DrawControl] Setting current route');
 					setCurrentRoute(finalRoute);
 
 					const newRoute: DrawnRoute = {
@@ -185,14 +169,10 @@ export default function DrawControl(props: DrawControlProps) {
 						distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
 					};
 
-					console.log('[DrawControl] Saving route');
 					await props.onRouteSave?.(newRoute);
-					console.log('[DrawControl] Route saved successfully');
 
 					props.onRouteAdd?.(newRoute);
-					console.log('[DrawControl] Route added to display');
 
-					console.log('[DrawControl] Deleting original feature');
 					draw.delete(featureId);
 				} catch (error) {
 					console.error('[DrawControl] Error processing route:', error);
@@ -200,12 +180,9 @@ export default function DrawControl(props: DrawControlProps) {
 			};
 
 			mapInst.on('draw.create', (e: any) => {
-				console.log('[DrawControl] draw.create event triggered:', e);
 				const feature = e.features[0];
 				if (feature) {
-					console.log('[DrawControl] Feature created:', feature);
 					const coords = feature.geometry.coordinates as [number, number][];
-					console.log('[DrawControl] Processing coordinates:', coords);
 					processRoute(coords, feature.id);
 				} else {
 					console.error('[DrawControl] No feature in draw.create event');
@@ -213,21 +190,16 @@ export default function DrawControl(props: DrawControlProps) {
 			});
 
 			mapInst.on('draw.modechange', (e: any) => {
-				console.log('[DrawControl] Mode changed:', e.mode);
 				props.onModeChange?.({ mode: e.mode });
 			});
 
-			mapInst.on('draw.actionable', (e: any) => {
-				console.log('[DrawControl] Draw actionable:', e);
-			});
+			mapInst.on('draw.actionable', (e: any) => {});
 
 			mapInst.on('draw.delete', props.onDelete || (() => {}));
 		},
-		() => {
-			console.log('[DrawControl] Draw control removed');
-		},
+		() => {},
 		{
-			position: props.position || 'top-right'
+			position: props.position || 'top-right',
 		}
 	);
 
