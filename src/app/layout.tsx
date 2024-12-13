@@ -6,8 +6,8 @@ import { Providers } from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-	title: 'Map Something',
-	description: 'Map your activities',
+	title: 'Villspor',
+	description: 'Et kart for meg som er på villspor',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
