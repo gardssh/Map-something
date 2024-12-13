@@ -8,6 +8,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
 	title: 'Villspor',
 	description: 'Et kart for meg som er på villspor',
+	icons: {
+		icon: '/favicon.svg',
+	},
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
