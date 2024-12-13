@@ -466,19 +466,42 @@ export const MapComponent = ({
 				/>
 
 				<DrawControl
-					position="bottom-right"
+					position="top-right"
 					displayControlsDefault={false}
 					userId={session?.user?.id || ''}
 					controls={{
 						line_string: true,
-						trash: false,
+						trash: true,
 					}}
-					onCreate={onDrawCreate}
-					onUpdate={onDrawUpdate}
-					onDelete={onDrawDelete}
-					onRouteSave={onRouteSave}
-					onRouteAdd={(route) => setLocalRoutes((prev) => [...prev, route])}
-					onModeChange={onDrawModeChange}
+					onCreate={(evt) => {
+						console.log('[MapComponent] Draw create event received:', evt);
+						onDrawCreate(evt);
+					}}
+					onUpdate={(evt) => {
+						console.log('[MapComponent] Draw update event received:', evt);
+						onDrawUpdate(evt);
+					}}
+					onDelete={(evt) => {
+						console.log('[MapComponent] Draw delete event received:', evt);
+						onDrawDelete(evt);
+					}}
+					onRouteSave={async (route) => {
+						console.log('[MapComponent] Route save requested:', route);
+						try {
+							await onRouteSave?.(route);
+							console.log('[MapComponent] Route saved successfully');
+						} catch (error) {
+							console.error('[MapComponent] Error saving route:', error);
+						}
+					}}
+					onRouteAdd={(route) => {
+						console.log('[MapComponent] Adding route to local state:', route);
+						setLocalRoutes((prev) => [...prev, route]);
+					}}
+					onModeChange={(evt) => {
+						console.log('[MapComponent] Draw mode change event received:', evt);
+						onDrawModeChange(evt);
+					}}
 				/>
 
 				<Source
