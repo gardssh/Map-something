@@ -73,7 +73,13 @@ export const MapComponent = ({
 }) => {
 	const mapRef = useRef<MapRef>();
 	const [hoverInfo, setHoverInfo] = useState<any>(null);
-	const [activeLayers, setActiveLayers] = useState<string[]>(['default', 'bratthet']);
+	const [currentBaseLayer, setCurrentBaseLayer] = useState<string>('default');
+	const [overlayStates, setOverlayStates] = useState<{[key: string]: boolean}>({
+		bratthet: false,
+		snoskred: false,
+		'custom-tileset': false
+	});
+	const [isAddingLayers, setIsAddingLayers] = useState(false);
 	const [selectedCategories, setSelectedCategories] = useState<string[]>([
 		'Foot Sports',
 		'Cycle Sports',
@@ -100,87 +106,248 @@ export const MapComponent = ({
 		{ id: 'custom-tileset', name: 'Heatmap 2000m Norge', isBase: false },
 	];
 
-	const handleLayerToggle = (layerId: string, isVisible: boolean) => {
-		if (mapRef.current) {
-			setActiveLayers((prev) => {
-				const newLayers = isVisible ? [...prev, layerId] : prev.filter((id) => id !== layerId);
+	// Function to add overlay layers based on their states
+	const addOverlayLayers = useCallback(() => {
+		if (!mapRef.current || isAddingLayers) return;
+		const map = mapRef.current.getMap();
 
-				if (isVisible && availableLayers.find((l) => l.id === layerId)?.isBase) {
-					return [layerId, ...prev.filter((id) => !availableLayers.find((l) => l.id === id)?.isBase)];
-				}
-				return newLayers;
-			});
+		setIsAddingLayers(true);
 
-			if (layerId === 'bratthet' || layerId === 'snoskred') {
-				mapRef.current.getMap().setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
-			} else if (['satellite', 'norge-topo', 'default'].includes(layerId)) {
-				const overlayStates = {
-					bratthet: activeLayers.includes('bratthet'),
-					snoskred: activeLayers.includes('snoskred'),
-				};
+		// Enhanced style loading check
+		const checkStyleAndAddLayers = () => {
+			if (!map.isStyleLoaded()) {
+				setTimeout(checkStyleAndAddLayers, 100);
+				return;
+			}
 
-				const norgeTopoStyle: StyleSpecification = {
-					version: 8,
-					sources: {
-						'norge-topo': {
-							type: 'raster',
-							tiles: ['https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png'],
-							tileSize: 256,
-							attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>',
-						},
-					},
+			// Additional check to ensure all resources are loaded
+			if (!map.areTilesLoaded()) {
+				setTimeout(checkStyleAndAddLayers, 100);
+				return;
+			}
 
-					layers: [
-						{
-							id: 'norge-topo-layer',
-							type: 'raster',
-							source: 'norge-topo',
-							paint: { 'raster-opacity': 1 },
-						},
-					],
-				};
+			try {
+				// Remove existing overlay sources and layers before adding them again
+				['bratthet', 'snoskred'].forEach(layerId => {
+					if (map.getLayer(layerId)) {
+						map.removeLayer(layerId);
+					}
+					if (map.getSource(layerId)) {
+						map.removeSource(layerId);
+					}
+				});
 
-				const newStyle =
-					layerId === 'satellite'
-						? 'mapbox://styles/mapbox/satellite-v9'
-						: layerId === 'norge-topo'
-							? norgeTopoStyle
-							: 'mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm';
-
-				mapRef.current.getMap().setStyle(newStyle as string);
-
-				mapRef.current.getMap().once('style.load', () => {
-					mapRef.current?.getMap().addSource('bratthet', {
+				// Add bratthet layer
+				if (!map.getSource('bratthet')) {
+					map.addSource('bratthet', {
 						type: 'raster',
 						tiles: [
-							'https://nve.geodataonline.no/arcgis/services/Bratthet/MapServer/WMSServer?service=WMS&request=GetMap&version=1.1.1&layers=Bratthet_snoskred&styles=&format=image/png&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
-						],
+							'https://nve.geodataonline.no/arcgis/services/Bratthet/MapServer/WMSServer?service=WMS&request=GetMap&version=1.1.1&layers=Bratthet_snoskred&styles=&format=image/png&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true'
+						]
 					});
-					mapRef.current?.getMap().addLayer({
+				}
+				if (!map.getLayer('bratthet')) {
+					map.addLayer({
 						id: 'bratthet',
 						type: 'raster',
 						source: 'bratthet',
 						paint: { 'raster-opacity': 0.6 },
-						layout: { visibility: overlayStates.bratthet ? 'visible' : 'none' },
+						layout: { visibility: overlayStates.bratthet ? 'visible' : 'none' }
 					});
+				}
 
-					mapRef.current?.getMap().addSource('snoskred', {
+				// Add snoskred layer
+				if (!map.getSource('snoskred')) {
+					map.addSource('snoskred', {
 						type: 'raster',
 						tiles: [
-							'https://gis3.nve.no/arcgis/rest/services/wmts/KastWMTS/MapServer/export?dpi=96&transparent=true&format=png32&bbox={bbox-epsg-3857}&bboxSR=EPSG:3857&imageSR=EPSG:3857&size=256,256&f=image&layers=show:0,1,2,3,4',
-						],
+							'https://gis3.nve.no/arcgis/rest/services/wmts/KastWMTS/MapServer/export?dpi=96&transparent=true&format=png32&bbox={bbox-epsg-3857}&bboxSR=EPSG:3857&imageSR=EPSG:3857&size=256,256&f=image&layers=show:0,1,2,3,4'
+						]
 					});
-					mapRef.current?.getMap().addLayer({
+				}
+				if (!map.getLayer('snoskred')) {
+					map.addLayer({
 						id: 'snoskred',
 						type: 'raster',
 						source: 'snoskred',
 						paint: { 'raster-opacity': 0.6 },
-						layout: { visibility: overlayStates.snoskred ? 'visible' : 'none' },
+						layout: { visibility: overlayStates.snoskred ? 'visible' : 'none' }
 					});
+				}
+
+				// Update layer visibility
+				['bratthet', 'snoskred'].forEach(layerId => {
+					if (map.getLayer(layerId)) {
+						map.setLayoutProperty(
+							layerId,
+							'visibility',
+							overlayStates[layerId] ? 'visible' : 'none'
+						);
+					}
+				});
+
+				setIsAddingLayers(false);
+			} catch (error) {
+				console.error('Error adding overlay layers:', error);
+				setIsAddingLayers(false);
+				// Retry once if there's an error
+				setTimeout(checkStyleAndAddLayers, 200);
+			}
+		};
+
+		// Start the loading check process
+		checkStyleAndAddLayers();
+	}, [overlayStates, isAddingLayers]);
+
+	// Add effect to handle initial map load and style changes
+	useEffect(() => {
+		if (!mapRef.current) return;
+		const map = mapRef.current.getMap();
+
+		const handleStyleData = () => {
+			// Enhanced loading check for style data
+			const checkAndAddLayers = () => {
+				if (!map.isStyleLoaded() || !map.areTilesLoaded()) {
+					setTimeout(checkAndAddLayers, 100);
+					return;
+				}
+				// Only add layers if they don't exist yet
+				if (!map.getLayer('bratthet') && !map.getLayer('snoskred')) {
+					addOverlayLayers();
+				}
+			};
+			checkAndAddLayers();
+		};
+
+		map.on('style.load', handleStyleData);
+		
+		// Handle initial load with additional checks
+		if (map.isStyleLoaded()) {
+			if (map.areTilesLoaded()) {
+				// Only add layers if they don't exist yet
+				if (!map.getLayer('bratthet') && !map.getLayer('snoskred')) {
+					addOverlayLayers();
+				}
+			} else {
+				map.once('idle', () => {
+					// Only add layers if they don't exist yet
+					if (!map.getLayer('bratthet') && !map.getLayer('snoskred')) {
+						addOverlayLayers();
+					}
 				});
 			}
 		}
-	};
+
+		return () => {
+			map.off('style.load', handleStyleData);
+		};
+	}, [addOverlayLayers]);
+
+	const handleLayerToggle = useCallback((layerId: string, isVisible: boolean) => {
+		if (!mapRef.current) return;
+		const map = mapRef.current.getMap();
+
+		// Handle base layer changes
+		if (['satellite', 'norge-topo', 'default'].includes(layerId)) {
+			setCurrentBaseLayer(layerId);
+			
+			const norgeTopoStyle: StyleSpecification = {
+				version: 8,
+				sources: {
+					'norge-topo': {
+						type: 'raster',
+						tiles: ['https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png'],
+						tileSize: 256,
+						attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
+					}
+				},
+				layers: [
+					{
+						id: 'norge-topo-layer',
+						type: 'raster',
+						source: 'norge-topo',
+						paint: { 'raster-opacity': 1 }
+					}
+				]
+			};
+
+			const newStyle = layerId === 'satellite'
+				? 'mapbox://styles/mapbox/satellite-v9'
+				: layerId === 'norge-topo'
+					? norgeTopoStyle
+					: 'mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm';
+
+			// Store current overlay states before style change
+			const currentOverlayStates = { ...overlayStates };
+
+			map.setStyle(newStyle as string);
+
+			// Re-add overlay layers after style load
+			map.once('style.load', () => {
+				// Restore overlay states
+				setOverlayStates(currentOverlayStates);
+				// Wait for style to be fully loaded
+				setTimeout(() => {
+					addOverlayLayers();
+				}, 200);
+			});
+		} 
+		// Handle overlay toggles
+		else {
+			// Update state first
+			setOverlayStates(prev => ({
+				...prev,
+				[layerId]: isVisible
+			}));
+
+			// For raster layers (bratthet and snoskred), ensure immediate layer addition
+			if (layerId === 'bratthet' || layerId === 'snoskred') {
+				const source = layerId === 'bratthet' ? {
+					type: 'raster' as const,
+					tiles: [
+						'https://nve.geodataonline.no/arcgis/services/Bratthet/MapServer/WMSServer?service=WMS&request=GetMap&version=1.1.1&layers=Bratthet_snoskred&styles=&format=image/png&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true'
+					]
+				} : {
+					type: 'raster' as const,
+					tiles: [
+						'https://gis3.nve.no/arcgis/rest/services/wmts/KastWMTS/MapServer/export?dpi=96&transparent=true&format=png32&bbox={bbox-epsg-3857}&bboxSR=EPSG:3857&imageSR=EPSG:3857&size=256,256&f=image&layers=show:0,1,2,3,4'
+					]
+				};
+
+				try {
+					// Add source if it doesn't exist
+					if (!map.getSource(layerId)) {
+						map.addSource(layerId, source);
+					}
+
+					// Add layer if it doesn't exist
+					if (!map.getLayer(layerId)) {
+						map.addLayer({
+							id: layerId,
+							type: 'raster',
+							source: layerId,
+							paint: { 'raster-opacity': 0.6 },
+							layout: { visibility: isVisible ? 'visible' : 'none' }
+						});
+					} else {
+						// Update visibility of existing layer
+						map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
+					}
+				} catch (error) {
+					console.error(`Error handling layer ${layerId}:`, error);
+					// Only call addOverlayLayers if we failed to add the layer directly
+					if (!map.getLayer(layerId)) {
+						addOverlayLayers();
+					}
+				}
+			} else {
+				// For other layers (like custom-tileset), just update visibility
+				if (map.getLayer(layerId)) {
+					map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
+				}
+			}
+		}
+	}, [addOverlayLayers, overlayStates]);
 
 	const getVisibleActivities = (): any[] => {
 		// @ts-ignore
@@ -461,7 +628,8 @@ export const MapComponent = ({
 				<NavigationControl position="top-right" visualizePitch={true} showZoom={true} showCompass={true} />
 				<LayersControl
 					layers={availableLayers}
-					activeLayers={activeLayers}
+					currentBaseLayer={currentBaseLayer}
+					overlays={overlayStates}
 					onLayerToggle={handleLayerToggle}
 					selectedCategories={selectedCategories}
 					onCategoryToggle={setSelectedCategories}
@@ -514,24 +682,6 @@ export const MapComponent = ({
 					maxzoom={14}
 				/>
 
-				<Source
-					type="raster"
-					tiles={[
-						'https://nve.geodataonline.no/arcgis/services/Bratthet/MapServer/WMSServer?service=WMS&request=GetMap&version=1.1.1&layers=Bratthet_snoskred&styles=&format=image/png&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true',
-					]}
-				>
-					<Layer id={'bratthet'} type="raster" paint={{ 'raster-opacity': 0.6 }} />
-				</Source>
-
-				<Source
-					type="raster"
-					tiles={[
-						'https://gis3.nve.no/arcgis/rest/services/wmts/KastWMTS/MapServer/export?dpi=96&transparent=true&format=png32&bbox={bbox-epsg-3857}&bboxSR=EPSG:3857&imageSR=EPSG:3857&size=256,256&f=image&layers=show:0,1,2,3,4',
-					]}
-				>
-					<Layer id={'snoskred'} type="raster" paint={{ 'raster-opacity': 0.6 }} layout={{ visibility: 'none' }} />
-				</Source>
-
 				<Source id="custom-tileset" type="vector" url="mapbox://gardsh.dppfxauy">
 					<Layer
 						id="custom-tileset-layer"
@@ -544,7 +694,7 @@ export const MapComponent = ({
 							'line-blur': 1,
 						}}
 						layout={{
-							visibility: activeLayers.includes('custom-tileset') ? 'visible' : 'none',
+							visibility: overlayStates['custom-tileset'] ? 'visible' : 'none',
 							'line-join': 'round',
 							'line-cap': 'round',
 						}}
@@ -559,7 +709,7 @@ export const MapComponent = ({
 							'line-opacity': 0.1,
 						}}
 						layout={{
-							visibility: activeLayers.includes('custom-tileset') ? 'visible' : 'none',
+							visibility: overlayStates['custom-tileset'] ? 'visible' : 'none',
 							'line-join': 'round',
 							'line-cap': 'round',
 						}}
@@ -758,16 +908,17 @@ export const MapComponent = ({
 					type="geojson"
 					data={{
 						type: 'FeatureCollection',
-						features: localRoutes.map((route) => ({
-							type: 'Feature',
-							geometry: route.geometry,
-							properties: {
-								id: route.id,
-								name: route.name,
-								distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
-								type: 'drawn-route',
-							},
-						})) || [],
+						features:
+							localRoutes.map((route) => ({
+								type: 'Feature',
+								geometry: route.geometry,
+								properties: {
+									id: route.id,
+									name: route.name,
+									distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
+									type: 'drawn-route',
+								},
+							})) || [],
 					}}
 				>
 					<Layer

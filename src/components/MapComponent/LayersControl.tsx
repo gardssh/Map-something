@@ -17,7 +17,8 @@ interface LayerOption {
 
 interface LayersControlProps {
 	layers: LayerOption[];
-	activeLayers: string[];
+	currentBaseLayer: string;
+	overlays: { [key: string]: boolean };
 	onLayerToggle: (layerId: string, isVisible: boolean) => void;
 	selectedCategories: string[];
 	onCategoryToggle: (categories: string[]) => void;
@@ -25,13 +26,14 @@ interface LayersControlProps {
 
 export const LayersControl = ({
 	layers,
-	activeLayers,
+	currentBaseLayer,
+	overlays,
 	onLayerToggle,
 	selectedCategories,
 	onCategoryToggle,
 }: LayersControlProps) => {
 	const baseLayers = layers.filter(l => l.isBase);
-	const overlays = layers.filter(l => !l.isBase);
+	const overlayLayers = layers.filter(l => !l.isBase);
 	const [isOpen, setIsOpen] = useState(false);
 	const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
 
@@ -108,7 +110,7 @@ export const LayersControl = ({
 									<input
 										type="radio"
 										name="baseLayer"
-										checked={activeLayers.includes(layer.id)}
+										checked={currentBaseLayer === layer.id}
 										onChange={() => onLayerToggle(layer.id, true)}
 										className="form-radio h-4 w-4 text-blue-600"
 									/>
@@ -122,12 +124,12 @@ export const LayersControl = ({
 					<div className="mb-6">
 						<div className="text-sm font-semibold text-gray-500 mb-3">Overlays</div>
 						<div className="flex flex-col space-y-2">
-							{overlays.map(layer => (
+							{overlayLayers.map(layer => (
 								<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
 									<input
 										type="checkbox"
-										checked={activeLayers.includes(layer.id)}
-										onChange={() => onLayerToggle(layer.id, !activeLayers.includes(layer.id))}
+										checked={overlays[layer.id]}
+										onChange={() => onLayerToggle(layer.id, !overlays[layer.id])}
 										className="form-checkbox h-4 w-4 text-blue-600"
 									/>
 									<span className="text-sm text-gray-700">{layer.name}</span>
