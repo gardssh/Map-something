@@ -27,6 +27,8 @@ import { Button } from '@/components/ui/button';
 import type { Waypoint } from '@/types/waypoint';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSession } from 'next-auth/react';
+import type { DbRoute } from '@/types/supabase';
+import * as turf from '@turf/turf';
 
 // Add a helper function to handle bounds
 const handleBounds = (mapRef: React.RefObject<MapRef>, coordinates: [number, number][]) => {
@@ -63,9 +65,9 @@ export const MapComponent = ({
 	selectedRouteId: number | null;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<number | null>>;
 	onMapLoad?: (map: mapboxgl.Map) => void;
-	onRouteSelect?: (route: DrawnRoute | null) => void;
+	onRouteSelect?: (route: DbRoute | null) => void;
 	onRouteSave?: (route: DrawnRoute) => void;
-	routes?: DrawnRoute[];
+	routes?: DbRoute[];
 	waypoints?: Waypoint[];
 	onWaypointSave?: (waypoint: Waypoint) => void;
 }) => {
@@ -79,8 +81,8 @@ export const MapComponent = ({
 		'Winter Sports',
 		'Other Sports',
 	]);
-	const [selectedRoute, setSelectedRoute] = useState<DrawnRoute | null>(null);
-	const [localRoutes, setLocalRoutes] = useState<DrawnRoute[]>(routes || []);
+	const [selectedRoute, setSelectedRoute] = useState<DbRoute | null>(null);
+	const [localRoutes, setLocalRoutes] = useState<DbRoute[]>(routes || []);
 	const [newWaypointCoords, setNewWaypointCoords] = useState<[number, number] | null>(null);
 	const [newWaypointName, setNewWaypointName] = useState('');
 	const [showWaypointDialog, setShowWaypointDialog] = useState(false);
@@ -756,17 +758,16 @@ export const MapComponent = ({
 					type="geojson"
 					data={{
 						type: 'FeatureCollection',
-						features:
-							localRoutes.map((route) => ({
-								type: 'Feature',
-								geometry: route.geometry,
-								properties: {
-									id: route.id,
-									name: route.name,
-									distance: route.distance,
-									type: 'drawn-route',
-								},
-							})) || [],
+						features: localRoutes.map((route) => ({
+							type: 'Feature',
+							geometry: route.geometry,
+							properties: {
+								id: route.id,
+								name: route.name,
+								distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
+								type: 'drawn-route',
+							},
+						})) || [],
 					}}
 				>
 					<Layer

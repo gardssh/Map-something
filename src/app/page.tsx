@@ -10,6 +10,7 @@ import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
 import type { DbRoute, DbWaypoint } from '@/types/supabase';
 import HelpButton from '@/components/HelpButton';
+import * as turf from '@turf/turf';
 
 export default function Home() {
 	const { user, loading, signOut } = useAuth();
@@ -43,18 +44,21 @@ export default function Home() {
 				.then((res) => res.json())
 				.then((data) => {
 					console.log('Loaded routes:', data.routes);
-					setRoutes(data.routes || []);
+					setRoutes(data.routes.map((route: DbRoute) => ({
+						...route,
+						distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' })
+					})));
 				})
 				.catch((error) => console.error('Error loading routes:', error));
 
 			// Load waypoints
-			fetch('/api/waypoints')
-				.then((res) => res.json())
-				.then((data) => {
-					console.log('Loaded waypoints:', data.waypoints);
-					setWaypoints(data.waypoints || []);
-				})
-				.catch((error) => console.error('Error loading waypoints:', error));
+				fetch('/api/waypoints')
+					.then((res) => res.json())
+					.then((data) => {
+						console.log('Loaded waypoints:', data.waypoints);
+						setWaypoints(data.waypoints || []);
+					})
+					.catch((error) => console.error('Error loading waypoints:', error));
 		}
 	}, [user]);
 
@@ -105,7 +109,10 @@ export default function Home() {
 			// Fetch updated routes
 			const getResponse = await fetch('/api/routes');
 			const data = await getResponse.json();
-			setRoutes(data.routes || []);
+			setRoutes(data.routes.map((route: DbRoute) => ({
+				...route,
+				distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' })
+			})));
 		} catch (error) {
 			console.error('Error saving route:', error);
 		}
