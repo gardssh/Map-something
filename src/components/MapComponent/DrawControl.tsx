@@ -124,11 +124,39 @@ export default function DrawControl(props: DrawControlProps) {
 		({ map }) => {
 			const mapInst = (map as any).getMap();
 			setMapInstance(mapInst);
+			console.log('DrawControl initialized');
 
 			const controlContainer = map.getContainer().querySelector('.mapboxgl-ctrl-top-right');
 			if (controlContainer && props.className) {
 				controlContainer.classList.add(props.className);
 			}
+
+			// Add listeners for all draw events
+			mapInst.on('draw.modechange', (e: any) => {
+				console.log('Draw mode changed:', e.mode);
+				if (e.mode === 'draw_line_string') {
+					console.log('Started drawing line');
+				} else if (e.mode === 'simple_select') {
+					console.log('Finished drawing, switched to select mode');
+				}
+			});
+
+			mapInst.on('draw.selectionchange', (e: any) => {
+				console.log('Selection changed:', e);
+			});
+
+			mapInst.on('draw.actionable', (e: any) => {
+				console.log('Draw actionable state changed:', e);
+			});
+
+			mapInst.on('draw.render', (e: any) => {
+				console.log('Draw render event:', e);
+			});
+
+			// Log when points are added during drawing
+			mapInst.on('draw.add', (e: any) => {
+				console.log('Point added during drawing:', e);
+			});
 
 			const processRoute = async (coords: [number, number][], featureId: string) => {
 				console.log('3. Starting to process route with', coords.length, 'points');
