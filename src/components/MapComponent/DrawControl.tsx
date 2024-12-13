@@ -127,14 +127,15 @@ export default function DrawControl(props: DrawControlProps) {
 					trash: true,
 					...props.controls,
 				},
-				defaultMode: 'draw_line_string', // Start in drawing mode
+				defaultMode: 'simple_select',
 				styles: drawStyles,
 				...props,
 			}) as any;
 
 			// Log when draw buttons are clicked
 			const originalChangeMode = drawInstance.changeMode;
-			drawInstance.changeMode = function(mode: string, ...args: any[]) {
+			
+			drawInstance.changeMode = function (mode: string, ...args: any[]) {
 				console.log('[DrawControl] Mode change requested:', mode);
 				try {
 					return originalChangeMode.apply(this, [mode, ...args]);
@@ -163,26 +164,37 @@ export default function DrawControl(props: DrawControlProps) {
 				}
 			};
 
+			// Add event listeners with more verbose logging
 			safeAddListener('draw.modechange', (e: any) => {
 				console.log('[DrawControl] Draw mode changed:', {
 					mode: e.mode,
-					timestamp: new Date().toISOString()
+					timestamp: new Date().toISOString(),
+					eventType: 'draw.modechange'
 				});
-				props.onModeChange?.({ mode: e.mode });
+				if (props.onModeChange) {
+					try {
+						props.onModeChange({ mode: e.mode });
+						console.log('[DrawControl] Mode change handler executed successfully');
+					} catch (error) {
+						console.error('[DrawControl] Error in mode change handler:', error);
+					}
+				}
 			});
 
 			safeAddListener('draw.selectionchange', (e: any) => {
 				console.log('[DrawControl] Selection changed:', {
 					features: e?.features,
-					timestamp: new Date().toISOString()
+					timestamp: new Date().toISOString(),
+					eventType: 'draw.selectionchange'
 				});
 			});
 
 			safeAddListener('draw.create', (e: any) => {
-				console.log('[DrawControl] Draw create event:', {
+				console.log('[DrawControl] Draw create event triggered:', {
 					featureCount: e?.features?.length,
 					coordinates: e?.features?.[0]?.geometry?.coordinates,
-					timestamp: new Date().toISOString()
+					timestamp: new Date().toISOString(),
+					eventType: 'draw.create'
 				});
 
 				if (!e?.features?.[0]) {
@@ -269,9 +281,12 @@ export default function DrawControl(props: DrawControlProps) {
 			};
 
 			safeAddListener('draw.delete', props.onDelete || (() => {}));
+
+			// Log all available event listeners
+			console.log('[DrawControl] Event listeners setup complete');
 		},
 		{
-			position: props.position || 'top-right'
+			position: 'top-right'
 		}
 	);
 
