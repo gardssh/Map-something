@@ -85,22 +85,26 @@ async function getMatch(coordinates: [number, number][]) {
 
 		const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coords}?geometries=geojson&steps=true&radiuses=${radiusStr}&access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}`;
 
-		console.log('Matching API URL:', url.replace(process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN!, 'HIDDEN'));
+		console.log('[DrawControl] Matching API URL:', url.replace(process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN!, 'HIDDEN'));
 
 		const query = await fetch(url);
+		if (!query.ok) {
+			console.error('[DrawControl] Matching API HTTP Error:', query.status);
+			return coordinates; // Fall back to original coordinates on HTTP error
+		}
+
 		const response = await query.json();
+		console.log('[DrawControl] Matching API Response:', response);
 
-		console.log('Matching API Response:', response);
-
-		if (response.code !== 'Ok') {
-			console.error('Matching API Error:', response);
-			return null;
+		if (response.code !== 'Ok' || !response.matchings?.[0]?.geometry?.coordinates) {
+			console.error('[DrawControl] Matching API Error:', response);
+			return coordinates; // Fall back to original coordinates on API error
 		}
 
 		return response.matchings[0].geometry.coordinates;
 	} catch (error) {
-		console.error('Error in getMatch:', error);
-		return null;
+		console.error('[DrawControl] Error in getMatch:', error);
+		return coordinates; // Fall back to original coordinates on any error
 	}
 }
 
@@ -123,7 +127,7 @@ export default function DrawControl(props: DrawControlProps) {
 					trash: true,
 					...props.controls,
 				},
-				defaultMode: 'simple_select',
+				defaultMode: 'draw_line_string', // Start in drawing mode
 				styles: drawStyles,
 				...props,
 			}) as any;
@@ -132,7 +136,13 @@ export default function DrawControl(props: DrawControlProps) {
 			const originalChangeMode = drawInstance.changeMode;
 			drawInstance.changeMode = function(mode: string, ...args: any[]) {
 				console.log('[DrawControl] Mode change requested:', mode);
-				return originalChangeMode.apply(this, [mode, ...args]);
+				try {
+					return originalChangeMode.apply(this, [mode, ...args]);
+				} catch (error) {
+					console.error('[DrawControl] Error changing mode:', error);
+					// Try to recover by forcing simple_select mode
+					return originalChangeMode.apply(this, ['simple_select']);
+				}
 			};
 
 			return drawInstance;
@@ -142,28 +152,33 @@ export default function DrawControl(props: DrawControlProps) {
 			console.log('[DrawControl] Map instance obtained:', !!mapInst);
 			setMapInstance(mapInst);
 
-			const controlContainer = map.getContainer().querySelector('.mapboxgl-ctrl-top-right');
-			if (controlContainer && props.className) {
-				controlContainer.classList.add(props.className);
-			}
-
 			// Add debug logging for drawing events
-			mapInst.on('draw.modechange', (e: any) => {
+			const safeAddListener = (event: string, handler: (e: any) => void) => {
+				try {
+					console.log(`[DrawControl] Adding listener for ${event}`);
+					mapInst.on(event, handler);
+					console.log(`[DrawControl] Successfully added listener for ${event}`);
+				} catch (error) {
+					console.error(`[DrawControl] Error adding listener for ${event}:`, error);
+				}
+			};
+
+			safeAddListener('draw.modechange', (e: any) => {
 				console.log('[DrawControl] Draw mode changed:', {
 					mode: e.mode,
 					timestamp: new Date().toISOString()
 				});
+				props.onModeChange?.({ mode: e.mode });
 			});
 
-			// Log when points are added during drawing
-			mapInst.on('draw.selectionchange', (e: any) => {
+			safeAddListener('draw.selectionchange', (e: any) => {
 				console.log('[DrawControl] Selection changed:', {
 					features: e?.features,
 					timestamp: new Date().toISOString()
 				});
 			});
 
-			mapInst.on('draw.create', (e: any) => {
+			safeAddListener('draw.create', (e: any) => {
 				console.log('[DrawControl] Draw create event:', {
 					featureCount: e?.features?.length,
 					coordinates: e?.features?.[0]?.geometry?.coordinates,
@@ -182,97 +197,83 @@ export default function DrawControl(props: DrawControlProps) {
 
 			const processRoute = async (coords: [number, number][], featureId: string) => {
 				console.log('[DrawControl] Processing route with coordinates:', coords);
+				if (!coords || coords.length < 2) {
+					console.error('[DrawControl] Invalid coordinates:', coords);
+					return;
+				}
+
 				let finalRoute: [number, number][] = [];
 
-				for (let i = 0; i < coords.length - 1; i++) {
-					const start = coords[i];
-					const end = coords[i + 1];
-					console.log(`[DrawControl] Processing segment ${i + 1}/${coords.length - 1}`);
-					
-					try {
-						const matchedGeometry = await getMatch([start, end]);
-						if (matchedGeometry) {
-							console.log(`[DrawControl] Segment ${i + 1} matched successfully`);
-							finalRoute.push(...matchedGeometry);
-						} else {
-							console.log(`[DrawControl] Segment ${i + 1} matching failed, using original coordinates`);
-							finalRoute.push(start, end);
-						}
-					} catch (error) {
-						console.error(`[DrawControl] Error matching segment ${i + 1}:`, error);
-						finalRoute.push(start, end);
-					}
-				}
-
-				console.log('[DrawControl] Removing duplicate points');
-				finalRoute = finalRoute.filter(
-					(point, index, self) => index === 0 || !turf.booleanEqual(turf.point(point), turf.point(self[index - 1]))
-				);
-
-				console.log('[DrawControl] Setting current route');
-				setCurrentRoute(finalRoute);
-
-				const newRoute: DrawnRoute = {
-					id: `route-${Date.now()}`,
-					name: `Route ${new Date().toLocaleDateString()}`,
-					user_id: props.userId,
-					geometry: {
-						type: 'LineString',
-						coordinates: finalRoute,
-					},
-					created_at: new Date().toISOString(),
-					distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
-				};
-
-				console.log('[DrawControl] Saving route');
 				try {
+					// Process the entire route at once instead of segment by segment
+					const matchedGeometry = await getMatch(coords);
+					if (matchedGeometry) {
+						console.log('[DrawControl] Route matched successfully');
+						finalRoute = matchedGeometry;
+					} else {
+						console.log('[DrawControl] Route matching failed, using original coordinates');
+						finalRoute = coords;
+					}
+
+					console.log('[DrawControl] Removing duplicate points');
+					finalRoute = finalRoute.filter(
+						(point, index, self) => index === 0 || !turf.booleanEqual(turf.point(point), turf.point(self[index - 1]))
+					);
+
+					console.log('[DrawControl] Setting current route');
+					setCurrentRoute(finalRoute);
+
+					const newRoute: DrawnRoute = {
+						id: `route-${Date.now()}`,
+						name: `Route ${new Date().toLocaleDateString()}`,
+						user_id: props.userId,
+						geometry: {
+							type: 'LineString',
+							coordinates: finalRoute,
+						},
+						created_at: new Date().toISOString(),
+						distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
+					};
+
+					console.log('[DrawControl] Saving route');
 					await props.onRouteSave?.(newRoute);
 					console.log('[DrawControl] Route saved successfully');
-				} catch (error) {
-					console.error('[DrawControl] Error saving route:', error);
-				}
 
-				try {
 					props.onRouteAdd?.(newRoute);
 					console.log('[DrawControl] Route added to display');
-				} catch (error) {
-					console.error('[DrawControl] Error adding route to display:', error);
-				}
 
-				console.log('[DrawControl] Deleting original feature');
-				draw.delete(featureId);
+					console.log('[DrawControl] Deleting original feature');
+					draw.delete(featureId);
+				} catch (error) {
+					console.error('[DrawControl] Error processing route:', error);
+					// Even if there's an error, try to save the original route
+					try {
+						const fallbackRoute: DrawnRoute = {
+							id: `route-${Date.now()}`,
+							name: `Route ${new Date().toLocaleDateString()}`,
+							user_id: props.userId,
+							geometry: {
+								type: 'LineString',
+								coordinates: coords,
+							},
+							created_at: new Date().toISOString(),
+							distance: turf.length(turf.lineString(coords), { units: 'kilometers' }),
+						};
+						await props.onRouteSave?.(fallbackRoute);
+						props.onRouteAdd?.(fallbackRoute);
+						draw.delete(featureId);
+					} catch (fallbackError) {
+						console.error('[DrawControl] Error saving fallback route:', fallbackError);
+					}
+				}
 			};
 
-			
-			mapInst.on('draw.delete', props.onDelete || (() => {}));
-
-			// Verify event listeners are attached
-			setTimeout(() => {
-				console.log('[DrawControl] Verifying event listeners attached');
-				const events = ['draw.create', 'draw.delete', 'draw.update', 'draw.selectionchange', 'draw.modechange'];
-				events.forEach(event => {
-					// Add a temporary listener to verify we can attach listeners
-					const tempListener = () => {};
-					mapInst.on(event, tempListener);
-					mapInst.off(event, tempListener);
-					console.log(`[DrawControl] Successfully verified listener for ${event}`);
-				});
-			}, 1000);
+			safeAddListener('draw.delete', props.onDelete || (() => {}));
 		},
 		{
-			position: 'top-right'
+			position: props.position || 'top-right'
 		}
 	);
-
-	useEffect(() => {
-		if (draw && mapInstance && props.onModeChange) {
-			const handler = (e: any) => props.onModeChange?.({ mode: e.mode });
-			mapInstance.on('draw.modechange', handler);
-			return () => {
-				mapInstance.off('draw.modechange', handler);
-			};
-		}
-	}, [draw, mapInstance, props.onModeChange]);
 
 	return null;
 }
