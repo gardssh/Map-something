@@ -88,7 +88,7 @@ async function getMatch(coordinates: [number, number][]): Promise<[number, numbe
 		const query = await fetch(url);
 		if (!query.ok) {
 			console.error('[DrawControl] Matching API HTTP Error:', query.status);
-			return coordinates;
+			return null;
 		}
 
 		const response = await query.json();
@@ -96,13 +96,13 @@ async function getMatch(coordinates: [number, number][]): Promise<[number, numbe
 
 		if (response.code !== 'Ok' || !response.matchings?.[0]?.geometry?.coordinates) {
 			console.error('[DrawControl] Matching API Error:', response);
-			return coordinates;
+			return null;
 		}
 
 		return response.matchings[0].geometry.coordinates;
 	} catch (error) {
 		console.error('[DrawControl] Error in getMatch:', error);
-		return coordinates;
+		return null;
 	}
 }
 
@@ -141,18 +141,33 @@ export default function DrawControl(props: DrawControlProps) {
 				let finalRoute: [number, number][] = [];
 
 				try {
-					const matchedGeometry = await getMatch(coords);
-					if (matchedGeometry) {
-						console.log('[DrawControl] Route matched successfully');
-						finalRoute = matchedGeometry;
-					} else {
-						console.log('[DrawControl] Route matching failed, using original coordinates');
-						finalRoute = coords;
+					for (let i = 0; i < coords.length - 1; i++) {
+						const segmentCoords = [coords[i], coords[i + 1]];
+						console.log(`[DrawControl] Processing segment ${i}:`, segmentCoords);
+						
+						const matchedGeometry = await getMatch(segmentCoords);
+
+						if (matchedGeometry) {
+							console.log(`[DrawControl] Segment ${i} matched successfully`);
+							if (finalRoute.length === 0) {
+								finalRoute.push(...matchedGeometry);
+							} else {
+								finalRoute.push(...matchedGeometry.slice(1));
+							}
+						} else {
+							console.log(`[DrawControl] Segment ${i} not matched, using original coordinates`);
+							if (finalRoute.length === 0) {
+								finalRoute.push(segmentCoords[0]);
+							}
+							finalRoute.push(segmentCoords[1]);
+						}
 					}
 
 					console.log('[DrawControl] Removing duplicate points');
 					finalRoute = finalRoute.filter(
-						(point, index, self) => index === 0 || !turf.booleanEqual(turf.point(point), turf.point(self[index - 1]))
+						(point, index, self) => 
+							index === 0 || 
+							!turf.booleanEqual(turf.point(point), turf.point(self[index - 1]))
 					);
 
 					console.log('[DrawControl] Setting current route');
