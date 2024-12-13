@@ -108,7 +108,6 @@ export default function DrawControl(props: DrawControlProps) {
 	const [currentRoute, setCurrentRoute] = useState<[number, number][]>([]);
 	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 
-	// Add debug logging for component lifecycle
 	useEffect(() => {
 		console.log('[DrawControl] Component mounted');
 		return () => console.log('[DrawControl] Component unmounted');
@@ -117,7 +116,7 @@ export default function DrawControl(props: DrawControlProps) {
 	const draw = useControl(
 		() => {
 			console.log('[DrawControl] Initializing draw control');
-			return new MapboxDraw({
+			const drawInstance = new MapboxDraw({
 				displayControlsDefault: false,
 				controls: {
 					line_string: true,
@@ -128,6 +127,15 @@ export default function DrawControl(props: DrawControlProps) {
 				styles: drawStyles,
 				...props,
 			}) as any;
+
+			// Log when draw buttons are clicked
+			const originalChangeMode = drawInstance.changeMode;
+			drawInstance.changeMode = function(mode: string, ...args: any[]) {
+				console.log('[DrawControl] Mode change requested:', mode);
+				return originalChangeMode.apply(this, [mode, ...args]);
+			};
+
+			return drawInstance;
 		},
 		({ map }) => {
 			const mapInst = (map as any).getMap();
@@ -141,14 +149,32 @@ export default function DrawControl(props: DrawControlProps) {
 
 			// Add debug logging for drawing events
 			mapInst.on('draw.modechange', (e: any) => {
-				console.log('[DrawControl] Draw mode changed:', e.mode);
+				console.log('[DrawControl] Draw mode changed:', {
+					mode: e.mode,
+					timestamp: new Date().toISOString()
+				});
+			});
+
+			// Log when points are added during drawing
+			mapInst.on('draw.selectionchange', (e: any) => {
+				console.log('[DrawControl] Selection changed:', {
+					features: e?.features,
+					timestamp: new Date().toISOString()
+				});
 			});
 
 			mapInst.on('draw.create', (e: any) => {
 				console.log('[DrawControl] Draw create event:', {
 					featureCount: e?.features?.length,
-					coordinates: e?.features?.[0]?.geometry?.coordinates
+					coordinates: e?.features?.[0]?.geometry?.coordinates,
+					timestamp: new Date().toISOString()
 				});
+
+				if (!e?.features?.[0]) {
+					console.error('[DrawControl] No feature created');
+					return;
+				}
+
 				const feature = e.features[0];
 				const coords = feature.geometry.coordinates as [number, number][];
 				processRoute(coords, feature.id);
@@ -162,13 +188,18 @@ export default function DrawControl(props: DrawControlProps) {
 					const start = coords[i];
 					const end = coords[i + 1];
 					console.log(`[DrawControl] Processing segment ${i + 1}/${coords.length - 1}`);
-					const matchedGeometry = await getMatch([start, end]);
-
-					if (matchedGeometry) {
-						console.log(`[DrawControl] Segment ${i + 1} matched successfully`);
-						finalRoute.push(...matchedGeometry);
-					} else {
-						console.log(`[DrawControl] Segment ${i + 1} matching failed, using original coordinates`);
+					
+					try {
+						const matchedGeometry = await getMatch([start, end]);
+						if (matchedGeometry) {
+							console.log(`[DrawControl] Segment ${i + 1} matched successfully`);
+							finalRoute.push(...matchedGeometry);
+						} else {
+							console.log(`[DrawControl] Segment ${i + 1} matching failed, using original coordinates`);
+							finalRoute.push(start, end);
+						}
+					} catch (error) {
+						console.error(`[DrawControl] Error matching segment ${i + 1}:`, error);
 						finalRoute.push(start, end);
 					}
 				}
@@ -194,14 +225,39 @@ export default function DrawControl(props: DrawControlProps) {
 				};
 
 				console.log('[DrawControl] Saving route');
-				props.onRouteSave?.(newRoute);
-				props.onRouteAdd?.(newRoute);
+				try {
+					await props.onRouteSave?.(newRoute);
+					console.log('[DrawControl] Route saved successfully');
+				} catch (error) {
+					console.error('[DrawControl] Error saving route:', error);
+				}
+
+				try {
+					props.onRouteAdd?.(newRoute);
+					console.log('[DrawControl] Route added to display');
+				} catch (error) {
+					console.error('[DrawControl] Error adding route to display:', error);
+				}
 
 				console.log('[DrawControl] Deleting original feature');
 				draw.delete(featureId);
 			};
 
+			
 			mapInst.on('draw.delete', props.onDelete || (() => {}));
+
+			// Verify event listeners are attached
+			setTimeout(() => {
+				console.log('[DrawControl] Verifying event listeners attached');
+				const events = ['draw.create', 'draw.delete', 'draw.update', 'draw.selectionchange', 'draw.modechange'];
+				events.forEach(event => {
+					// Add a temporary listener to verify we can attach listeners
+					const tempListener = () => {};
+					mapInst.on(event, tempListener);
+					mapInst.off(event, tempListener);
+					console.log(`[DrawControl] Successfully verified listener for ${event}`);
+				});
+			}, 1000);
 		},
 		{
 			position: 'top-right'
