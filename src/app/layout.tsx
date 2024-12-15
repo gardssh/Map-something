@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { Navbar } from '@/components/Navigation/Navbar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,7 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 				<link href="https://api.tiles.mapbox.com/mapbox-gl-js/v3.5.2/mapbox-gl.css" rel="stylesheet" />
 			</head>
 			<body className={inter.className}>
-				<Providers>{children}</Providers>
+				<Providers>
+					<Navbar />
+					{children}
+				</Providers>
 			</body>
 		</html>
 	);

@@ -223,7 +223,7 @@ export default function Home() {
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
+			<div className="flex items-center justify-center h-[calc(100vh-56px)] mt-14">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
 					<p>Loading authentication...</p>
@@ -233,12 +233,16 @@ export default function Home() {
 	}
 
 	if (!user) {
-		return <AuthComponent />;
+		return (
+			<div className="h-[calc(100vh-56px)] mt-14">
+				<AuthComponent />
+			</div>
+		);
 	}
 
 	if (activitiesLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
+			<div className="flex items-center justify-center h-[calc(100vh-56px)] mt-14">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
 					<p>Loading activities...</p>
@@ -248,7 +252,7 @@ export default function Home() {
 	}
 
 	return (
-		<main className="h-screen w-screen relative">
+		<main className="h-[calc(100vh-56px)] w-screen relative mt-14">
 			<div className="flex h-full">
 				<SideBar
 					isOpen={isOpen}
@@ -267,7 +271,6 @@ export default function Home() {
 					onRouteRename={handleRouteRename}
 					waypoints={waypoints}
 					onWaypointDelete={handleWaypointDelete}
-					signOut={signOut}
 				/>
 				<div className="flex-1 relative">
 					<MapComponent

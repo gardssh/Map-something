@@ -63,7 +63,6 @@ interface SideBarProps {
 	onRouteRename?: (routeId: string, newName: string) => void;
 	waypoints?: DbWaypoint[];
 	onWaypointDelete?: (waypointId: string) => void;
-	signOut?: () => void;
 	className?: string;
 }
 
@@ -109,7 +108,6 @@ export default function SideBar({
 	onRouteRename,
 	waypoints = [],
 	onWaypointDelete,
-	signOut,
 	className,
 }: SideBarProps) {
 	const [selectedView, setSelectedView] = useState<ViewType>('nearby');
@@ -696,18 +694,6 @@ export default function SideBar({
 								</TabsContent>
 							</Tabs>
 						</div>
-					)}
-				</div>
-
-				<div className="border-t bg-background p-4 flex flex-col gap-4">
-					{status === 'authenticated' ? (
-						<Button variant="secondary" className="w-full" onClick={() => signOut?.()}>
-							Sign out
-						</Button>
-					) : (
-						<Button variant="secondary" className="w-full" disabled>
-							Sign in (coming soon)
-						</Button>
 					)}
 				</div>
 			</div>

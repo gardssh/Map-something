@@ -9,6 +9,7 @@ type AuthContextType = {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   signOut: async () => {},
+  refreshSession: async () => {},
 });
 
 export const useAuth = () => {
@@ -28,12 +30,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
+  const refreshSession = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: { user: freshUser }, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        setSession(session);
+        setUser(freshUser);
+      }
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+    }
+  };
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      // Refresh session after initial load to get fresh data
+      if (session) {
+        refreshSession();
+      }
     });
 
     // Listen for changes
@@ -45,21 +65,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Add visibility change listener
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshSession();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Clear auth state
       setSession(null);
       setUser(null);
+
+      // Clear any stored auth data
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Force reload the page to clear any cached state
+      window.location.href = '/';
     } catch (error) {
       console.error('Error signing out:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut, refreshSession }}>
       {children}
     </AuthContext.Provider>
   );
