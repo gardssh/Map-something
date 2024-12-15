@@ -28,9 +28,9 @@ declare module './supabase-generated' {
     public: {
       Tables: {
         profiles: {
-          Row: DbProfile;
-          Insert: Omit<DbProfile, 'created_at'>;
-          Update: Partial<Omit<DbProfile, 'id'>>;
+          Row: DbProfileRow;
+          Insert: Omit<DbProfileRow, 'created_at'>;
+          Update: Partial<Omit<DbProfileRow, 'id'>>;
         };
       } & DatabaseGenerated['public']['Tables'];
     };

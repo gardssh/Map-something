@@ -32,6 +32,11 @@ export default function ProfilePage() {
       return;
     }
 
+    if (!user?.id) {
+      setMessage('User not authenticated');
+      return;
+    }
+
     try {
       setLoading(true);
       setMessage('');
@@ -51,7 +56,7 @@ export default function ProfilePage() {
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: user?.id,
+          id: user.id,
           first_name: firstName,
           last_name: lastName,
           updated_at: new Date().toISOString(),
