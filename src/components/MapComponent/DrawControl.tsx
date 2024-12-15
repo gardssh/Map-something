@@ -116,7 +116,7 @@ export default function DrawControl(props: DrawControlProps) {
 				displayControlsDefault: false,
 				controls: {
 					line_string: true,
-					trash: true,
+					trash: false,
 					...props.controls,
 				},
 				defaultMode: 'simple_select',
@@ -125,6 +125,7 @@ export default function DrawControl(props: DrawControlProps) {
 			});
 			return drawInstance;
 		},
+		
 		({ map }) => {
 			const mapInst = map.getMap();
 

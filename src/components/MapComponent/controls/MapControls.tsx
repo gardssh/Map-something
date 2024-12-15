@@ -64,7 +64,6 @@ const MapControls = ({
         userId={userId}
         controls={{
           line_string: true,
-          trash: true,
         }}
         onCreate={onDrawCreate}
         onUpdate={onDrawUpdate}

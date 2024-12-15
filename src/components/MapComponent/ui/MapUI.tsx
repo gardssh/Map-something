@@ -43,7 +43,12 @@ export const MapUI = ({
       {activities.length > 0 &&
         activities
           .filter((activity) => selectedCategories.includes(categorizeActivity(activity.sport_type)))
-          .map((activity) => <AddMarker key={activity.id} activity={activity} />)}
+          .map((activity) => {
+            /* Commented out AddMarker component
+            <AddMarker key={activity.id} activity={activity} />
+            */
+            return null;
+          })}
 
       {!isDrawing && hoverInfo && (
         <Popup
@@ -60,12 +65,15 @@ export const MapUI = ({
       )}
 
       {waypoints?.map((waypoint) => (
+        /* Commented out Marker component
         <Marker
           key={waypoint.id}
           longitude={waypoint.coordinates[0]}
           latitude={waypoint.coordinates[1]}
           color="#9333ea"
         />
+        */
+        null
       ))}
 
       <Dialog open={showWaypointDialog} onOpenChange={setShowWaypointDialog}>

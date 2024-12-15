@@ -23,20 +23,20 @@ export default function AddMarker({ activity }: { activity: Activity }) {
 
 	return (
 		<>
-			<Marker 
+			{/* <Marker 
 				longitude={startLng} 
 				latitude={startLat} 
 				scale={0.5} 
 				color="#22c55e" 
 				anchor="center"
-			/>
-			<Marker 
+			/> */}
+			{/* <Marker 
 				longitude={endLng} 
 				latitude={endLat} 
 				scale={0.5} 
 				color="#ef4444" 
 				anchor="center"
-			/>
+			/> */}
 		</>
 	);
 }
