@@ -7,13 +7,19 @@ export type DbWaypoint = Database['public']['Tables']['waypoints']['Row'];
 export type DbRoute = Database['public']['Tables']['routes']['Row'];
 export type DbStravaToken = Database['public']['Tables']['strava_tokens']['Row'];
 export type DbStravaActivity = Database['public']['Tables']['strava_activities']['Row'];
-export type DbProfile = {
+export type DbProfileRow = {
   id: string;
   first_name: string;
   last_name: string;
   avatar_url?: string | null;
   updated_at: string;
   created_at: string;
+};
+
+export type DbProfile = {
+  Row: DbProfileRow;
+  Insert: Omit<DbProfileRow, 'created_at'>;
+  Update: Partial<Omit<DbProfileRow, 'id'>>;
 };
 
 // Extend the generated Database type to include profiles
