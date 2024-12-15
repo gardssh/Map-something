@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase';
+import type { DbProfile } from '@/types/supabase';
 
 export default function ProfilePage() {
   const { user, refreshSession } = useAuth();
@@ -54,7 +55,7 @@ export default function ProfilePage() {
           first_name: firstName,
           last_name: lastName,
           updated_at: new Date().toISOString(),
-        });
+        } as DbProfile['Insert']);
 
       if (profileError) throw profileError;
 
