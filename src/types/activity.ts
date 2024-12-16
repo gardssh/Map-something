@@ -19,6 +19,8 @@ export interface Activity {
   max_speed: number;
   average_heartrate?: number;
   max_heartrate?: number;
+  elev_high?: number;
+  elev_low?: number;
   map: ActivityMap;
 }
 
