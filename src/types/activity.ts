@@ -7,7 +7,14 @@ export interface ActivityMap {
 export interface Activity {
   id: number;
   name: string;
+  type: string;
   sport_type: string;
+  distance: number;
+  moving_time: number;
+  total_elevation_gain: number;
+  start_date: string;
+  start_latlng: [number, number] | null;
+  end_latlng: [number, number] | null;
   map: ActivityMap;
 }
 
