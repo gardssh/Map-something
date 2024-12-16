@@ -18,11 +18,13 @@ import type { DbRoute } from '@/types/supabase';
 import { ActivityLayers } from './layers/ActivityLayers';
 import { RouteLayer } from './layers/RouteLayer';
 import { TerrainLayer } from './layers/TerrainLayer';
+import { WaypointLayer } from './layers/WaypointLayer';
 import MapControls from './controls/MapControls';
 import { MapUI } from './ui/MapUI';
 import { useMapEvents } from './hooks/useMapEvents';
 import { useMapConfig } from './hooks/useMapConfig';
 import { useMapLayers } from './hooks/useMapLayers';
+import { useSidebar } from '@/components/ui/sidebar';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 export const MapComponent = ({
@@ -65,6 +67,7 @@ export const MapComponent = ({
 	const [isDrawing, setIsDrawing] = useState(false);
 	const { user } = useAuth();
 	const { data: session } = useSession();
+	const { open: isSidebarOpen } = useSidebar();
 
 	const {
 		availableLayers,
@@ -160,13 +163,28 @@ export const MapComponent = ({
 		}
 	}, [newWaypointCoords, newWaypointName, onWaypointSave, user]);
 
+	useEffect(() => {
+		if (mapRef.current) {
+			const map = mapRef.current.getMap();
+			const resizeHandler = () => {
+				map.resize();
+			};
+			map.on('idle', resizeHandler);
+			
+			// Cleanup
+			return () => {
+				map.off('idle', resizeHandler);
+			};
+		}
+	}, [isSidebarOpen]);
+
 	return (
-		<div className="h-full w-full">
+		<div className="absolute inset-0">
 			<Map
 				ref={mapRef as React.RefObject<MapRef>}
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
 				initialViewState={initialMapState}
-				style={{ width: '100%', height: '100%' }}
+				style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
 				mapStyle={mapStyle}
 				onMoveEnd={() => updateVisibleActivitiesIds()}
 				onMouseMove={onHover}
@@ -247,6 +265,8 @@ export const MapComponent = ({
 					routes={localRoutes}
 					selectedRoute={selectedRoute}
 				/>
+
+				<WaypointLayer waypoints={waypoints} />
 
 				<MapUI
 					activities={activities}

@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase';
 import type { DbProfile, DbProfileRow } from '@/types/supabase';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user, refreshSession } = useAuth();
@@ -114,6 +116,14 @@ export default function ProfilePage() {
 
   return (
     <div className="container max-w-2xl mx-auto p-4 pt-20">
+      <div className="mb-6">
+        <Link href="/">
+          <Button variant="ghost" className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Map
+          </Button>
+        </Link>
+      </div>
       <h1 className="text-3xl font-bold mb-8">Profile Settings</h1>
 
       {/* Name Settings */}

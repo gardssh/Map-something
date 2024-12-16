@@ -303,25 +303,25 @@ export default function SideBar({
 									<p>Created: {new Date(selectedRoute.created_at).toLocaleString()}</p>
 								</CardHeader>
 							</Card>
-							<Button 
-								variant="secondary" 
+							<Button
+								variant="secondary"
 								className="w-full flex gap-2"
 								onClick={() => {
 									if (!selectedRoute.geometry) return;
-									
+
 									// Create GPX content
 									const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Map Something">
+<gpx version="1.1" creator="Villspor">
     <trk>
         <name>${selectedRoute.name}</name>
         <trkseg>
             ${(selectedRoute.geometry.coordinates as [number, number][])
-                .map(([lon, lat]) => `            <trkpt lat="${lat}" lon="${lon}"></trkpt>`)
-                .join('\n')}
+							.map(([lon, lat]) => `            <trkpt lat="${lat}" lon="${lon}"></trkpt>`)
+							.join('\n')}
         </trkseg>
     </trk>
 </gpx>`;
-									
+
 									// Create and trigger download
 									const blob = new Blob([gpx], { type: 'application/gpx+xml' });
 									const url = window.URL.createObjectURL(blob);
@@ -432,28 +432,28 @@ export default function SideBar({
 									</ChartContainer>
 								</CardContent>
 							</Card>
-							<Button 
-								variant="secondary" 
+							<Button
+								variant="secondary"
 								className="w-full flex gap-2"
 								onClick={() => {
 									if (!selectedActivity?.map?.summary_polyline) return;
-									
+
 									const routePoints = switchCoordinates(selectedActivity);
-									
+
 									// Create GPX content
 									const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Map Something">
+<gpx version="1.1" creator="Villspor">
     <trk>
         <name>${selectedActivity.name}</name>
         <type>${selectedActivity.type}</type>
         <trkseg>
             ${routePoints.coordinates
-                .map(([lon, lat]) => `            <trkpt lat="${lat}" lon="${lon}"></trkpt>`)
-                .join('\n')}
+							.map(([lon, lat]) => `            <trkpt lat="${lat}" lon="${lon}"></trkpt>`)
+							.join('\n')}
         </trkseg>
     </trk>
 </gpx>`;
-									
+
 									// Create and trigger download
 									const blob = new Blob([gpx], { type: 'application/gpx+xml' });
 									const url = window.URL.createObjectURL(blob);

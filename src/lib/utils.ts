@@ -47,12 +47,12 @@ const activityCategories: { [name: string]: string[] } = {
 };
 
 const categoryColors: { [name: string]: string } = {
-	'Foot Sports': '#FF5733', // Example color
+	'Foot Sports': '#FF5733',
 	'Cycle Sports': '#33FF57',
 	'Water Sports': '#3357FF',
 	'Winter Sports': '#FF33A1',
 	'Other Sports': '#FFC300',
-	'Unknown Category': '#000000', // Default color for unknown categories
+	'Unknown Category': '#000000',
 };
 
 export function categorizeActivity(activityType: string) {
@@ -68,3 +68,4 @@ export function getActivityColor(activityType: string) {
 	const category = categorizeActivity(activityType);
 	return categoryColors[category] || categoryColors['Unknown Category'];
 }
+

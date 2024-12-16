@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { Navbar } from '@/components/Navigation/Navbar';
 
 export function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const { loading } = useAuth();
@@ -19,7 +18,6 @@ export function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <Navbar />
       {children}
     </>
   );

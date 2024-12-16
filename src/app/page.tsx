@@ -5,12 +5,22 @@ import { MapComponent } from '@/components/MapComponent';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthComponent from '@/components/Auth/AuthComponent';
 import { Button } from '@/components/ui/button';
-import SideBar from '@/components/SideBar';
 import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
 import type { DbRoute, DbWaypoint } from '@/types/supabase';
 import HelpButton from '@/components/HelpButton';
 import * as turf from '@turf/turf';
+import { AppSidebar } from '@/components/app-sidebar';
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Separator } from '@/components/ui/separator';
+import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 
 export default function Home() {
 	const { user, loading, signOut } = useAuth();
@@ -42,20 +52,22 @@ export default function Home() {
 			fetch('/api/routes')
 				.then((res) => res.json())
 				.then((data) => {
-					setRoutes(data.routes.map((route: DbRoute) => ({
-						...route,
-						distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' })
-					})));
+					setRoutes(
+						data.routes.map((route: DbRoute) => ({
+							...route,
+							distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
+						}))
+					);
 				})
 				.catch((error) => console.error('Error loading routes:', error));
 
 			// Load waypoints
-				fetch('/api/waypoints')
-					.then((res) => res.json())
-					.then((data) => {
-						setWaypoints(data.waypoints || []);
-					})
-					.catch((error) => console.error('Error loading waypoints:', error));
+			fetch('/api/waypoints')
+				.then((res) => res.json())
+				.then((data) => {
+					setWaypoints(data.waypoints || []);
+				})
+				.catch((error) => console.error('Error loading waypoints:', error));
 		}
 	}, [user]);
 
@@ -106,10 +118,12 @@ export default function Home() {
 			// Fetch updated routes
 			const getResponse = await fetch('/api/routes');
 			const data = await getResponse.json();
-			setRoutes(data.routes.map((route: DbRoute) => ({
-				...route,
-				distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' })
-			})));
+			setRoutes(
+				data.routes.map((route: DbRoute) => ({
+					...route,
+					distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
+				}))
+			);
 		} catch (error) {
 			console.error('Error saving route:', error);
 		}
@@ -223,7 +237,7 @@ export default function Home() {
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center h-[calc(100vh-56px)] mt-14">
+			<div className="flex items-center justify-center h-screen">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
 					<p>Loading authentication...</p>
@@ -234,7 +248,7 @@ export default function Home() {
 
 	if (!user) {
 		return (
-			<div className="h-[calc(100vh-56px)] mt-14">
+			<div className="h-screen">
 				<AuthComponent />
 			</div>
 		);
@@ -242,7 +256,7 @@ export default function Home() {
 
 	if (activitiesLoading) {
 		return (
-			<div className="flex items-center justify-center h-[calc(100vh-56px)] mt-14">
+			<div className="flex items-center justify-center h-screen">
 				<div className="text-center">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
 					<p>Loading activities...</p>
@@ -252,29 +266,109 @@ export default function Home() {
 	}
 
 	return (
-		<main className="h-[calc(100vh-56px)] w-screen relative mt-14">
-			<div className="flex h-full">
-				<SideBar
-					isOpen={isOpen}
-					setIsOpen={setIsOpen}
-					activities={filteredActivities}
-					status="authenticated"
+		<main className="h-screen w-screen relative overflow-hidden">
+			<SidebarProvider
+				style={
+					{
+						'--sidebar-width': '350px',
+					} as React.CSSProperties
+				}
+				className="h-full w-full"
+			>
+				<AppSidebarAndMap 
+					activities={activities}
 					visibleActivitiesId={visibleActivitiesId}
 					selectedRouteId={selectedRouteId}
-					selectedActivity={currentActivity}
-					map={mapInstance}
-					onActivitySelect={handleActivitySelect}
+					currentActivity={currentActivity}
+					mapInstance={mapInstance}
+					setMapInstance={setMapInstance}
+					handleActivitySelect={handleActivitySelect}
 					selectedRoute={selectedRoute}
 					routes={routes}
-					onRouteSelect={handleRouteSelect}
-					onRouteDelete={handleRouteDelete}
-					onRouteRename={handleRouteRename}
+					handleRouteSelect={handleRouteSelect}
+					handleRouteDelete={handleRouteDelete}
+					handleRouteRename={handleRouteRename}
 					waypoints={waypoints}
-					onWaypointDelete={handleWaypointDelete}
+					handleWaypointDelete={handleWaypointDelete}
+					setVisibleActivitiesId={setVisibleActivitiesId}
+					handleRouteSave={handleRouteSave}
+					handleWaypointSave={handleWaypointSave}
+					setSelectedRouteId={setSelectedRouteId}
 				/>
-				<div className="flex-1 relative">
+			</SidebarProvider>
+			<HelpButton />
+		</main>
+	);
+}
+
+// Create a new component for the sidebar and map content
+function AppSidebarAndMap({
+	activities,
+	visibleActivitiesId,
+	selectedRouteId,
+	currentActivity,
+	mapInstance,
+	setMapInstance,
+	handleActivitySelect,
+	selectedRoute,
+	routes,
+	handleRouteSelect,
+	handleRouteDelete,
+	handleRouteRename,
+	waypoints,
+	handleWaypointDelete,
+	setVisibleActivitiesId,
+	handleRouteSave,
+	handleWaypointSave,
+	setSelectedRouteId,
+}: {
+	activities: any[];
+	visibleActivitiesId: number[];
+	selectedRouteId: number | null;
+	currentActivity: any;
+	mapInstance: mapboxgl.Map | null;
+	setMapInstance: (map: mapboxgl.Map) => void;
+	handleActivitySelect: (activity: any) => void;
+	selectedRoute: DbRoute | null;
+	routes: DbRoute[];
+	handleRouteSelect: (route: DbRoute | null) => void;
+	handleRouteDelete: (routeId: string) => void;
+	handleRouteRename: (routeId: string, newName: string) => void;
+	waypoints: DbWaypoint[];
+	handleWaypointDelete: (waypointId: string) => void;
+	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
+	handleRouteSave: (route: DbRoute) => void;
+	handleWaypointSave: (waypoint: DbWaypoint) => void;
+	setSelectedRouteId: React.Dispatch<React.SetStateAction<number | null>>;
+}) {
+	const { open: isSidebarOpen } = useSidebar();
+
+	return (
+		<>
+			<AppSidebar 
+				activities={activities}
+				visibleActivitiesId={visibleActivitiesId}
+				selectedRouteId={selectedRouteId}
+				selectedActivity={currentActivity}
+				map={mapInstance}
+				onActivitySelect={handleActivitySelect}
+				selectedRoute={selectedRoute}
+				routes={routes}
+				onRouteSelect={handleRouteSelect}
+				onRouteDelete={handleRouteDelete}
+				onRouteRename={handleRouteRename}
+				waypoints={waypoints}
+				onWaypointDelete={handleWaypointDelete}
+			/>
+			<SidebarInset className="flex flex-col h-screen w-full">
+				<header className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b bg-background p-4">
+					<SidebarTrigger className="-ml-1" />
+					<Separator orientation="vertical" className="mr-2 h-4" />
+					<div className="text-sm font-medium">Villspor</div>
+				</header>
+				<div className="flex-1 relative w-full">
 					<MapComponent
-						activities={filteredActivities}
+						activities={activities}
 						setVisibleActivitiesId={setVisibleActivitiesId}
 						selectedRouteId={selectedRouteId}
 						setSelectedRouteId={setSelectedRouteId}
@@ -286,8 +380,7 @@ export default function Home() {
 						onWaypointSave={handleWaypointSave}
 					/>
 				</div>
-			</div>
-			<HelpButton />
-		</main>
+			</SidebarInset>
+		</>
 	);
 }
