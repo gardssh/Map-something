@@ -6,17 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import AddMarker from '../AddMarker';
 import type { Waypoint } from '@/types/waypoint';
+import type { Activity, HoverInfo } from '@/types/activity';
 import { categorizeActivity } from '@/lib/utils';
 
 interface MapUIProps {
-  activities: any[];
+  activities: Activity[];
   selectedCategories: string[];
-  hoverInfo: {
-    id: string | number;
-    name: string;
-    longitude: number;
-    latitude: number;
-  } | null;
+  hoverInfo: HoverInfo | null;
   isDrawing: boolean;
   waypoints?: Waypoint[];
   showWaypointDialog: boolean;

@@ -3,9 +3,10 @@
 import { Source, Layer } from 'react-map-gl';
 import { switchCoordinates } from '../../activities/switchCor';
 import { categorizeActivity, getActivityColor } from '@/lib/utils';
+import type { Activity } from '@/types/activity';
 
 interface ActivityLayersProps {
-  activities: any[];
+  activities: Activity[];
   selectedRouteId: string | number | null;
   selectedCategories: string[];
 }
@@ -24,7 +25,7 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
             type: 'Feature',
             properties: { activityType: categorizeActivity(activity.sport_type) },
             geometry: { type: 'LineString', coordinates: routePoints.coordinates },
-            paint: { 'line-color': getActivityColor(activity.type), 'line-width': 8, 'line-opacity': 0.5 },
+            paint: { 'line-color': getActivityColor(activity.sport_type), 'line-width': 8, 'line-opacity': 0.5 },
           };
         }),
       }}

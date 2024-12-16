@@ -3,19 +3,21 @@
 import { useCallback } from 'react';
 import type { MapLayerMouseEvent } from 'react-map-gl';
 import type { DbRoute } from '@/types/supabase';
+import type { Activity, HoverInfo } from '@/types/activity';
+import type { RoutePoints } from '@/components/activities/switchCor';
 import { handleBounds } from '../utils/mapUtils';
 import type { MapRef } from 'react-map-gl';
 
 interface UseMapEventsProps {
-  activities: any[];
+  activities: Activity[];
   routes?: DbRoute[];
-  setSelectedRouteId: (id: number | null) => void;
+  setSelectedRouteId: (id: string | number | null) => void;
   setSelectedRoute: (route: DbRoute | null) => void;
   onRouteSelect?: (route: DbRoute | null) => void;
-  setHoverInfo: (info: any) => void;
+  setHoverInfo: (info: HoverInfo | null) => void;
   isDrawing: boolean;
   mapRef: React.MutableRefObject<MapRef | undefined> | React.RefObject<MapRef>;
-  switchCoordinates: (activity: any) => any;
+  switchCoordinates: (activity: Activity) => RoutePoints;
 }
 
 export const useMapEvents = ({
@@ -99,7 +101,7 @@ export const useMapEvents = ({
           console.log('Found route:', route);
 
           if (route) {
-            setSelectedRouteId(route.id as number);
+            setSelectedRouteId(route.id);
             setSelectedRoute(route);
             onRouteSelect?.(route);
             if ('coordinates' in route.geometry) {

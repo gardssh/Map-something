@@ -6,6 +6,7 @@ import type { MapRef, MapLayerMouseEvent } from 'react-map-gl';
 import type { StyleSpecification } from 'mapbox-gl';
 import type { DrawnRoute } from '@/types/route';
 import type { Waypoint } from '@/types/waypoint';
+import type { Activity, HoverInfo } from '@/types/activity';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSession } from 'next-auth/react';
 import type { DbRoute } from '@/types/supabase';
@@ -33,7 +34,7 @@ export const MapComponent = ({
 	waypoints,
 	onWaypointSave,
 }: {
-	activities: any[];
+	activities: Activity[];
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
 	selectedRouteId: string | number | null;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
@@ -45,7 +46,7 @@ export const MapComponent = ({
 	onWaypointSave?: (waypoint: Waypoint) => void;
 }) => {
 	const mapRef = useRef<MapRef>();
-	const [hoverInfo, setHoverInfo] = useState<any>(null);
+	const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
 	const [selectedCategories, setSelectedCategories] = useState<string[]>([
 		'Foot Sports',
 		'Cycle Sports',
