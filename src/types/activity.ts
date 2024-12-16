@@ -15,6 +15,10 @@ export interface Activity {
   start_date: string;
   start_latlng: [number, number] | null;
   end_latlng: [number, number] | null;
+  average_speed: number;
+  max_speed: number;
+  average_heartrate?: number;
+  max_heartrate?: number;
   map: ActivityMap;
 }
 
