@@ -24,4 +24,3 @@ export type ActivityCategory =
   | 'Water Sports'
   | 'Winter Sports'
   | 'Other Sports';
-} 
