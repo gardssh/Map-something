@@ -1,7 +1,9 @@
-import type { LineString } from 'geojson';
+import type { LineString, Feature, GeoJsonProperties } from 'geojson';
+import type { RoutePoints } from '@/components/activities/switchCor';
 
 export interface ActivityMap {
   summary_polyline: string;
+  geometry?: RoutePoints | null;
 }
 
 export interface Activity {
@@ -22,6 +24,18 @@ export interface Activity {
   elev_high?: number;
   elev_low?: number;
   map: ActivityMap;
+  athlete?: {
+    id: number;
+  };
+  selected?: boolean;
+  visible?: boolean;
+  coordinates?: [number, number] | null;
+  bounds?: number[] | null;
+  elevation_data?: any;
+  feature?: Feature<LineString, GeoJsonProperties> | null;
+  sourceId?: string;
+  layerId?: string;
+  isHovered?: boolean;
 }
 
 export interface HoverInfo {
