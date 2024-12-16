@@ -1,7 +1,22 @@
 'use client';
 
 import * as React from 'react';
-import { ArchiveX, Command, File, Inbox, Send, Trash2, Navigation, Medal, Route, MapPin, Edit2, Check, X, Download } from 'lucide-react';
+import {
+	ArchiveX,
+	Command,
+	File,
+	Inbox,
+	Send,
+	Trash2,
+	Navigation,
+	Medal,
+	Route,
+	MapPin,
+	Edit2,
+	Check,
+	X,
+	Download,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavUser } from '@/components/nav-user';
 import { Label } from './ui/label';
@@ -38,7 +53,7 @@ import { LineString, Position } from 'geojson';
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activities: any[];
 	visibleActivitiesId: number[];
-	selectedRouteId: number | null;
+	selectedRouteId: string | number | null;
 	selectedActivity: any;
 	map: mapboxgl.Map | null;
 	onActivitySelect?: (activity: any) => void;
@@ -49,6 +64,8 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	onRouteRename?: (routeId: string, newName: string) => void;
 	waypoints?: DbWaypoint[];
 	onWaypointDelete?: (waypointId: string) => void;
+	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
+	handleWaypointSelect?: (waypoint: DbWaypoint) => void;
 }
 
 const navigationItems = [
@@ -74,7 +91,7 @@ interface RouteData {
 	}>;
 }
 
-export function AppSidebar({ 
+export function AppSidebar({
 	activities = [],
 	visibleActivitiesId = [],
 	selectedRouteId,
@@ -88,7 +105,9 @@ export function AppSidebar({
 	onRouteRename,
 	waypoints = [],
 	onWaypointDelete,
-	...props 
+	setSelectedRouteId,
+	handleWaypointSelect,
+	...props
 }: AppSidebarProps) {
 	// All hooks must be called before any conditional returns
 	const { user } = useAuth();
@@ -195,8 +214,8 @@ export function AppSidebar({
 	const visibleActivities = activities.filter((activity: any) => visibleActivitiesId.includes(activity.id));
 
 	const calculateRouteDistance = (coordinates: Position[]) => {
-		const validCoords = coordinates.filter((coord): coord is [number, number] => 
-			Array.isArray(coord) && coord.length === 2
+		const validCoords = coordinates.filter(
+			(coord): coord is [number, number] => Array.isArray(coord) && coord.length === 2
 		);
 		return turf.length(turf.lineString(validCoords), { units: 'kilometers' });
 	};
@@ -218,11 +237,7 @@ export function AppSidebar({
 				</CardHeader>
 				<CardContent className="pl-0">
 					<ChartContainer config={chartConfig}>
-						<LineChart 
-							data={chartData} 
-							margin={{ left: 48, right: 8, bottom: 24, top: 8 }} 
-							height={300}
-						>
+						<LineChart data={chartData} margin={{ left: 48, right: 8, bottom: 24, top: 8 }} height={300}>
 							<CartesianGrid vertical={false} strokeDasharray="3 3" />
 							<XAxis
 								dataKey="distance"
@@ -460,11 +475,7 @@ export function AppSidebar({
 										<div className="flex-1">
 											{editingRouteId === route.id ? (
 												<div className="flex gap-2">
-													<Input
-														value={editingName}
-														onChange={(e) => setEditingName(e.target.value)}
-														className="h-8"
-													/>
+													<Input value={editingName} onChange={(e) => setEditingName(e.target.value)} className="h-8" />
 													<div className="flex gap-1">
 														<Button
 															variant="ghost"
@@ -490,12 +501,15 @@ export function AppSidebar({
 													</div>
 												</div>
 											) : (
-												<div onClick={() => onRouteSelect?.(route)}>
+												<div onClick={() => {
+													onRouteSelect?.(route);
+													setSelectedRouteId(route.id);
+												}}>
 													<CardTitle>{route.name}</CardTitle>
 													{route.geometry && (route.geometry as LineString).coordinates && (
 														<CardDescription>
-															Distance:{' '}
-															{calculateRouteDistance((route.geometry as LineString).coordinates).toFixed(2)} km
+															Distance: {calculateRouteDistance((route.geometry as LineString).coordinates).toFixed(2)}{' '}
+															km
 														</CardDescription>
 													)}
 												</div>
@@ -531,10 +545,7 @@ export function AppSidebar({
 											</div>
 										)}
 									</CardHeader>
-									<CardContent
-										className="cursor-pointer"
-										onClick={() => !editingRouteId && onRouteSelect?.(route)}
-									>
+									<CardContent className="cursor-pointer" onClick={() => !editingRouteId && onRouteSelect?.(route)}>
 										<p>Created: {new Date(route.created_at).toLocaleString()}</p>
 									</CardContent>
 								</Card>
@@ -552,7 +563,7 @@ export function AppSidebar({
 							waypoints.map((waypoint) => (
 								<Card key={waypoint.id} className="mb-2">
 									<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-										<div>
+										<div className="cursor-pointer" onClick={() => handleWaypointSelect?.(waypoint)}>
 											<CardTitle>{waypoint.name}</CardTitle>
 											<CardDescription>
 												{waypoint.coordinates[0].toFixed(6)}, {waypoint.coordinates[1].toFixed(6)}
@@ -640,15 +651,13 @@ export function AppSidebar({
 				<SidebarHeader className="gap-3.5 border-b p-4">
 					<div className="flex w-full items-center justify-between">
 						<div className="text-base font-medium text-foreground">
-							{navigationItems.find(item => item.id === activeItem)?.label}
+							{navigationItems.find((item) => item.id === activeItem)?.label}
 						</div>
 					</div>
 				</SidebarHeader>
 				<SidebarContent>
 					<SidebarGroup className="px-0">
-						<SidebarGroupContent>
-							{renderContent()}
-						</SidebarGroupContent>
+						<SidebarGroupContent>{renderContent()}</SidebarGroupContent>
 					</SidebarGroup>
 				</SidebarContent>
 			</Sidebar>

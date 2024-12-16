@@ -1,12 +1,6 @@
 'use client';
 import { useRef, useCallback, useState, useEffect } from 'react';
-import Map, {
-	Source,
-	Layer,
-	MapLayerTouchEvent,
-	GeolocateControl,
-	NavigationControl,
-} from 'react-map-gl';
+import Map, { Source, Layer, MapLayerTouchEvent, GeolocateControl, NavigationControl } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
 import type { MapRef, MapLayerMouseEvent } from 'react-map-gl';
 import type { StyleSpecification } from 'mapbox-gl';
@@ -41,8 +35,8 @@ export const MapComponent = ({
 }: {
 	activities: any[];
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
-	selectedRouteId: number | null;
-	setSelectedRouteId: React.Dispatch<React.SetStateAction<number | null>>;
+	selectedRouteId: string | number | null;
+	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
 	onMapLoad?: (map: mapboxgl.Map) => void;
 	onRouteSelect?: (route: DbRoute | null) => void;
 	onRouteSave?: (route: DrawnRoute) => void;
@@ -69,19 +63,9 @@ export const MapComponent = ({
 	const { data: session } = useSession();
 	const { open: isSidebarOpen } = useSidebar();
 
-	const {
-		availableLayers,
-		initialMapState,
-		mapStyle,
-		mapSettings,
-		handlePitch,
-	} = useMapConfig({ mapRef });
+	const { availableLayers, initialMapState, mapStyle, mapSettings, handlePitch } = useMapConfig({ mapRef });
 
-	const {
-		currentBaseLayer,
-		overlayStates,
-		handleLayerToggle,
-	} = useMapLayers({ mapRef });
+	const { currentBaseLayer, overlayStates, handleLayerToggle } = useMapLayers({ mapRef });
 
 	const getVisibleActivities = (): any[] => {
 		// @ts-ignore
@@ -124,6 +108,17 @@ export const MapComponent = ({
 	}, [onMapLoad]);
 
 	useEffect(() => {
+		if (selectedRouteId === null) {
+			setSelectedRoute(null);
+		} else {
+			const route = routes?.find(r => r.id === selectedRouteId);
+			if (route) {
+				setSelectedRoute(route);
+			}
+		}
+	}, [selectedRouteId, routes]);
+
+	useEffect(() => {
 		setLocalRoutes(routes || []);
 	}, [routes]);
 
@@ -131,17 +126,23 @@ export const MapComponent = ({
 		setIsDrawing(mode === 'draw_line_string');
 	}, []);
 
-	const onDrawCreate = useCallback((evt: { features: any[] }) => {
-		if (onRouteSave && evt.features[0]) {
-			onRouteSave(evt.features[0]);
-		}
-	}, [onRouteSave]);
+	const onDrawCreate = useCallback(
+		(evt: { features: any[] }) => {
+			if (onRouteSave && evt.features[0]) {
+				onRouteSave(evt.features[0]);
+			}
+		},
+		[onRouteSave]
+	);
 
-	const onDrawUpdate = useCallback((evt: { features: any[]; action: string }) => {
-		if (onRouteSave && evt.features[0]) {
-			onRouteSave(evt.features[0]);
-		}
-	}, [onRouteSave]);
+	const onDrawUpdate = useCallback(
+		(evt: { features: any[]; action: string }) => {
+			if (onRouteSave && evt.features[0]) {
+				onRouteSave(evt.features[0]);
+			}
+		},
+		[onRouteSave]
+	);
 
 	const onDrawDelete = useCallback((evt: { features: any[] }) => {
 		// Handle route deletion if needed
@@ -170,7 +171,7 @@ export const MapComponent = ({
 				map.resize();
 			};
 			map.on('idle', resizeHandler);
-			
+
 			// Cleanup
 			return () => {
 				map.off('idle', resizeHandler);
@@ -255,16 +256,13 @@ export const MapComponent = ({
 
 				<TerrainLayer overlayStates={overlayStates} />
 
-				<ActivityLayers 
+				<ActivityLayers
 					activities={activities}
 					selectedRouteId={selectedRouteId}
 					selectedCategories={selectedCategories}
 				/>
 
-				<RouteLayer 
-					routes={localRoutes}
-					selectedRoute={selectedRoute}
-				/>
+				<RouteLayer routes={localRoutes} selectedRoute={selectedRoute} />
 
 				<WaypointLayer waypoints={waypoints} />
 

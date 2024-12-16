@@ -27,7 +27,7 @@ export default function Home() {
 	const [activities, setActivities] = useState<any[]>([]);
 	const [activitiesLoading, setActivitiesLoading] = useState(true);
 	const [visibleActivitiesId, setVisibleActivitiesId] = useState<number[]>([]);
-	const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
+	const [selectedRouteId, setSelectedRouteId] = useState<string | number | null>(null);
 	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 	const [selectedRoute, setSelectedRoute] = useState<DbRoute | null>(null);
 	const [routes, setRoutes] = useState<DbRoute[]>([]);
@@ -235,6 +235,16 @@ export default function Home() {
 		}
 	};
 
+	const handleWaypointSelect = (waypoint: DbWaypoint) => {
+		if (mapInstance) {
+			mapInstance.flyTo({
+				center: waypoint.coordinates as [number, number],
+				zoom: 14,
+				duration: 1000
+			});
+		}
+	};
+
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center h-screen">
@@ -294,6 +304,7 @@ export default function Home() {
 					handleRouteSave={handleRouteSave}
 					handleWaypointSave={handleWaypointSave}
 					setSelectedRouteId={setSelectedRouteId}
+					handleWaypointSelect={handleWaypointSelect}
 				/>
 			</SidebarProvider>
 			<HelpButton />
@@ -321,10 +332,11 @@ function AppSidebarAndMap({
 	handleRouteSave,
 	handleWaypointSave,
 	setSelectedRouteId,
+	handleWaypointSelect,
 }: {
 	activities: any[];
 	visibleActivitiesId: number[];
-	selectedRouteId: number | null;
+	selectedRouteId: string | number | null;
 	currentActivity: any;
 	mapInstance: mapboxgl.Map | null;
 	setMapInstance: (map: mapboxgl.Map) => void;
@@ -339,7 +351,8 @@ function AppSidebarAndMap({
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
 	handleRouteSave: (route: DbRoute) => void;
 	handleWaypointSave: (waypoint: DbWaypoint) => void;
-	setSelectedRouteId: React.Dispatch<React.SetStateAction<number | null>>;
+	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
+	handleWaypointSelect: (waypoint: DbWaypoint) => void;
 }) {
 	const { open: isSidebarOpen } = useSidebar();
 
@@ -359,6 +372,8 @@ function AppSidebarAndMap({
 				onRouteRename={handleRouteRename}
 				waypoints={waypoints}
 				onWaypointDelete={handleWaypointDelete}
+				setSelectedRouteId={setSelectedRouteId}
+				handleWaypointSelect={handleWaypointSelect}
 			/>
 			<SidebarInset className="flex flex-col h-screen w-full">
 				<header className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b bg-background p-4">

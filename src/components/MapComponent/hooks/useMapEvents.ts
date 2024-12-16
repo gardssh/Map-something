@@ -99,7 +99,7 @@ export const useMapEvents = ({
           console.log('Found route:', route);
 
           if (route) {
-            setSelectedRouteId(null);
+            setSelectedRouteId(route.id as number);
             setSelectedRoute(route);
             onRouteSelect?.(route);
             if ('coordinates' in route.geometry) {

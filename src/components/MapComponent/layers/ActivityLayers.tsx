@@ -6,7 +6,7 @@ import { categorizeActivity, getActivityColor } from '@/lib/utils';
 
 interface ActivityLayersProps {
   activities: any[];
-  selectedRouteId: number | null;
+  selectedRouteId: string | number | null;
   selectedCategories: string[];
 }
 
