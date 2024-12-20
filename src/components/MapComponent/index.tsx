@@ -33,6 +33,8 @@ export const MapComponent = ({
 	routes,
 	waypoints,
 	onWaypointSave,
+	onActivitySelect,
+	handleWaypointSelect,
 }: {
 	activities: Activity[];
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
@@ -44,6 +46,8 @@ export const MapComponent = ({
 	routes?: DbRoute[];
 	waypoints?: Waypoint[];
 	onWaypointSave?: (waypoint: Waypoint) => void;
+	onActivitySelect?: (activity: any | null) => void;
+	handleWaypointSelect?: (waypoint: Waypoint | null) => void;
 }) => {
 	const mapRef = useRef<MapRef>();
 	const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
@@ -104,15 +108,23 @@ export const MapComponent = ({
 
 	useEffect(() => {
 		if (mapRef.current && onMapLoad) {
-			onMapLoad(mapRef.current.getMap());
+			const map = mapRef.current.getMap();
+			onMapLoad(map);
+
+			// Wait for the map to be idle before updating visible activities
+			const onIdle = () => {
+				updateVisibleActivitiesIds();
+				map.off('idle', onIdle);
+			};
+			map.on('idle', onIdle);
 		}
-	}, [onMapLoad]);
+	}, [onMapLoad, updateVisibleActivitiesIds]);
 
 	useEffect(() => {
 		if (selectedRouteId === null) {
 			setSelectedRoute(null);
 		} else {
-			const route = routes?.find(r => r.id === selectedRouteId);
+			const route = routes?.find((r) => r.id === selectedRouteId);
 			if (route) {
 				setSelectedRoute(route);
 			}
@@ -192,39 +204,17 @@ export const MapComponent = ({
 				onMouseMove={onHover}
 				onClick={(e) => {
 					if (!isDrawing) {
-						onClick(e);
-					}
-				}}
-				onTouchEnd={(e: MapLayerTouchEvent) => {
-					if (!isDrawing && e.target && mapRef.current) {
-						const map = mapRef.current.getMap();
-						const point = map.project(e.lngLat);
-
-						const features = map.queryRenderedFeatures(point, {
-							layers: [
-								'foot-sports',
-								'cycle-sports',
-								'water-sports',
-								'winter-sports',
-								'other-sports',
-								'unknown-sports',
-								'saved-routes-layer',
-								'saved-routes-border',
-							],
-						});
-
-						if (features && features.length > 0) {
-							const mouseEvent = new MouseEvent('click');
-							const clickEvent = {
-								...e,
-								features,
-								type: 'click',
-								originalEvent: mouseEvent,
-								preventDefault: () => {},
-								stopPropagation: () => {},
-							} as unknown as MapLayerMouseEvent;
-
-							onClick(clickEvent);
+						// Check if we clicked on a feature
+						const features = e.features || [];
+						if (features.length === 0) {
+							// If we clicked on empty space, clear selections
+							setSelectedRouteId(null);
+							onRouteSelect?.(null);
+							onActivitySelect?.(null);
+							handleWaypointSelect?.(null);
+						} else {
+							// If we clicked on a feature, handle it normally
+							onClick(e);
 						}
 					}
 				}}

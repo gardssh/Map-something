@@ -98,4 +98,36 @@ export async function DELETE(request: Request) {
     console.error('DELETE Error:', error);
     return NextResponse.json({ error: 'Failed to delete waypoint' }, { status: 500 });
   }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const supabase = createRouteHandlerClient<Database>({ cookies });
+    
+    // Get the current user
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { waypointId, newName } = await request.json();
+    
+    // Update the waypoint name
+    const { error } = await supabase
+      .from('waypoints')
+      .update({ name: newName })
+      .eq('id', waypointId)
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('PATCH Error:', error);
+    return NextResponse.json({ error: 'Failed to rename waypoint' }, { status: 500 });
+  }
 } 

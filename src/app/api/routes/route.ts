@@ -113,21 +113,20 @@ export async function PATCH(request: Request) {
     const { routeId, newName } = await request.json();
     
     // Update the route name
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('routes')
       .update({ name: newName })
       .eq('id', routeId)
-      .eq('user_id', session.user.id)
-      .select();
+      .eq('user_id', session.user.id);
 
     if (error) {
       console.error('Supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ route: data[0] });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('PATCH Error:', error);
-    return NextResponse.json({ error: 'Failed to update route' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to rename route' }, { status: 500 });
   }
 } 

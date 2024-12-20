@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { MapComponent } from '@/components/MapComponent';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthComponent from '@/components/Auth/AuthComponent';
+import MobileNotice from '@/components/MobileNotice';
 import { Button } from '@/components/ui/button';
 import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
@@ -30,9 +31,27 @@ export default function Home() {
 	const [selectedRouteId, setSelectedRouteId] = useState<string | number | null>(null);
 	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 	const [selectedRoute, setSelectedRoute] = useState<DbRoute | null>(null);
+	const [selectedWaypoint, setSelectedWaypoint] = useState<DbWaypoint | null>(null);
 	const [routes, setRoutes] = useState<DbRoute[]>([]);
 	const [waypoints, setWaypoints] = useState<DbWaypoint[]>([]);
 	const [isOpen, setIsOpen] = useState(false);
+	const [isMobile, setIsMobile] = useState(false);
+
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth < 768); // 768px is a common breakpoint for tablets/mobile
+		};
+
+		// Check on mount
+		checkMobile();
+
+		// Check on resize
+		window.addEventListener('resize', checkMobile);
+
+		return () => {
+			window.removeEventListener('resize', checkMobile);
+		};
+	}, []);
 
 	useEffect(() => {
 		if (user) {
@@ -74,7 +93,11 @@ export default function Home() {
 	const filteredActivities = activities;
 	const currentActivity = activities.find((activity) => activity.id === selectedRouteId) || null;
 
-	const handleActivitySelect = (activity: any) => {
+	const handleActivitySelect = (activity: any | null) => {
+		if (!activity) {
+			setSelectedRouteId(null);
+			return;
+		}
 		setSelectedRouteId(activity.id);
 		if (mapInstance) handleBounds(activity);
 	};
@@ -167,6 +190,10 @@ export default function Home() {
 			}
 
 			setRoutes(routes.filter((route) => route.id !== routeId));
+			if (selectedRoute?.id === routeId) {
+				setSelectedRoute(null);
+				setSelectedRouteId(null);
+			}
 		} catch (error) {
 			console.error('Error deleting route:', error);
 		}
@@ -184,7 +211,11 @@ export default function Home() {
 				throw new Error('Failed to rename route');
 			}
 
+			// Update both the routes list and the selected route
 			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, name: newName } : route)));
+			setSelectedRoute(
+				selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, name: newName } : selectedRoute
+			);
 		} catch (error) {
 			console.error('Error renaming route:', error);
 		}
@@ -230,18 +261,48 @@ export default function Home() {
 			}
 
 			setWaypoints(waypoints.filter((waypoint) => waypoint.id !== waypointId));
+			if (selectedWaypoint?.id === waypointId) {
+				setSelectedWaypoint(null);
+			}
 		} catch (error) {
 			console.error('Error deleting waypoint:', error);
 		}
 	};
 
-	const handleWaypointSelect = (waypoint: DbWaypoint) => {
-		if (mapInstance) {
+	const handleWaypointSelect = (waypoint: DbWaypoint | null) => {
+		setSelectedWaypoint(waypoint);
+		if (mapInstance && waypoint) {
 			mapInstance.flyTo({
 				center: waypoint.coordinates as [number, number],
 				zoom: 14,
-				duration: 1000
+				duration: 1000,
 			});
+		}
+	};
+
+	const handleWaypointRename = async (waypointId: string, newName: string) => {
+		try {
+			const response = await fetch('/api/waypoints', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ waypointId, newName }),
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to rename waypoint');
+			}
+
+			// Update both the waypoints list and the selected waypoint
+			setWaypoints(
+				waypoints.map((waypoint) => (waypoint.id === waypointId ? { ...waypoint, name: newName } : waypoint))
+			);
+			setSelectedWaypoint(
+				selectedWaypoint && selectedWaypoint.id === waypointId
+					? { ...selectedWaypoint, name: newName }
+					: selectedWaypoint
+			);
+		} catch (error) {
+			console.error('Error renaming waypoint:', error);
 		}
 	};
 
@@ -254,6 +315,10 @@ export default function Home() {
 				</div>
 			</div>
 		);
+	}
+
+	if (isMobile) {
+		return <MobileNotice />;
 	}
 
 	if (!user) {
@@ -285,7 +350,7 @@ export default function Home() {
 				}
 				className="h-full w-full"
 			>
-				<AppSidebarAndMap 
+				<AppSidebarAndMap
 					activities={activities}
 					visibleActivitiesId={visibleActivitiesId}
 					selectedRouteId={selectedRouteId}
@@ -294,12 +359,14 @@ export default function Home() {
 					setMapInstance={setMapInstance}
 					handleActivitySelect={handleActivitySelect}
 					selectedRoute={selectedRoute}
+					selectedWaypoint={selectedWaypoint}
 					routes={routes}
 					handleRouteSelect={handleRouteSelect}
 					handleRouteDelete={handleRouteDelete}
 					handleRouteRename={handleRouteRename}
 					waypoints={waypoints}
 					handleWaypointDelete={handleWaypointDelete}
+					handleWaypointRename={handleWaypointRename}
 					setVisibleActivitiesId={setVisibleActivitiesId}
 					handleRouteSave={handleRouteSave}
 					handleWaypointSave={handleWaypointSave}
@@ -322,12 +389,14 @@ function AppSidebarAndMap({
 	setMapInstance,
 	handleActivitySelect,
 	selectedRoute,
+	selectedWaypoint,
 	routes,
 	handleRouteSelect,
 	handleRouteDelete,
 	handleRouteRename,
 	waypoints,
 	handleWaypointDelete,
+	handleWaypointRename,
 	setVisibleActivitiesId,
 	handleRouteSave,
 	handleWaypointSave,
@@ -340,25 +409,28 @@ function AppSidebarAndMap({
 	currentActivity: any;
 	mapInstance: mapboxgl.Map | null;
 	setMapInstance: (map: mapboxgl.Map) => void;
-	handleActivitySelect: (activity: any) => void;
+	handleActivitySelect: (activity: any | null) => void;
 	selectedRoute: DbRoute | null;
+	selectedWaypoint: DbWaypoint | null;
 	routes: DbRoute[];
 	handleRouteSelect: (route: DbRoute | null) => void;
 	handleRouteDelete: (routeId: string) => void;
 	handleRouteRename: (routeId: string, newName: string) => void;
 	waypoints: DbWaypoint[];
 	handleWaypointDelete: (waypointId: string) => void;
+	handleWaypointRename: (waypointId: string, newName: string) => void;
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
 	handleRouteSave: (route: DbRoute) => void;
 	handleWaypointSave: (waypoint: DbWaypoint) => void;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
-	handleWaypointSelect: (waypoint: DbWaypoint) => void;
+	handleWaypointSelect: (waypoint: DbWaypoint | null) => void;
 }) {
 	const { open: isSidebarOpen } = useSidebar();
+	const { user } = useAuth();
 
 	return (
 		<>
-			<AppSidebar 
+			<AppSidebar
 				activities={activities}
 				visibleActivitiesId={visibleActivitiesId}
 				selectedRouteId={selectedRouteId}
@@ -366,14 +438,18 @@ function AppSidebarAndMap({
 				map={mapInstance}
 				onActivitySelect={handleActivitySelect}
 				selectedRoute={selectedRoute}
+				selectedWaypoint={selectedWaypoint}
 				routes={routes}
 				onRouteSelect={handleRouteSelect}
 				onRouteDelete={handleRouteDelete}
 				onRouteRename={handleRouteRename}
 				waypoints={waypoints}
 				onWaypointDelete={handleWaypointDelete}
+				onWaypointRename={handleWaypointRename}
 				setSelectedRouteId={setSelectedRouteId}
 				handleWaypointSelect={handleWaypointSelect}
+				onRouteSave={handleRouteSave}
+				userId={user?.id || ''}
 			/>
 			<SidebarInset className="flex flex-col h-screen w-full">
 				<header className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b bg-background p-4">
@@ -390,9 +466,11 @@ function AppSidebarAndMap({
 						onMapLoad={(map) => setMapInstance(map)}
 						onRouteSave={handleRouteSave}
 						onRouteSelect={handleRouteSelect}
+						onActivitySelect={handleActivitySelect}
 						routes={routes}
 						waypoints={waypoints}
 						onWaypointSave={handleWaypointSave}
+						handleWaypointSelect={handleWaypointSelect}
 					/>
 				</div>
 			</SidebarInset>

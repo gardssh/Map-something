@@ -16,6 +16,7 @@ import {
 	Check,
 	X,
 	Download,
+	Upload,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavUser } from '@/components/nav-user';
@@ -49,6 +50,8 @@ import type { DbRoute, DbWaypoint } from '@/types/supabase';
 import type { RouteWithDistance } from '@/types/route';
 import * as turf from '@turf/turf';
 import { LineString, Position } from 'geojson';
+import { GpxUpload } from './MapComponent/controls/GpxUpload';
+import type { DrawnRoute } from '@/types/route';
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activities: any[];
@@ -58,14 +61,18 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	map: mapboxgl.Map | null;
 	onActivitySelect?: (activity: any) => void;
 	selectedRoute: DbRoute | null;
+	selectedWaypoint: DbWaypoint | null;
 	routes?: DbRoute[];
-	onRouteSelect?: (route: DbRoute) => void;
+	onRouteSelect?: (route: DbRoute | null) => void;
 	onRouteDelete?: (routeId: string) => void;
 	onRouteRename?: (routeId: string, newName: string) => void;
 	waypoints?: DbWaypoint[];
 	onWaypointDelete?: (waypointId: string) => void;
+	onWaypointRename?: (waypointId: string, newName: string) => void;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
-	handleWaypointSelect?: (waypoint: DbWaypoint) => void;
+	handleWaypointSelect?: (waypoint: DbWaypoint | null) => void;
+	onRouteSave?: (route: DrawnRoute) => void;
+	userId: string;
 }
 
 const navigationItems = [
@@ -99,14 +106,18 @@ export function AppSidebar({
 	map,
 	onActivitySelect,
 	selectedRoute,
+	selectedWaypoint,
 	routes = [],
 	onRouteSelect,
 	onRouteDelete,
 	onRouteRename,
 	waypoints = [],
 	onWaypointDelete,
+	onWaypointRename,
 	setSelectedRouteId,
 	handleWaypointSelect,
+	onRouteSave,
+	userId,
 	...props
 }: AppSidebarProps) {
 	// All hooks must be called before any conditional returns
@@ -125,6 +136,8 @@ export function AppSidebar({
 	]);
 	const [chartData, setChartData] = React.useState<ElevationPoint[]>([]);
 	const scrollRef = React.useRef<HTMLDivElement>(null);
+	const [editingWaypointId, setEditingWaypointId] = React.useState<string | null>(null);
+	const [editingWaypointName, setEditingWaypointName] = React.useState<string>('');
 
 	const getElevationData = React.useCallback(async (activity: any) => {
 		if (!activity?.map?.summary_polyline) return [];
@@ -303,10 +316,152 @@ export function AppSidebar({
 	};
 
 	const renderContent = () => {
+		if (selectedWaypoint) {
+			return (
+				<div className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
+					<div className="flex justify-between items-center">
+						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedWaypoint.name}</h3>
+						<div className="flex gap-1">
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-8 w-8 p-0"
+								onClick={() => {
+									setEditingWaypointId(selectedWaypoint.id);
+									setEditingWaypointName(selectedWaypoint.name);
+								}}
+							>
+								<Edit2 className="h-4 w-4" />
+								<span className="sr-only">Edit waypoint name</span>
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-8 w-8 p-0"
+								onClick={(e) => {
+									e.stopPropagation();
+									onWaypointDelete?.(selectedWaypoint.id);
+								}}
+							>
+								<Trash2 className="h-4 w-4" />
+								<span className="sr-only">Delete waypoint</span>
+							</Button>
+							<Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => handleWaypointSelect?.(null)}>
+								<X className="h-4 w-4" />
+								<span className="sr-only">Close waypoint</span>
+							</Button>
+						</div>
+					</div>
+					{editingWaypointId === selectedWaypoint.id ? (
+						<div className="flex gap-2">
+							<Input
+								value={editingWaypointName}
+								onChange={(e) => setEditingWaypointName(e.target.value)}
+								className="h-8"
+							/>
+							<div className="flex gap-1">
+								<Button
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 p-0"
+									onClick={() => {
+										onWaypointRename?.(selectedWaypoint.id, editingWaypointName);
+										setEditingWaypointId(null);
+									}}
+								>
+									<Check className="h-4 w-4" />
+									<span className="sr-only">Save waypoint name</span>
+								</Button>
+								<Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setEditingWaypointId(null)}>
+									<X className="h-4 w-4" />
+									<span className="sr-only">Cancel editing</span>
+								</Button>
+							</div>
+						</div>
+					) : null}
+					<Card>
+						<CardHeader>
+							<p>
+								Coordinates: {selectedWaypoint.coordinates[0].toFixed(6)}, {selectedWaypoint.coordinates[1].toFixed(6)}
+							</p>
+						</CardHeader>
+					</Card>
+					<Card>
+						<CardHeader>
+							<p>Created: {new Date(selectedWaypoint.created_at).toLocaleString()}</p>
+						</CardHeader>
+					</Card>
+				</div>
+			);
+		}
+
 		if (selectedRoute) {
 			return (
 				<div className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedRoute.name}</h3>
+					<div className="flex justify-between items-center">
+						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedRoute.name}</h3>
+						<div className="flex gap-1">
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-8 w-8 p-0"
+								onClick={() => {
+									setEditingRouteId(selectedRoute.id);
+									setEditingName(selectedRoute.name);
+								}}
+							>
+								<Edit2 className="h-4 w-4" />
+								<span className="sr-only">Edit route name</span>
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-8 w-8 p-0"
+								onClick={(e) => {
+									e.stopPropagation();
+									onRouteDelete?.(selectedRoute.id);
+								}}
+							>
+								<Trash2 className="h-4 w-4" />
+								<span className="sr-only">Delete route</span>
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-8 w-8 p-0"
+								onClick={() => {
+									setSelectedRouteId(null);
+									onRouteSelect?.(null);
+								}}
+							>
+								<X className="h-4 w-4" />
+								<span className="sr-only">Close route</span>
+							</Button>
+						</div>
+					</div>
+					{editingRouteId === selectedRoute.id ? (
+						<div className="flex gap-2">
+							<Input value={editingName} onChange={(e) => setEditingName(e.target.value)} className="h-8" />
+							<div className="flex gap-1">
+								<Button
+									variant="ghost"
+									size="icon"
+									className="h-8 w-8 p-0"
+									onClick={() => {
+										onRouteRename?.(selectedRoute.id, editingName);
+										setEditingRouteId(null);
+									}}
+								>
+									<Check className="h-4 w-4" />
+									<span className="sr-only">Save route name</span>
+								</Button>
+								<Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setEditingRouteId(null)}>
+									<X className="h-4 w-4" />
+									<span className="sr-only">Cancel editing</span>
+								</Button>
+							</div>
+						</div>
+					) : null}
 					<Card>
 						<CardHeader>
 							<p>Distance: {(selectedRoute as RouteWithDistance)?.distance?.toFixed(2) || 'N/A'}km</p>
@@ -358,7 +513,13 @@ export function AppSidebar({
 		if (selectedActivity) {
 			return (
 				<div id="slide" className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedActivity.name}</h3>
+					<div className="flex justify-between items-center">
+						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedActivity.name}</h3>
+						<Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setSelectedRouteId(null)}>
+							<X className="h-4 w-4" />
+							<span className="sr-only">Close activity</span>
+						</Button>
+					</div>
 					<div className="flex justify-between gap-2">
 						<Badge variant={'secondary'} className="flex-1 flex items-center justify-center">
 							{selectedActivity.type}
@@ -408,9 +569,7 @@ export function AppSidebar({
 										<CardDescription>{activity.sport_type}</CardDescription>
 									</CardHeader>
 									<CardContent>
-										<p>
-											Time: {Math.floor(activity.moving_time / 60)}:{activity.moving_time % 60}
-										</p>
+										<p>Time: {formatTime(activity.moving_time)}</p>
 									</CardContent>
 								</Card>
 								{activity.id === selectedRouteId && <div ref={scrollRef} />}
@@ -454,9 +613,7 @@ export function AppSidebar({
 											<CardDescription>{activity.sport_type}</CardDescription>
 										</CardHeader>
 										<CardContent>
-											<p>
-												Time: {Math.floor(activity.moving_time / 60)}:{activity.moving_time % 60}
-											</p>
+											<p>Time: {formatTime(activity.moving_time)}</p>
 										</CardContent>
 									</Card>
 									{activity.id === selectedRouteId && <div ref={scrollRef} />}
@@ -467,85 +624,47 @@ export function AppSidebar({
 
 				{activeItem === 'routes' && (
 					<div className="grow gap-2 overflow-y-auto">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Routes</h3>
+						<div className="flex flex-col gap-4 mb-4">
+							<div className="flex items-center justify-between">
+								<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">Routes</h3>
+							</div>
+							<div className="relative">
+								<Button
+									variant="outline"
+									className="w-full flex items-center justify-center gap-2"
+									disabled={!userId || !onRouteSave}
+								>
+									<Upload className="h-4 w-4" />
+									Upload GPX File
+								</Button>
+								{userId && onRouteSave && (
+									<GpxUpload
+										onRouteSave={onRouteSave}
+										userId={userId}
+										className="absolute inset-0 opacity-0 cursor-pointer"
+									/>
+								)}
+							</div>
+						</div>
 						{routes && routes.length > 0 ? (
 							routes.map((route) => (
-								<Card key={route.id} className="mb-2">
-									<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-										<div className="flex-1">
-											{editingRouteId === route.id ? (
-												<div className="flex gap-2">
-													<Input value={editingName} onChange={(e) => setEditingName(e.target.value)} className="h-8" />
-													<div className="flex gap-1">
-														<Button
-															variant="ghost"
-															size="icon"
-															className="h-8 w-8 p-0"
-															onClick={() => {
-																onRouteRename?.(route.id, editingName);
-																setEditingRouteId(null);
-															}}
-														>
-															<Check className="h-4 w-4" />
-															<span className="sr-only">Save route name</span>
-														</Button>
-														<Button
-															variant="ghost"
-															size="icon"
-															className="h-8 w-8 p-0"
-															onClick={() => setEditingRouteId(null)}
-														>
-															<X className="h-4 w-4" />
-															<span className="sr-only">Cancel editing</span>
-														</Button>
-													</div>
-												</div>
-											) : (
-												<div onClick={() => {
-													onRouteSelect?.(route);
-													setSelectedRouteId(route.id);
-												}}>
-													<CardTitle>{route.name}</CardTitle>
-													{route.geometry && (route.geometry as LineString).coordinates && (
-														<CardDescription>
-															Distance: {calculateRouteDistance((route.geometry as LineString).coordinates).toFixed(2)}{' '}
-															km
-														</CardDescription>
-													)}
-												</div>
-											)}
-										</div>
-										{!editingRouteId && (
-											<div className="flex gap-1">
-												<Button
-													variant="ghost"
-													size="icon"
-													className="h-8 w-8 p-0"
-													onClick={(e) => {
-														e.stopPropagation();
-														setEditingRouteId(route.id);
-														setEditingName(route.name);
-													}}
-												>
-													<Edit2 className="h-4 w-4" />
-													<span className="sr-only">Edit route name</span>
-												</Button>
-												<Button
-													variant="ghost"
-													size="icon"
-													className="h-8 w-8 p-0"
-													onClick={(e) => {
-														e.stopPropagation();
-														onRouteDelete?.(route.id);
-													}}
-												>
-													<Trash2 className="h-4 w-4" />
-													<span className="sr-only">Delete route</span>
-												</Button>
-											</div>
+								<Card
+									key={route.id}
+									className="mb-2 hover:bg-accent cursor-pointer transition-colors"
+									onClick={() => {
+										onRouteSelect?.(route);
+										setSelectedRouteId(route.id);
+									}}
+								>
+									<CardHeader>
+										<CardTitle>{route.name}</CardTitle>
+										{route.geometry && (route.geometry as LineString).coordinates && (
+											<CardDescription>
+												Distance: {calculateRouteDistance((route.geometry as LineString).coordinates).toFixed(2)} km
+											</CardDescription>
 										)}
 									</CardHeader>
-									<CardContent className="cursor-pointer" onClick={() => !editingRouteId && onRouteSelect?.(route)}>
+									<CardContent>
 										<p>Created: {new Date(route.created_at).toLocaleString()}</p>
 									</CardContent>
 								</Card>
@@ -569,15 +688,6 @@ export function AppSidebar({
 												{waypoint.coordinates[0].toFixed(6)}, {waypoint.coordinates[1].toFixed(6)}
 											</CardDescription>
 										</div>
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-8 w-8 p-0"
-											onClick={() => onWaypointDelete?.(waypoint.id)}
-										>
-											<Trash2 className="h-4 w-4" />
-											<span className="sr-only">Delete waypoint</span>
-										</Button>
 									</CardHeader>
 									<CardContent>
 										<p>Created: {new Date(waypoint.created_at).toLocaleString()}</p>
@@ -628,6 +738,10 @@ export function AppSidebar({
 											onClick={() => {
 												setActiveItem(item.id);
 												setOpen(true);
+												setSelectedRouteId(null);
+												onRouteSelect?.(null);
+												onActivitySelect?.(null);
+												handleWaypointSelect?.(null);
 											}}
 											isActive={activeItem === item.id}
 											className="px-2.5 md:px-2"
