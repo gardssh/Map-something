@@ -3,7 +3,7 @@ import { useControl } from 'react-map-gl';
 import type { ControlPosition } from 'react-map-gl';
 import type { DrawnRoute } from '@/types/route';
 import * as turf from '@turf/turf';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 type DrawControlProps = {
 	position?: ControlPosition;
@@ -105,10 +105,7 @@ async function getMatch(coordinates: [number, number][]): Promise<[number, numbe
 
 export default function DrawControl(props: DrawControlProps) {
 	const [currentRoute, setCurrentRoute] = useState<[number, number][]>([]);
-
-	useEffect(() => {
-		return () => {};
-	}, [props]);
+	const isProcessingRef = useRef(false);
 
 	const draw = useControl<any>(
 		() => {
@@ -125,11 +122,14 @@ export default function DrawControl(props: DrawControlProps) {
 			});
 			return drawInstance;
 		},
-		
+
 		({ map }) => {
 			const mapInst = map.getMap();
 
 			const processRoute = async (coords: [number, number][], featureId: string) => {
+				if (isProcessingRef.current) return; // Prevent duplicate processing
+				isProcessingRef.current = true;
+
 				let finalRoute: [number, number][] = [];
 
 				try {
@@ -159,7 +159,7 @@ export default function DrawControl(props: DrawControlProps) {
 					setCurrentRoute(finalRoute);
 
 					const newRoute: DrawnRoute = {
-						id: `route-${Date.now()}`,
+						id: `draw-${Date.now()}`,
 						name: `Route ${new Date().toLocaleDateString()}`,
 						user_id: props.userId,
 						geometry: {
@@ -168,19 +168,21 @@ export default function DrawControl(props: DrawControlProps) {
 						},
 						created_at: new Date().toISOString(),
 						distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
+						source: 'draw',
 					};
 
+					console.log('[DrawControl] Saving drawn route:', newRoute);
 					await props.onRouteSave?.(newRoute);
-
-					props.onRouteAdd?.(newRoute);
 
 					draw.delete(featureId);
 				} catch (error) {
 					console.error('[DrawControl] Error processing route:', error);
+				} finally {
+					isProcessingRef.current = false;
 				}
 			};
 
-			mapInst.on('draw.create', (e: any) => {
+			const handleCreate = (e: any) => {
 				const feature = e.features[0];
 				if (feature) {
 					const coords = feature.geometry.coordinates as [number, number][];
@@ -188,15 +190,23 @@ export default function DrawControl(props: DrawControlProps) {
 				} else {
 					console.error('[DrawControl] No feature in draw.create event');
 				}
-			});
+			};
 
-			mapInst.on('draw.modechange', (e: any) => {
+			const handleModeChange = (e: any) => {
 				props.onModeChange?.({ mode: e.mode });
-			});
+			};
 
-			mapInst.on('draw.actionable', (e: any) => {});
-
+			// Add event listeners
+			mapInst.on('draw.create', handleCreate);
+			mapInst.on('draw.modechange', handleModeChange);
 			mapInst.on('draw.delete', props.onDelete || (() => {}));
+
+			// Return cleanup function
+			return () => {
+				mapInst.off('draw.create', handleCreate);
+				mapInst.off('draw.modechange', handleModeChange);
+				mapInst.off('draw.delete', props.onDelete || (() => {}));
+			};
 		},
 		() => {},
 		{

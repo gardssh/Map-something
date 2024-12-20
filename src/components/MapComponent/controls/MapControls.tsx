@@ -2,7 +2,7 @@
 
 import { GeolocateControl, NavigationControl } from 'react-map-gl';
 import { LayersControl } from '../LayersControl';
-import DrawControl from '../DrawControl';
+import DrawControl from './DrawControl';
 import type { DrawnRoute } from '@/types/route';
 import type { DbRoute } from '@/types/supabase';
 

@@ -23,14 +23,16 @@ export function GpxUpload({ onRouteSave, userId, className }: GpxUploadProps) {
 			const { name, geometry } = parseGPX(text);
 
 			const route: DrawnRoute = {
-				id: `route-${Date.now()}`,
+				id: `gpx-${Date.now()}`,
 				name,
 				user_id: userId,
 				geometry,
 				created_at: new Date().toISOString(),
-				distance: 0, // This will be calculated by the backend
+				distance: 0,
+				source: 'gpx_upload'
 			};
 
+			console.log('[GpxUpload] Saving GPX route:', route);
 			onRouteSave?.(route);
 		} catch (error) {
 			console.error('Error parsing GPX file:', error);

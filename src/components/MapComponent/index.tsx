@@ -141,18 +141,14 @@ export const MapComponent = ({
 
 	const onDrawCreate = useCallback(
 		(evt: { features: any[] }) => {
-			if (onRouteSave && evt.features[0]) {
-				onRouteSave(evt.features[0]);
-			}
+			// DrawControl handles route saving internally
 		},
 		[onRouteSave]
 	);
 
 	const onDrawUpdate = useCallback(
 		(evt: { features: any[]; action: string }) => {
-			if (onRouteSave && evt.features[0]) {
-				onRouteSave(evt.features[0]);
-			}
+			// DrawControl handles route saving internally
 		},
 		[onRouteSave]
 	);

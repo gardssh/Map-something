@@ -10,58 +10,59 @@ import type { Activity, HoverInfo } from '@/types/activity';
 import { categorizeActivity } from '@/lib/utils';
 
 interface MapUIProps {
-  activities: Activity[];
-  selectedCategories: string[];
-  hoverInfo: HoverInfo | null;
-  isDrawing: boolean;
-  waypoints?: Waypoint[];
-  showWaypointDialog: boolean;
-  setShowWaypointDialog: (show: boolean) => void;
-  newWaypointName: string;
-  setNewWaypointName: (name: string) => void;
-  handleWaypointSave: () => void;
+	activities: Activity[];
+	selectedCategories: string[];
+	hoverInfo: HoverInfo | null;
+	isDrawing: boolean;
+	waypoints?: Waypoint[];
+	showWaypointDialog: boolean;
+	setShowWaypointDialog: (show: boolean) => void;
+	newWaypointName: string;
+	setNewWaypointName: (name: string) => void;
+	handleWaypointSave: () => void;
 }
 
 export const MapUI = ({
-  activities,
-  selectedCategories,
-  hoverInfo,
-  isDrawing,
-  waypoints,
-  showWaypointDialog,
-  setShowWaypointDialog,
-  newWaypointName,
-  setNewWaypointName,
-  handleWaypointSave,
+	activities,
+	selectedCategories,
+	hoverInfo,
+	isDrawing,
+	waypoints,
+	showWaypointDialog,
+	setShowWaypointDialog,
+	newWaypointName,
+	setNewWaypointName,
+	handleWaypointSave,
 }: MapUIProps) => {
-  return (
-    <>
-      {activities.length > 0 &&
-        activities
-          .filter((activity) => selectedCategories.includes(categorizeActivity(activity.sport_type)))
-          .map((activity) => {
-            /* Commented out AddMarker component
+	return (
+		<>
+			{activities.length > 0 &&
+				activities
+					.filter((activity) => selectedCategories.includes(categorizeActivity(activity.sport_type)))
+					.map((activity) => {
+						/* Commented out AddMarker component
             <AddMarker key={activity.id} activity={activity} />
             */
-            return null;
-          })}
+						return null;
+					})}
 
-      {!isDrawing && hoverInfo && (
-        <Popup
-          longitude={hoverInfo.longitude}
-          latitude={hoverInfo.latitude}
-          offset={[0, -10] as [number, number]}
-          closeButton={false}
-          className="activity-info"
-        >
-          Name: {hoverInfo.name}
-          <p> </p>
-          ID: {hoverInfo.id}
-        </Popup>
-      )}
+			{!isDrawing && hoverInfo && (
+				<Popup
+					longitude={hoverInfo.longitude}
+					latitude={hoverInfo.latitude}
+					offset={[0, -10] as [number, number]}
+					closeButton={false}
+					className="activity-info"
+				>
+					Name: {hoverInfo.name}
+					<p> </p>
+					ID: {hoverInfo.id}
+				</Popup>
+			)}
 
-      {waypoints?.map((waypoint) => (
-        /* Commented out Marker component
+			{waypoints?.map(
+				(waypoint) =>
+					/* Commented out Marker component
         <Marker
           key={waypoint.id}
           longitude={waypoint.coordinates[0]}
@@ -69,29 +70,29 @@ export const MapUI = ({
           color="#9333ea"
         />
         */
-        null
-      ))}
+					null
+			)}
 
-      <Dialog open={showWaypointDialog} onOpenChange={setShowWaypointDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Waypoint</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Input
-              placeholder="Waypoint name"
-              value={newWaypointName}
-              onChange={(e) => setNewWaypointName(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowWaypointDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleWaypointSave}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}; 
+			<Dialog open={showWaypointDialog} onOpenChange={setShowWaypointDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Add Waypoint</DialogTitle>
+					</DialogHeader>
+					<div className="grid gap-4 py-4">
+						<Input
+							placeholder="Waypoint name"
+							value={newWaypointName}
+							onChange={(e) => setNewWaypointName(e.target.value)}
+						/>
+					</div>
+					<DialogFooter>
+						<Button variant="ghost" onClick={() => setShowWaypointDialog(false)}>
+							Cancel
+						</Button>
+						<Button onClick={handleWaypointSave}>Save</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</>
+	);
+};
