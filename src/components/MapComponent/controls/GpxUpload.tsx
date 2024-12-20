@@ -29,7 +29,7 @@ export function GpxUpload({ onRouteSave, userId, className }: GpxUploadProps) {
 				geometry,
 				created_at: new Date().toISOString(),
 				distance: 0,
-				source: 'gpx_upload'
+				source: 'gpx_upload',
 			};
 
 			console.log('[GpxUpload] Saving GPX route:', route);
