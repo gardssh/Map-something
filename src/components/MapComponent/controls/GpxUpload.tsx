@@ -26,7 +26,10 @@ export function GpxUpload({ onRouteSave, userId, className }: GpxUploadProps) {
 				id: `gpx-${Date.now()}`,
 				name,
 				user_id: userId,
-				geometry,
+				geometry: {
+					type: 'LineString',
+					coordinates: geometry.coordinates as [number, number][],
+				},
 				created_at: new Date().toISOString(),
 				distance: 0,
 				source: 'gpx_upload',
