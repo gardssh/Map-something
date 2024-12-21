@@ -15,16 +15,28 @@ export async function POST(request: Request) {
     }
 
     const { waypoints } = await request.json();
+    console.log('Received waypoints data:', waypoints);
     const waypointsToInsert = Array.isArray(waypoints) ? waypoints : [waypoints];
+    console.log('Formatted waypoints to insert:', waypointsToInsert);
     
     // Insert the waypoint data into Supabase
     const { data, error } = await supabase
       .from('waypoints')
-      .insert(waypointsToInsert.map(waypoint => ({
-        name: waypoint.name,
-        coordinates: waypoint.coordinates,
-        user_id: session.user.id,
-      })))
+      .insert(waypointsToInsert.map(waypoint => {
+        const formattedWaypoint = {
+          id: waypoint.id,
+          name: waypoint.name,
+          geometry: {
+            type: 'Point',
+            coordinates: waypoint.coordinates
+          },
+          coordinates: waypoint.coordinates,
+          user_id: session.user.id,
+          created_at: new Date().toISOString()
+        };
+        console.log('Formatted waypoint:', formattedWaypoint);
+        return formattedWaypoint;
+      }))
       .select();
 
     if (error) {
@@ -32,6 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    console.log('Successfully inserted waypoints:', data);
     return NextResponse.json({ waypoints: data });
   } catch (error) {
     console.error('API Error:', error);
