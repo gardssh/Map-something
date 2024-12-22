@@ -45,6 +45,7 @@ export const useMapConfig = ({ mapRef }: MapConfigOptions) => {
     touchZoomRotate: true,
     touchPitch: true,
     interactiveLayerIds: isDrawing ? [] : [
+      'waypoints-layer',
       'foot-sports',
       'cycle-sports',
       'water-sports',

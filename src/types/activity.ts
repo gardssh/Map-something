@@ -43,6 +43,8 @@ export interface HoverInfo {
   name: string;
   longitude: number;
   latitude: number;
+  type: string;
+  time: string;
 }
 
 export type ActivityCategory = 

@@ -10,96 +10,36 @@ export function StravaConnect() {
 	const [isConnected, setIsConnected] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 
-	const fetchAndStoreActivities = async (accessToken: string) => {
+	const importActivities = async () => {
 		try {
-			console.log('Starting to fetch all Strava activities...');
-			let page = 1;
-			let allActivities: any[] = [];
-			let hasMore = true;
-
-			while (hasMore) {
-				console.log(`Fetching page ${page} of activities...`);
-				const response = await fetch(
-					`https://www.strava.com/api/v3/athlete/activities?per_page=200&page=${page}`,
-					{
-						headers: {
-							Authorization: `Bearer ${accessToken}`,
-						},
-					}
-				);
-
-				if (!response.ok) {
-					throw new Error(`Failed to fetch activities page ${page}: ${response.statusText}`);
-				}
-
-				const activities = await response.json();
-				console.log(`Received ${activities.length} activities for page ${page}`);
-				
-				allActivities = [...allActivities, ...activities];
-				
-				hasMore = activities.length === 200;
-				page++;
-
-				// Small delay between requests
-				await new Promise(resolve => setTimeout(resolve, 100));
-			}
-
-			console.log(`Total activities fetched: ${allActivities.length}`);
-
+			setIsLoading(true);
 			const supabase = createClientComponentClient();
-			const { data: { user } } = await supabase.auth.getUser();
+			const {
+				data: { user },
+			} = await supabase.auth.getUser();
 
 			if (!user) {
 				throw new Error('No authenticated user found');
 			}
 
-			// Transform activities to match our database schema
-			const transformedActivities = allActivities.map((activity: any) => ({
-				user_id: user.id,
-				strava_id: activity.id,
-				name: activity.name,
-				type: activity.type,
-				sport_type: activity.sport_type,
-				distance: activity.distance,
-				moving_time: activity.moving_time,
-				total_elevation_gain: activity.total_elevation_gain,
-				average_speed: activity.average_speed,
-				start_date: activity.start_date,
-				summary_polyline: activity.map?.summary_polyline || '',
-				elev_low: activity.elev_low,
-				elev_high: activity.elev_high,
-			}));
+			const response = await fetch('/api/strava/import', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ userId: user.id }),
+			});
 
-			// Store activities in batches
-			const BATCH_SIZE = 50;
-			console.log(`Storing ${transformedActivities.length} activities in batches of ${BATCH_SIZE}...`);
-
-			for (let i = 0; i < transformedActivities.length; i += BATCH_SIZE) {
-				const batch = transformedActivities.slice(i, i + BATCH_SIZE);
-				
-				try {
-					await supabase
-						.from('strava_activities')
-						.upsert(batch, {
-							onConflict: 'strava_id',
-							ignoreDuplicates: true
-						});
-					
-					console.log(`Processed activities ${i + 1} to ${Math.min(i + BATCH_SIZE, transformedActivities.length)}`);
-				} catch (error: any) {
-					// Only log actual errors, not conflicts
-					if (error.code !== '23505') {
-						console.error(`Error processing batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error);
-					}
-				}
-
-				// Small delay between batches
-				await new Promise(resolve => setTimeout(resolve, 100));
+			if (!response.ok) {
+				throw new Error('Failed to import activities');
 			}
 
-			console.log('Successfully processed all activities');
+			const result = await response.json();
+			console.log('Import result:', result);
 		} catch (error) {
-			console.error('Error in activity processing:', error);
+			console.error('Error importing activities:', error);
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
@@ -108,14 +48,18 @@ export function StravaConnect() {
 			if (session?.user?.id && session?.accessToken) {
 				try {
 					const supabase = createClientComponentClient();
-					const { data: { user } } = await supabase.auth.getUser();
+					const {
+						data: { user },
+					} = await supabase.auth.getUser();
 
 					if (!user) {
 						console.error('No authenticated user found');
 						return;
 					}
 
-					const stravaAthleteId = session.user.stravaAthleteId ? Number(session.user.stravaAthleteId) : Number(session.user.id);
+					const stravaAthleteId = session.user.stravaAthleteId
+						? Number(session.user.stravaAthleteId)
+						: Number(session.user.id);
 
 					// Check for existing token
 					const { data: existingToken } = await supabase
@@ -145,12 +89,12 @@ export function StravaConnect() {
 							.single();
 
 						// Fetch and store activities regardless of token insert result
-						await fetchAndStoreActivities(session.accessToken);
+						await importActivities();
 						setIsConnected(true);
 					} catch (error: any) {
 						// If token already exists, just proceed with activity fetch
 						if (error.code === '23505') {
-							await fetchAndStoreActivities(session.accessToken);
+							await importActivities();
 							setIsConnected(true);
 						} else {
 							console.error('Error setting up Strava connection:', error);
@@ -176,14 +120,18 @@ export function StravaConnect() {
 			try {
 				setIsLoading(true);
 				const supabase = createClientComponentClient();
-				const { data: { user } } = await supabase.auth.getUser();
+				const {
+					data: { user },
+				} = await supabase.auth.getUser();
 
 				if (!user) {
 					throw new Error('No authenticated user found');
 				}
 
-				const stravaAthleteId = session.user.stravaAthleteId ? Number(session.user.stravaAthleteId) : Number(session.user.id);
-				
+				const stravaAthleteId = session.user.stravaAthleteId
+					? Number(session.user.stravaAthleteId)
+					: Number(session.user.id);
+
 				await supabase.from('strava_tokens').delete().eq('strava_athlete_id', stravaAthleteId);
 				await supabase.from('strava_activities').delete().eq('user_id', user.id);
 

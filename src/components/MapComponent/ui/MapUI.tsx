@@ -1,10 +1,9 @@
 'use client';
 
-import { Popup, Marker } from 'react-map-gl';
+import { Popup } from 'react-map-gl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import AddMarker from '../AddMarker';
 import type { Waypoint } from '@/types/waypoint';
 import type { Activity, HoverInfo } from '@/types/activity';
 import { categorizeActivity } from '@/lib/utils';
@@ -54,23 +53,12 @@ export const MapUI = ({
 					closeButton={false}
 					className="activity-info"
 				>
-					Name: {hoverInfo.name}
-					<p> </p>
-					ID: {hoverInfo.id}
+					<div className="flex flex-col gap-1">
+						<div className="font-semibold">{hoverInfo.name}</div>
+						<div className="text-sm text-muted-foreground">{hoverInfo.type}</div>
+						<div className="text-sm">Time: {hoverInfo.time}</div>
+					</div>
 				</Popup>
-			)}
-
-			{waypoints?.map(
-				(waypoint) =>
-					/* Commented out Marker component
-        <Marker
-          key={waypoint.id}
-          longitude={waypoint.coordinates[0]}
-          latitude={waypoint.coordinates[1]}
-          color="#9333ea"
-        />
-        */
-					null
 			)}
 
 			<Dialog open={showWaypointDialog} onOpenChange={setShowWaypointDialog}>

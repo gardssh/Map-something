@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { redirect } from 'next/navigation';
 
 export default function Home() {
 	const { user, loading, signOut } = useAuth();
@@ -322,11 +323,7 @@ export default function Home() {
 	}
 
 	if (!user) {
-		return (
-			<div className="h-screen">
-				<AuthComponent />
-			</div>
-		);
+		return redirect('/login');
 	}
 
 	if (activitiesLoading) {
@@ -452,11 +449,6 @@ function AppSidebarAndMap({
 				userId={user?.id || ''}
 			/>
 			<SidebarInset className="flex flex-col h-screen w-full">
-				<header className="sticky top-0 z-10 flex shrink-0 items-center gap-2 border-b bg-background p-4">
-					<SidebarTrigger className="-ml-1" />
-					<Separator orientation="vertical" className="mr-2 h-4" />
-					<div className="text-sm font-medium">Villspor</div>
-				</header>
 				<div className="flex-1 relative w-full">
 					<MapComponent
 						activities={activities}

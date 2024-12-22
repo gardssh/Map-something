@@ -67,6 +67,7 @@ export const MapComponent = ({
 	const { user } = useAuth();
 	const { data: session } = useSession();
 	const { open: isSidebarOpen } = useSidebar();
+	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
 
 	const { availableLayers, initialMapState, mapStyle, mapSettings, handlePitch } = useMapConfig({ mapRef });
 
@@ -97,6 +98,7 @@ export const MapComponent = ({
 	const { onHover, onClick } = useMapEvents({
 		activities,
 		routes,
+		waypoints,
 		setSelectedRouteId,
 		setSelectedRoute,
 		onRouteSelect,
@@ -200,16 +202,24 @@ export const MapComponent = ({
 				onMouseMove={onHover}
 				onClick={(e) => {
 					if (!isDrawing) {
-						// Check if we clicked on a feature
 						const features = e.features || [];
 						if (features.length === 0) {
-							// If we clicked on empty space, clear selections
 							setSelectedRouteId(null);
 							onRouteSelect?.(null);
 							onActivitySelect?.(null);
 							handleWaypointSelect?.(null);
+							setSelectedWaypoint(null);
 						} else {
-							// If we clicked on a feature, handle it normally
+							const waypointFeature = features.find((f) => f.layer.id === 'waypoints-layer');
+							if (waypointFeature) {
+								const waypointId = waypointFeature.properties?.id;
+								const waypoint = waypoints?.find((w) => w.id === waypointId);
+								if (waypoint) {
+									setSelectedWaypoint(waypoint);
+									handleWaypointSelect?.(waypoint);
+									return;
+								}
+							}
 							onClick(e);
 						}
 					}
@@ -221,7 +231,35 @@ export const MapComponent = ({
 						setShowWaypointDialog(true);
 					}
 				}}
-				{...mapSettings(isDrawing)}
+				interactiveLayerIds={
+					isDrawing
+						? []
+						: [
+								'waypoints-layer',
+								'foot-sports',
+								'cycle-sports',
+								'water-sports',
+								'winter-sports',
+								'other-sports',
+								'unknown-sports',
+								'saved-routes-layer',
+								'saved-routes-border',
+							]
+				}
+				renderWorldCopies={false}
+				maxTileCacheSize={50}
+				trackResize={false}
+				dragRotate={true}
+				pitchWithRotate={true}
+				dragPan={true}
+				touchZoomRotate={true}
+				touchPitch={true}
+				onLoad={(evt) => {
+					const map = evt.target;
+					if (onMapLoad) {
+						onMapLoad(map);
+					}
+				}}
 				onPitch={(evt) => handlePitch(evt.viewState.pitch)}
 				terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
 			>
@@ -251,7 +289,7 @@ export const MapComponent = ({
 
 				<RouteLayer routes={localRoutes} selectedRoute={selectedRoute} />
 
-				<WaypointLayer waypoints={waypoints} />
+				<WaypointLayer waypoints={waypoints} selectedWaypoint={selectedWaypoint} />
 
 				<MapUI
 					activities={activities}
@@ -269,3 +307,27 @@ export const MapComponent = ({
 		</div>
 	);
 };
+
+const mapSettings = (isDrawing: boolean) => ({
+	renderWorldCopies: false,
+	maxTileCacheSize: 50,
+	trackResize: false,
+	dragRotate: true,
+	pitchWithRotate: true,
+	dragPan: true,
+	touchZoomRotate: true,
+	touchPitch: true,
+	interactiveLayerIds: isDrawing
+		? []
+		: [
+				'waypoints-layer',
+				'foot-sports',
+				'cycle-sports',
+				'water-sports',
+				'winter-sports',
+				'other-sports',
+				'unknown-sports',
+				'saved-routes-layer',
+				'saved-routes-border',
+			],
+});

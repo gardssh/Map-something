@@ -17,6 +17,8 @@ import {
 	X,
 	Download,
 	Upload,
+	PanelLeft,
+	PanelLeftClose,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavUser } from '@/components/nav-user';
@@ -38,6 +40,7 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 	useSidebar,
+	SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -122,7 +125,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
 	// All hooks must be called before any conditional returns
 	const { user } = useAuth();
-	const { setOpen } = useSidebar();
+	const { open, setOpen } = useSidebar();
 	const [mounted, setMounted] = React.useState(false);
 	const [activeItem, setActiveItem] = React.useState('nearby');
 	const [editingRouteId, setEditingRouteId] = React.useState<string | null>(null);
@@ -710,19 +713,13 @@ export function AppSidebar({
 				<SidebarHeader>
 					<SidebarMenu>
 						<SidebarMenuItem>
-							<SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
-								<a href="/">
-									<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground relative">
-										<Image src="/favicon.svg" alt="Villspor Logo" fill className="object-cover p-1" />
-									</div>
-									<div className="grid flex-1 text-left text-sm leading-tight">
-										<span className="truncate font-semibold">Villspor</span>
-										<span className="truncate text-xs">Villspor</span>
-									</div>
-								</a>
+							<SidebarMenuButton isActive={open} className="px-2.5 md:px-2" onClick={() => setOpen(!open)}>
+								{open ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+								<span>Toggle Sidebar</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 					</SidebarMenu>
+					<div className="mx-2 my-2 h-[1px] bg-border" />
 				</SidebarHeader>
 				<SidebarContent>
 					<SidebarGroup>

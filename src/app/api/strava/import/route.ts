@@ -82,6 +82,11 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
         }
     } : null;
 
+    // Ensure arrays are properly formatted
+    const start_latlng = Array.isArray(activity.start_latlng) ? activity.start_latlng.map(Number) : [];
+    const end_latlng = Array.isArray(activity.end_latlng) ? activity.end_latlng.map(Number) : [];
+    const bounds = geoJsonFeature ? turf.bbox(geoJsonFeature).map(Number) : [];
+
     return {
         id: activity.id,
         name: activity.name,
@@ -91,8 +96,8 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
         moving_time: activity.moving_time,
         total_elevation_gain: activity.total_elevation_gain,
         start_date: activity.start_date,
-        start_latlng: activity.start_latlng,
-        end_latlng: activity.end_latlng,
+        start_latlng,
+        end_latlng,
         average_speed: activity.average_speed,
         max_speed: activity.max_speed,
         average_heartrate: activity.average_heartrate,
@@ -108,8 +113,8 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
         },
         selected: false,
         visible: true,
-        coordinates: activity.start_latlng || null,
-        bounds: geoJsonFeature ? turf.bbox(geoJsonFeature) : null,
+        coordinates: start_latlng,
+        bounds,
         elevation_data: formatElevationData(activity),
         feature: geoJsonFeature,
         sourceId: 'routes',
@@ -140,8 +145,13 @@ export async function POST(request: Request) {
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         // Get user from request
-        const { user_id } = await request.json();
+        const body = await request.json();
+        const user_id = body.user_id || body.userId;
         console.log('Processing import for user:', user_id);
+
+        if (!user_id) {
+            return NextResponse.json({ error: 'No user ID provided' }, { status: 400 });
+        }
 
         // Get fresh Strava access token
         console.log('Fetching Strava access token...');
