@@ -10,6 +10,20 @@ export class StravaService {
     this.supabase = createClient();
   }
 
+  async saveToken(userId: string, code: string): Promise<void> {
+    const response = await fetch('/api/strava/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId, code }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save token');
+    }
+  }
+
   async getToken(userId: string): Promise<DbStravaToken | null> {
     const { data } = await this.supabase
       .from('strava_tokens')
