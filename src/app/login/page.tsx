@@ -34,7 +34,7 @@ export default function LoginPage() {
 	return (
 		<div
 			className="min-h-screen w-full flex items-center justify-center bg-cover bg-center"
-			style={{ backgroundImage: 'url(/IMG_9790.jpeg)' }}
+			style={{ backgroundImage: "url('/IMG_9790.jpeg')" }}
 		>
 			<div className="absolute inset-0 bg-black/40" />
 			<AuthNav />
@@ -78,7 +78,7 @@ export default function LoginPage() {
 						</Link>
 
 						<div className="text-sm text-center">
-							Don't have an account?{' '}
+							Don&apos;t have an account?{' '}
 							<Link href="/signup" className="text-primary hover:underline">
 								Sign up for free
 							</Link>

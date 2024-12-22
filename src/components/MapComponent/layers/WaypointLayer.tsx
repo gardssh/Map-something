@@ -1,10 +1,26 @@
-import { Source, Layer } from 'react-map-gl';
+import { Source, Layer, LayerProps } from 'react-map-gl';
 import type { Waypoint } from '@/types/waypoint';
 
 interface WaypointLayerProps {
 	waypoints?: Waypoint[];
 	selectedWaypoint?: Waypoint | null;
 }
+
+const circlePaint: LayerProps['paint'] = {
+	'circle-radius': ['case', ['boolean', ['feature-state', 'hover'], false], 14, ['get', 'selected'], 12, 8],
+	'circle-color': [
+		'case',
+		['boolean', ['feature-state', 'hover'], false],
+		'#a855f7',
+		['get', 'selected'],
+		'#a855f7',
+		'#9333ea',
+	],
+	'circle-stroke-width': ['case', ['boolean', ['feature-state', 'hover'], false], 3, ['get', 'selected'], 3, 2],
+	'circle-stroke-color': '#ffffff',
+	'circle-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.9, 1],
+	'circle-stroke-opacity': 1,
+};
 
 export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProps) => {
 	if (!waypoints?.length) return null;
@@ -33,26 +49,7 @@ export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProp
 			}}
 			generateId={false}
 		>
-			<Layer
-				id="waypoints-layer"
-				type="circle"
-				source="waypoints"
-				paint={{
-					'circle-radius': ['case', ['boolean', ['feature-state', 'hover'], false], 14, ['get', 'selected'], 12, 8],
-					'circle-color': [
-						'case',
-						['boolean', ['feature-state', 'hover'], false],
-						'#a855f7',
-						['get', 'selected'],
-						'#a855f7',
-						'#9333ea',
-					],
-					'circle-stroke-width': ['case', ['boolean', ['feature-state', 'hover'], false], 3, ['get', 'selected'], 3, 2],
-					'circle-stroke-color': '#ffffff',
-					'circle-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.9, 1],
-					'circle-stroke-opacity': 1,
-				}}
-			/>
+			<Layer id="waypoints-layer" type="circle" source="waypoints" paint={circlePaint} />
 		</Source>
 	);
 };
