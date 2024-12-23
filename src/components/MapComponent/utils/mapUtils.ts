@@ -1,22 +1,23 @@
 import type { MapRef } from 'react-map-gl';
-import { LngLatBounds } from 'mapbox-gl';
 
-export const handleBounds = (
-  mapRef: React.MutableRefObject<MapRef | undefined> | React.RefObject<MapRef>, 
-  coordinates: [number, number][]
-) => {
-  if (!mapRef.current) return;
+export const handleBounds = (mapRef: React.RefObject<MapRef>, coordinates: [number, number][]) => {
+	if (!mapRef.current || !coordinates.length) return;
 
-  const bounds = coordinates.reduce(
-    (bounds, coord) => bounds.extend(coord),
-    new LngLatBounds(coordinates[0], coordinates[0])
-  );
+	const bounds = coordinates.reduce(
+		(bounds, coord) => {
+			return [
+				[Math.min(bounds[0][0], coord[0]), Math.min(bounds[0][1], coord[1])],
+				[Math.max(bounds[1][0], coord[0]), Math.max(bounds[1][1], coord[1])],
+			];
+		},
+		[
+			[coordinates[0][0], coordinates[0][1]],
+			[coordinates[0][0], coordinates[0][1]],
+		]
+	);
 
-  mapRef.current.fitBounds(
-    [
-      [bounds.getWest(), bounds.getSouth()],
-      [bounds.getEast(), bounds.getNorth()],
-    ],
-    { padding: 100, duration: 1000 }
-  );
+	mapRef.current.fitBounds(bounds as [[number, number], [number, number]], {
+		padding: 50,
+		duration: 1000,
+	});
 }; 

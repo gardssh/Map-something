@@ -1,24 +1,24 @@
 'use client';
 
-import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 export function RootLayoutContent({ children }: { children: React.ReactNode }) {
-  const { loading } = useAuth();
+	const [isMobile, setIsMobile] = useState(false);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          <p className="text-sm text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth <= 768);
+		};
 
-  return (
-    <>
-      {children}
-    </>
-  );
-} 
+		checkMobile();
+		window.addEventListener('resize', checkMobile);
+		return () => window.removeEventListener('resize', checkMobile);
+	}, []);
+
+	return (
+		<div className={cn('flex min-h-screen flex-col md:flex-row', 'transition-all duration-300 ease-in-out')}>
+			{children}
+		</div>
+	);
+}

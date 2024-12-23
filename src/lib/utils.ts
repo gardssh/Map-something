@@ -5,67 +5,16 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-type ActivityCategory = 'Foot Sports' | 'Cycle Sports' | 'Water Sports' | 'Winter Sports' | 'Other Sports';
+export function categorizeActivity(sportType: string) {
+	const footSports = ['Run', 'Walk', 'Hike', 'Trail Run'];
+	const cycleSports = ['Ride', 'Mountain Bike', 'Gravel Bike', 'E-Bike Ride'];
+	const waterSports = ['Swim', 'Kayak', 'Canoe', 'Row', 'Stand Up Paddle'];
+	const winterSports = ['Alpine Ski', 'Nordic Ski', 'Backcountry Ski', 'Snowboard', 'Snowshoe'];
 
-const activityCategories: { [name: string]: string[] } = {
-	'Foot Sports': ['Run', 'Trail Run', 'Walk', 'Hike', 'Virtual Run'],
-	'Cycle Sports': [
-		'Ride',
-		'Mountain Bike Ride',
-		'GravelRide',
-		'E-Bike Ride',
-		'E-Mountain Bike Ride',
-		'Velomobile',
-		'Virtual Ride',
-	],
-	'Water Sports': ['Canoe', 'Kayaking', 'Kitesurf', 'Rowing', 'Stand Up Paddling', 'Surf', 'Swim', 'Windsurf', 'Sail'],
-	'Winter Sports': ['Ice Skate', 'AlpineSki', 'BackcountrySki', 'NordicSki', 'Snowboard', 'Snowshoe'],
-	'Other Sports': [
-		'Handcycle',
-		'Inline Skate',
-		'RockClimbing',
-		'Roller Ski',
-		'Golf',
-		'Skateboard',
-		'Football (Soccer)',
-		'Wheelchair',
-		'Badminton',
-		'Tennis',
-		'Pickleball',
-		'Crossfit',
-		'Elliptical',
-		'Stair Stepper',
-		'WeightTraining',
-		'Yoga',
-		'Workout',
-		'HIIT',
-		'Pilates',
-		'Table Tennis',
-		'Squash',
-		'Racquetball',
-	],
-};
-
-const categoryColors: { [name: string]: string } = {
-	'Foot Sports': '#FF5733',
-	'Cycle Sports': '#33FF57',
-	'Water Sports': '#3357FF',
-	'Winter Sports': '#FF33A1',
-	'Other Sports': '#FFC300',
-	'Unknown Category': '#000000',
-};
-
-export function categorizeActivity(activityType: string) {
-	for (const category in activityCategories) {
-		if (activityCategories[category].includes(activityType)) {
-			return category;
-		}
-	}
-	return 'Unknown Category';
-}
-
-export function getActivityColor(activityType: string) {
-	const category = categorizeActivity(activityType);
-	return categoryColors[category] || categoryColors['Unknown Category'];
+	if (footSports.includes(sportType)) return 'Foot Sports';
+	if (cycleSports.includes(sportType)) return 'Cycle Sports';
+	if (waterSports.includes(sportType)) return 'Water Sports';
+	if (winterSports.includes(sportType)) return 'Winter Sports';
+	return 'Other Sports';
 }
 

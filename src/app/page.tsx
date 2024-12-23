@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { MapComponent } from '@/components/MapComponent';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthComponent from '@/components/Auth/AuthComponent';
-import MobileNotice from '@/components/MobileNotice';
 import { Button } from '@/components/ui/button';
 import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
@@ -23,9 +22,23 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { redirect } from 'next/navigation';
+import { MobileNavBar } from '@/components/MobileNavBar';
+import { cn } from '@/lib/utils';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
+import { MobileProfile } from '@/components/MobileProfile';
+import { MobileDrawer } from '@/components/MobileDrawer';
+import { formatTime } from '@/lib/timeFormat';
+import { Download } from 'lucide-react';
+import { RouteDetails } from '@/components/routes/RouteDetails';
+import { Edit2 } from 'lucide-react';
+import { EditDetailsForm } from '@/components/EditDetailsForm';
+import { ActivityDetails } from '@/components/activities/ActivityDetails';
+import { WaypointDetails } from '@/components/waypoints/WaypointDetails';
 
 export default function Home() {
 	const { user, loading, signOut } = useAuth();
+	const { isMobile, isPWA, isOnline } = useResponsiveLayout();
 	const [activities, setActivities] = useState<any[]>([]);
 	const [activitiesLoading, setActivitiesLoading] = useState(true);
 	const [visibleActivitiesId, setVisibleActivitiesId] = useState<number[]>([]);
@@ -36,23 +49,18 @@ export default function Home() {
 	const [routes, setRoutes] = useState<DbRoute[]>([]);
 	const [waypoints, setWaypoints] = useState<DbWaypoint[]>([]);
 	const [isOpen, setIsOpen] = useState(false);
-	const [isMobile, setIsMobile] = useState(false);
+	const [activeItem, setActiveItem] = useState('nearby');
+	const [selectedActivity, setSelectedActivity] = useState<any>(null);
+	const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
+	const [isEditingRoute, setIsEditingRoute] = useState(false);
+	const [isEditingWaypoint, setIsEditingWaypoint] = useState(false);
 
 	useEffect(() => {
-		const checkMobile = () => {
-			setIsMobile(window.innerWidth < 768); // 768px is a common breakpoint for tablets/mobile
-		};
-
-		// Check on mount
-		checkMobile();
-
-		// Check on resize
-		window.addEventListener('resize', checkMobile);
-
-		return () => {
-			window.removeEventListener('resize', checkMobile);
-		};
-	}, []);
+		if (!isOnline) {
+			// Handle offline state - could show a notification or load cached data
+			console.log('App is offline, using cached data');
+		}
+	}, [isOnline]);
 
 	useEffect(() => {
 		if (user) {
@@ -97,10 +105,17 @@ export default function Home() {
 	const handleActivitySelect = (activity: any | null) => {
 		if (!activity) {
 			setSelectedRouteId(null);
+			setSelectedActivity(null);
+			setShowDetailsDrawer(false);
 			return;
 		}
 		setSelectedRouteId(activity.id);
+		setSelectedActivity(activity);
 		if (mapInstance) handleBounds(activity);
+		if (isMobile) {
+			setActiveItem('nearby');
+			setShowDetailsDrawer(true);
+		}
 	};
 
 	const handleBounds = (activity: any) => {
@@ -155,6 +170,10 @@ export default function Home() {
 
 	const handleRouteSelect = (route: DbRoute | null) => {
 		setSelectedRoute(route);
+		if (isMobile) {
+			setActiveItem('nearby');
+			setShowDetailsDrawer(true);
+		}
 
 		if (route && mapInstance && 'coordinates' in route.geometry) {
 			const coordinates = route.geometry.coordinates as [number, number][];
@@ -272,6 +291,10 @@ export default function Home() {
 
 	const handleWaypointSelect = (waypoint: DbWaypoint | null) => {
 		setSelectedWaypoint(waypoint);
+		if (isMobile) {
+			setActiveItem('nearby');
+			setShowDetailsDrawer(true);
+		}
 		if (mapInstance && waypoint) {
 			mapInstance.flyTo({
 				center: waypoint.coordinates as [number, number],
@@ -360,10 +383,6 @@ export default function Home() {
 		);
 	}
 
-	if (isMobile) {
-		return <MobileNotice />;
-	}
-
 	if (!user) {
 		return redirect('/login');
 	}
@@ -389,33 +408,188 @@ export default function Home() {
 				}
 				className="h-full w-full"
 			>
-				<AppSidebarAndMap
-					activities={activities}
-					visibleActivitiesId={visibleActivitiesId}
-					selectedRouteId={selectedRouteId}
-					currentActivity={currentActivity}
-					mapInstance={mapInstance}
-					setMapInstance={setMapInstance}
-					handleActivitySelect={handleActivitySelect}
-					selectedRoute={selectedRoute}
-					selectedWaypoint={selectedWaypoint}
-					routes={routes}
-					handleRouteSelect={handleRouteSelect}
-					handleRouteDelete={handleRouteDelete}
-					handleRouteRename={handleRouteRename}
-					waypoints={waypoints}
-					handleWaypointDelete={handleWaypointDelete}
-					handleWaypointRename={handleWaypointRename}
-					setVisibleActivitiesId={setVisibleActivitiesId}
-					handleRouteSave={handleRouteSave}
-					handleWaypointSave={handleWaypointSave}
-					setSelectedRouteId={setSelectedRouteId}
-					handleWaypointSelect={handleWaypointSelect}
-					onWaypointCommentUpdate={handleWaypointCommentUpdate}
-					onRouteCommentUpdate={handleRouteCommentUpdate}
-				/>
+				{!isMobile ? (
+					<AppSidebarAndMap
+						activities={activities}
+						visibleActivitiesId={visibleActivitiesId}
+						selectedRouteId={selectedRouteId}
+						currentActivity={selectedActivity}
+						mapInstance={mapInstance}
+						setMapInstance={setMapInstance}
+						handleActivitySelect={handleActivitySelect}
+						selectedRoute={selectedRoute}
+						selectedWaypoint={selectedWaypoint}
+						routes={routes}
+						handleRouteSelect={handleRouteSelect}
+						handleRouteDelete={handleRouteDelete}
+						handleRouteRename={handleRouteRename}
+						waypoints={waypoints}
+						handleWaypointDelete={handleWaypointDelete}
+						handleWaypointRename={handleWaypointRename}
+						setVisibleActivitiesId={setVisibleActivitiesId}
+						handleRouteSave={handleRouteSave}
+						handleWaypointSave={handleWaypointSave}
+						setSelectedRouteId={setSelectedRouteId}
+						handleWaypointSelect={handleWaypointSelect}
+						onWaypointCommentUpdate={handleWaypointCommentUpdate}
+						onRouteCommentUpdate={handleRouteCommentUpdate}
+						activeItem={activeItem}
+						setActiveItem={setActiveItem}
+					/>
+				) : (
+					<div className="h-[calc(100vh-4rem)] w-full flex flex-col">
+						{!isOnline && (
+							<div className="bg-yellow-500 text-white px-4 py-2 text-sm">
+								You're offline. Some features may be limited.
+							</div>
+						)}
+						<div className="flex-1 relative">
+							{activeItem === 'profile' ? (
+								<MobileProfile />
+							) : (
+								<>
+									<MapComponent
+										activities={activities}
+										setVisibleActivitiesId={setVisibleActivitiesId}
+										selectedRouteId={selectedRouteId}
+										setSelectedRouteId={setSelectedRouteId}
+										onMapLoad={(map) => setMapInstance(map)}
+										onRouteSave={handleRouteSave}
+										onRouteSelect={handleRouteSelect}
+										onActivitySelect={handleActivitySelect}
+										routes={routes}
+										waypoints={waypoints}
+										onWaypointSave={handleWaypointSave}
+										handleWaypointSelect={handleWaypointSelect}
+										selectedWaypoint={selectedWaypoint}
+									/>
+									<MobileDrawer
+										isOpen={['activities', 'routes', 'waypoints'].includes(activeItem)}
+										onClose={() => setActiveItem('nearby')}
+										title={activeItem.charAt(0).toUpperCase() + activeItem.slice(1)}
+									>
+										{activeItem === 'activities' && (
+											<div className="space-y-4">
+												{activities.map((activity) => (
+													<div
+														key={activity.id}
+														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+														onClick={() => handleActivitySelect(activity)}
+													>
+														<h3 className="font-medium">{activity.name}</h3>
+														<p className="text-sm text-muted-foreground">
+															{new Date(activity.start_date).toLocaleDateString()}
+														</p>
+													</div>
+												))}
+											</div>
+										)}
+										{activeItem === 'routes' && (
+											<div className="space-y-4">
+												{routes.map((route) => (
+													<div
+														key={route.id}
+														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+														onClick={() => handleRouteSelect(route)}
+													>
+														<div className="flex justify-between items-start">
+															<div>
+																<h3 className="font-medium">{route.name}</h3>
+																<p className="text-sm text-muted-foreground">
+																	Distance: {route.distance?.toFixed(1)} km
+																</p>
+															</div>
+															<button
+																className="p-2 hover:bg-accent rounded-full"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	const newName = window.prompt('Enter new name:', route.name);
+																	if (newName && newName !== route.name) {
+																		handleRouteRename(route.id as string, newName);
+																	}
+																	const newComment = window.prompt('Enter comment:', route.comments || '');
+																	if (newComment !== null && newComment !== route.comments) {
+																		handleRouteCommentUpdate(route.id as string, newComment);
+																	}
+																}}
+															>
+																<Edit2 className="h-4 w-4" />
+															</button>
+														</div>
+														{route.comments && <p className="text-sm text-muted-foreground mt-2">{route.comments}</p>}
+													</div>
+												))}
+											</div>
+										)}
+										{activeItem === 'waypoints' && (
+											<div className="space-y-4">
+												{waypoints.map((waypoint) => (
+													<div
+														key={waypoint.id}
+														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+														onClick={() => handleWaypointSelect(waypoint)}
+													>
+														<div className="flex justify-between items-start">
+															<div>
+																<h3 className="font-medium">{waypoint.name}</h3>
+																{waypoint.comments && (
+																	<p className="text-sm text-muted-foreground">{waypoint.comments}</p>
+																)}
+															</div>
+															<button
+																className="p-2 hover:bg-accent rounded-full"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	const newName = window.prompt('Enter new name:', waypoint.name);
+																	if (newName && newName !== waypoint.name) {
+																		handleWaypointRename(waypoint.id as string, newName);
+																	}
+																	const newComment = window.prompt('Enter comment:', waypoint.comments || '');
+																	if (newComment !== null && newComment !== waypoint.comments) {
+																		handleWaypointCommentUpdate(waypoint.id as string, newComment);
+																	}
+																}}
+															>
+																<Edit2 className="h-4 w-4" />
+															</button>
+														</div>
+													</div>
+												))}
+											</div>
+										)}
+									</MobileDrawer>
+									<MobileDrawer
+										isOpen={showDetailsDrawer && (!!selectedActivity || !!selectedRoute || !!selectedWaypoint)}
+										onClose={() => {
+											setShowDetailsDrawer(false);
+											setSelectedActivity(null);
+											setSelectedRoute(null);
+											setSelectedWaypoint(null);
+											setSelectedRouteId(null);
+										}}
+										title={
+											selectedActivity
+												? 'Activity Details'
+												: selectedRoute
+													? 'Route Details'
+													: selectedWaypoint
+														? 'Waypoint Details'
+														: ''
+										}
+									>
+										{selectedActivity && <ActivityDetails activity={selectedActivity} />}
+										{selectedRoute && <RouteDetails route={selectedRoute} />}
+										{selectedWaypoint && <WaypointDetails waypoint={selectedWaypoint} />}
+									</MobileDrawer>
+								</>
+							)}
+						</div>
+						<MobileNavBar activeItem={activeItem} onItemSelect={setActiveItem} />
+					</div>
+				)}
+				<HelpButton activeItem={activeItem} />
+				{isMobile && !isPWA && <PWAInstallPrompt />}
 			</SidebarProvider>
-			<HelpButton />
 		</main>
 	);
 }
@@ -445,6 +619,8 @@ function AppSidebarAndMap({
 	handleWaypointSelect,
 	onWaypointCommentUpdate,
 	onRouteCommentUpdate,
+	activeItem,
+	setActiveItem,
 }: {
 	activities: any[];
 	visibleActivitiesId: number[];
@@ -469,6 +645,8 @@ function AppSidebarAndMap({
 	handleWaypointSelect: (waypoint: DbWaypoint | null) => void;
 	onWaypointCommentUpdate: (waypointId: string, comments: string) => void;
 	onRouteCommentUpdate: (routeId: string, comments: string) => void;
+	activeItem: string;
+	setActiveItem: React.Dispatch<React.SetStateAction<string>>;
 }) {
 	const { open: isSidebarOpen } = useSidebar();
 	const { user } = useAuth();
@@ -497,9 +675,11 @@ function AppSidebarAndMap({
 				userId={user?.id || ''}
 				onWaypointCommentUpdate={onWaypointCommentUpdate}
 				onRouteCommentUpdate={onRouteCommentUpdate}
+				activeItem={activeItem}
+				setActiveItem={setActiveItem}
 			/>
 			<SidebarInset className="flex flex-col h-screen w-full">
-				<div className="flex-1 relative w-full">
+				<div className="flex-1 relative w-full pb-16 md:pb-0">
 					<MapComponent
 						activities={activities}
 						setVisibleActivitiesId={setVisibleActivitiesId}

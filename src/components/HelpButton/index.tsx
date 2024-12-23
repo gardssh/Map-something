@@ -1,24 +1,40 @@
 'use client';
 
+import { HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 
-export default function HelpButton() {
+interface HelpButtonProps {
+	activeItem?: string;
+}
+
+export default function HelpButton({ activeItem }: HelpButtonProps) {
+	const { isMobile } = useResponsiveLayout();
+
+	// Hide the help button when the profile page is active
+	if (activeItem === 'profile') return null;
+
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
 				<Button
-					variant="outline"
+					variant="ghost"
 					size="icon"
-					className="mapboxgl-ctrl mapboxgl-ctrl-group absolute bottom-[50px] right-[10px] w-[40px] h-[40px] md:w-[29px] md:h-[29px]"
+					className={`fixed z-[4] bg-white hover:bg-accent border rounded-sm
+						${
+							isMobile
+								? 'right-[10px] top-[280px] w-[29px] h-[29px]' // Align with mapbox controls
+								: 'bottom-4 right-4 h-10 w-10'
+						}`}
 				>
-					<QuestionMarkCircledIcon className="h-6 w-6 md:h-4 md:w-4" />
+					<HelpCircle className="h-4 w-4" />
+					<span className="sr-only">Help</span>
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent 
-				className="w-[80vw] md:w-[686px] p-6 space-y-6 ml-4" 
-				side="left" 
+			<PopoverContent
+				className={`w-[80vw] md:w-[686px] p-6 space-y-6 ${isMobile ? 'ml-[-75vw]' : 'ml-4'}`}
+				side={isMobile ? 'left' : 'left'}
 				align="end"
 				sideOffset={20}
 			>
