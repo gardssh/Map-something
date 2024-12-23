@@ -27,7 +27,7 @@ export async function POST(request: Request) {
           id: waypoint.id,
           name: waypoint.name,
           geometry: {
-            type: 'Point',
+            type: 'Point' as const,
             coordinates: waypoint.coordinates
           },
           coordinates: waypoint.coordinates,
