@@ -49,7 +49,7 @@ export default function Home() {
 	const [routes, setRoutes] = useState<DbRoute[]>([]);
 	const [waypoints, setWaypoints] = useState<DbWaypoint[]>([]);
 	const [isOpen, setIsOpen] = useState(false);
-	const [activeItem, setActiveItem] = useState('nearby');
+	const [activeItem, setActiveItem] = useState(`nearby`);
 	const [selectedActivity, setSelectedActivity] = useState<any>(null);
 	const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
 	const [isEditingRoute, setIsEditingRoute] = useState(false);
@@ -58,26 +58,26 @@ export default function Home() {
 	useEffect(() => {
 		if (!isOnline) {
 			// Handle offline state - could show a notification or load cached data
-			console.log('App is offline, using cached data');
+			console.log(`App is offline, using cached data`);
 		}
 	}, [isOnline]);
 
 	useEffect(() => {
 		if (user) {
 			// Load activities
-			fetch('/api/activities')
+			fetch(`/api/activities`)
 				.then((res) => res.json())
 				.then((data) => {
 					setActivities(data.activities || []);
 					setActivitiesLoading(false);
 				})
 				.catch((error) => {
-					console.error('Error loading activities:', error);
+					console.error(`Error loading activities:`, error);
 					setActivitiesLoading(false);
 				});
 
 			// Load routes
-			fetch('/api/routes')
+			fetch(`/api/routes`)
 				.then((res) => res.json())
 				.then((data) => {
 					setRoutes(
@@ -87,15 +87,15 @@ export default function Home() {
 						}))
 					);
 				})
-				.catch((error) => console.error('Error loading routes:', error));
+				.catch((error) => console.error(`Error loading routes:`, error));
 
 			// Load waypoints
-			fetch('/api/waypoints')
+			fetch(`/api/waypoints`)
 				.then((res) => res.json())
 				.then((data) => {
 					setWaypoints(data.waypoints || []);
 				})
-				.catch((error) => console.error('Error loading waypoints:', error));
+				.catch((error) => console.error(`Error loading waypoints:`, error));
 		}
 	}, [user]);
 
@@ -113,7 +113,7 @@ export default function Home() {
 		setSelectedActivity(activity);
 		if (mapInstance) handleBounds(activity);
 		if (isMobile) {
-			setActiveItem('nearby');
+			setActiveItem(`nearby`);
 			setShowDetailsDrawer(true);
 		}
 	};
@@ -143,15 +143,15 @@ export default function Home() {
 
 	const handleRouteSave = async (newRoute: DbRoute) => {
 		try {
-			const response = await fetch('/api/routes', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/routes`, {
+				method: `POST`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify(newRoute),
 			});
 
 			if (!response.ok) {
 				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to save route');
+				throw new Error(errorData.error || `Failed to save route`);
 			}
 
 			// Fetch updated routes
@@ -164,18 +164,18 @@ export default function Home() {
 				}))
 			);
 		} catch (error) {
-			console.error('Error saving route:', error);
+			console.error(`Error saving route:`, error);
 		}
 	};
 
 	const handleRouteSelect = (route: DbRoute | null) => {
 		setSelectedRoute(route);
 		if (isMobile) {
-			setActiveItem('nearby');
+			setActiveItem(`nearby`);
 			setShowDetailsDrawer(true);
 		}
 
-		if (route && mapInstance && 'coordinates' in route.geometry) {
+		if (route && mapInstance && `coordinates` in route.geometry) {
 			const coordinates = route.geometry.coordinates as [number, number][];
 			const bounds = coordinates.reduce(
 				(bounds, coord) => {
@@ -199,14 +199,14 @@ export default function Home() {
 
 	const handleRouteDelete = async (routeId: string) => {
 		try {
-			const response = await fetch('/api/routes', {
-				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/routes`, {
+				method: `DELETE`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ routeId }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to delete route');
+				throw new Error(`Failed to delete route`);
 			}
 
 			setRoutes(routes.filter((route) => route.id !== routeId));
@@ -215,20 +215,20 @@ export default function Home() {
 				setSelectedRouteId(null);
 			}
 		} catch (error) {
-			console.error('Error deleting route:', error);
+			console.error(`Error deleting route:`, error);
 		}
 	};
 
 	const handleRouteRename = async (routeId: string, newName: string) => {
 		try {
-			const response = await fetch('/api/routes', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/routes`, {
+				method: `PATCH`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ routeId, newName }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to rename route');
+				throw new Error(`Failed to rename route`);
 			}
 
 			// Update both the routes list and the selected route
@@ -237,47 +237,47 @@ export default function Home() {
 				selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, name: newName } : selectedRoute
 			);
 		} catch (error) {
-			console.error('Error renaming route:', error);
+			console.error(`Error renaming route:`, error);
 		}
 	};
 
 	const handleWaypointSave = async (newWaypoint: DbWaypoint) => {
 		try {
-			const response = await fetch('/api/waypoints', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/waypoints`, {
+				method: `POST`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ waypoints: [newWaypoint] }),
 			});
 
 			if (!response.ok) {
 				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to save waypoint');
+				throw new Error(errorData.error || `Failed to save waypoint`);
 			}
 
 			// Fetch updated waypoints
 			const getResponse = await fetch('/api/waypoints');
 			if (!getResponse.ok) {
-				throw new Error('Failed to fetch updated waypoints');
+				throw new Error(`Failed to fetch updated waypoints`);
 			}
 
 			const data = await getResponse.json();
 			setWaypoints(data.waypoints || []);
 		} catch (error) {
-			console.error('Error saving waypoint:', error);
+			console.error(`Error saving waypoint:`, error);
 			throw error;
 		}
 	};
 
 	const handleWaypointDelete = async (waypointId: string) => {
 		try {
-			const response = await fetch('/api/waypoints', {
-				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/waypoints`, {
+				method: `DELETE`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ waypointId }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to delete waypoint');
+				throw new Error(`Failed to delete waypoint`);
 			}
 
 			setWaypoints(waypoints.filter((waypoint) => waypoint.id !== waypointId));
@@ -285,14 +285,14 @@ export default function Home() {
 				setSelectedWaypoint(null);
 			}
 		} catch (error) {
-			console.error('Error deleting waypoint:', error);
+			console.error(`Error deleting waypoint:`, error);
 		}
 	};
 
 	const handleWaypointSelect = (waypoint: DbWaypoint | null) => {
 		setSelectedWaypoint(waypoint);
 		if (isMobile) {
-			setActiveItem('nearby');
+			setActiveItem(`nearby`);
 			setShowDetailsDrawer(true);
 		}
 		if (mapInstance && waypoint) {
@@ -306,14 +306,14 @@ export default function Home() {
 
 	const handleWaypointRename = async (waypointId: string, newName: string) => {
 		try {
-			const response = await fetch('/api/waypoints', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/waypoints`, {
+				method: `PATCH`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ waypointId, newName }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to rename waypoint');
+				throw new Error(`Failed to rename waypoint`);
 			}
 
 			// Update both the waypoints list and the selected waypoint
@@ -326,20 +326,20 @@ export default function Home() {
 					: selectedWaypoint
 			);
 		} catch (error) {
-			console.error('Error renaming waypoint:', error);
+			console.error(`Error renaming waypoint:`, error);
 		}
 	};
 
 	const handleWaypointCommentUpdate = async (waypointId: string, comments: string) => {
 		try {
-			const response = await fetch('/api/waypoints', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/waypoints`, {
+				method: `PATCH`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ waypointId, comments }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to update waypoint comments');
+				throw new Error(`Failed to update waypoint comments`);
 			}
 
 			// Update both the waypoints list and the selected waypoint
@@ -348,27 +348,27 @@ export default function Home() {
 				selectedWaypoint && selectedWaypoint.id === waypointId ? { ...selectedWaypoint, comments } : selectedWaypoint
 			);
 		} catch (error) {
-			console.error('Error updating waypoint comments:', error);
+			console.error(`Error updating waypoint comments:`, error);
 		}
 	};
 
 	const handleRouteCommentUpdate = async (routeId: string, comments: string) => {
 		try {
-			const response = await fetch('/api/routes', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/routes`, {
+				method: `PATCH`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ routeId, comments }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to update route comments');
+				throw new Error(`Failed to update route comments`);
 			}
 
 			// Update both the routes list and the selected route
 			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, comments } : route)));
 			setSelectedRoute(selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, comments } : selectedRoute);
 		} catch (error) {
-			console.error('Error updating route comments:', error);
+			console.error(`Error updating route comments:`, error);
 		}
 	};
 
@@ -403,7 +403,7 @@ export default function Home() {
 			<SidebarProvider
 				style={
 					{
-						'--sidebar-width': '350px',
+						'--sidebar-width': `350px`,
 					} as React.CSSProperties
 				}
 				className="h-full w-full"
@@ -444,7 +444,7 @@ export default function Home() {
 							</div>
 						)}
 						<div className="flex-1 relative">
-							{activeItem === 'profile' ? (
+							{activeItem === `profile` ? (
 								<MobileProfile />
 							) : (
 								<>
@@ -464,11 +464,11 @@ export default function Home() {
 										selectedWaypoint={selectedWaypoint}
 									/>
 									<MobileDrawer
-										isOpen={['activities', 'routes', 'waypoints'].includes(activeItem)}
-										onClose={() => setActiveItem('nearby')}
+										isOpen={[`activities`, `routes`, `waypoints`].includes(activeItem)}
+										onClose={() => setActiveItem(`nearby`)}
 										title={activeItem.charAt(0).toUpperCase() + activeItem.slice(1)}
 									>
-										{activeItem === 'activities' && (
+										{activeItem === `activities` && (
 											<div className="space-y-4">
 												{activities.map((activity) => (
 													<div
@@ -484,7 +484,7 @@ export default function Home() {
 												))}
 											</div>
 										)}
-										{activeItem === 'routes' && (
+										{activeItem === `routes` && (
 											<div className="space-y-4">
 												{routes.map((route) => (
 													<div
@@ -521,7 +521,7 @@ export default function Home() {
 												))}
 											</div>
 										)}
-										{activeItem === 'waypoints' && (
+										{activeItem === `waypoints` && (
 											<div className="space-y-4">
 												{waypoints.map((waypoint) => (
 													<div
@@ -569,12 +569,12 @@ export default function Home() {
 										}}
 										title={
 											selectedActivity
-												? 'Activity Details'
+												? `Activity Details`
 												: selectedRoute
-													? 'Route Details'
+													? `Route Details`
 													: selectedWaypoint
-														? 'Waypoint Details'
-														: ''
+														? `Waypoint Details`
+														: ``
 										}
 									>
 										{selectedActivity && <ActivityDetails activity={selectedActivity} />}
