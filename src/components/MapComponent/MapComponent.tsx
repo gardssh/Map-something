@@ -167,7 +167,7 @@ export const MapComponent = () => {
 		features: activities.map((activity) => {
 			const feature: Feature = {
 				type: 'Feature',
-				geometry: activity.map.geometry?.geometry || { type: 'LineString', coordinates: [] },
+				geometry: activity.map?.geometry || { type: 'LineString', coordinates: [] },
 				properties: {
 					id: activity.id,
 					name: activity.name,
