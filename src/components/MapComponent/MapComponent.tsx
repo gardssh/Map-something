@@ -165,9 +165,13 @@ export const MapComponent = () => {
 	const activitiesGeoJSON: FeatureCollection = {
 		type: 'FeatureCollection',
 		features: activities.map((activity) => {
+			const defaultGeometry: LineString = {
+				type: 'LineString',
+				coordinates: [],
+			};
 			const feature: Feature = {
 				type: 'Feature',
-				geometry: activity.map?.geometry || { type: 'LineString', coordinates: [] },
+				geometry: activity.map?.geometry || defaultGeometry,
 				properties: {
 					id: activity.id,
 					name: activity.name,

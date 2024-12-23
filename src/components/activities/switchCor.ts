@@ -4,6 +4,7 @@ import type { Activity } from '../../types/activity';
 import polyline from '@mapbox/polyline';
 
 export interface RoutePoints {
+	type: 'LineString';
 	coordinates: [number, number][];
 	startPoint?: [number, number];
 	endPoint?: [number, number];
@@ -24,7 +25,7 @@ export const hasValidPolyline = (activity: Activity): boolean => {
 
 export const switchCoordinates = (activity: Activity): RoutePoints => {
 	if (!activity.map?.summary_polyline) {
-		return { coordinates: [] };
+		return { type: 'LineString', coordinates: [] };
 	}
 
 	try {
@@ -33,11 +34,12 @@ export const switchCoordinates = (activity: Activity): RoutePoints => {
 		const coordinates = decodedCoordinates.map(([lat, lng]): [number, number] => [lng, lat]);
 		
 		return {
+			type: 'LineString',
 			coordinates,
 			startPoint: coordinates[0],
 			endPoint: coordinates[coordinates.length - 1]
 		};
 	} catch (error) {
-		return { coordinates: [] };
+		return { type: 'LineString', coordinates: [] };
 	}
 };
