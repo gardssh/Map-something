@@ -26,46 +26,48 @@ export async function GET(request: Request) {
         }
 
         // Transform activities to match your application's format
-        const formattedActivities = activities.map(activity => ({
-            id: activity.strava_id,
-            name: activity.name,
-            type: activity.type,
-            sport_type: activity.sport_type,
-            distance: activity.distance,
-            moving_time: activity.moving_time,
-            total_elevation_gain: activity.total_elevation_gain,
-            start_date: activity.start_date,
-            start_latlng: activity.start_latlng,
-            end_latlng: activity.end_latlng,
-            average_speed: activity.average_speed,
-            max_speed: activity.max_speed,
-            average_heartrate: activity.average_heartrate,
-            max_heartrate: activity.max_heartrate,
-            elev_high: activity.elev_high,
-            elev_low: activity.elev_low,
-            map: {
-                summary_polyline: activity.summary_polyline,
-                geometry: activity.geometry
-            },
-            // These fields are important for map display
-            selected: false,
-            visible: true,
-            coordinates: activity.start_latlng,
-            bounds: activity.bounds,
-            // Add route-specific properties
-            properties: {
+        const formattedActivities = activities
+            .filter(activity => activity.summary_polyline && activity.summary_polyline.length > 0)
+            .map(activity => ({
                 id: activity.strava_id,
                 name: activity.name,
                 type: activity.type,
+                sport_type: activity.sport_type,
                 distance: activity.distance,
                 moving_time: activity.moving_time,
-                isRoute: false,
-                isActivity: true,
+                total_elevation_gain: activity.total_elevation_gain,
+                start_date: activity.start_date,
+                start_latlng: activity.start_latlng,
+                end_latlng: activity.end_latlng,
+                average_speed: activity.average_speed,
+                max_speed: activity.max_speed,
+                average_heartrate: activity.average_heartrate,
+                max_heartrate: activity.max_heartrate,
+                elev_high: activity.elev_high,
+                elev_low: activity.elev_low,
+                map: {
+                    summary_polyline: activity.summary_polyline,
+                    geometry: activity.geometry
+                },
+                // These fields are important for map display
                 selected: false,
                 visible: true,
-                source: 'strava'
-            }
-        }));
+                coordinates: activity.start_latlng,
+                bounds: activity.bounds,
+                // Add route-specific properties
+                properties: {
+                    id: activity.strava_id,
+                    name: activity.name,
+                    type: activity.type,
+                    distance: activity.distance,
+                    moving_time: activity.moving_time,
+                    isRoute: false,
+                    isActivity: true,
+                    selected: false,
+                    visible: true,
+                    source: 'strava'
+                }
+            }));
 
         return NextResponse.json({ activities: formattedActivities });
     } catch (error) {

@@ -21,6 +21,7 @@ import { useMapConfig } from './hooks/useMapConfig';
 import { useMapLayers } from './hooks/useMapLayers';
 import { useSidebar } from '@/components/ui/sidebar';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import { ViewModeControl } from './controls/ViewModeControl';
 
 export const MapComponent = ({
 	activities,
@@ -68,6 +69,7 @@ export const MapComponent = ({
 	const { data: session } = useSession();
 	const { open: isSidebarOpen } = useSidebar();
 	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
+	const [is3DMode, setIs3DMode] = useState(true);
 
 	const { availableLayers, initialMapState, mapStyle, mapSettings, handlePitch } = useMapConfig({ mapRef });
 
@@ -190,6 +192,22 @@ export const MapComponent = ({
 		}
 	}, [isSidebarOpen]);
 
+	const toggleViewMode = useCallback(() => {
+		if (!mapRef.current) return;
+		const map = mapRef.current.getMap();
+		const newMode = !is3DMode;
+		setIs3DMode(newMode);
+
+		if (newMode) {
+			// Enable 3D mode
+			map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+		} else {
+			// Enable 2D mode
+			map.setTerrain(null);
+			map.setPitch(0);
+		}
+	}, [is3DMode]);
+
 	return (
 		<div className="absolute inset-0">
 			<Map
@@ -249,11 +267,11 @@ export const MapComponent = ({
 				renderWorldCopies={false}
 				maxTileCacheSize={50}
 				trackResize={false}
-				dragRotate={true}
-				pitchWithRotate={true}
+				dragRotate={is3DMode}
+				pitchWithRotate={is3DMode}
 				dragPan={true}
 				touchZoomRotate={true}
-				touchPitch={true}
+				touchPitch={is3DMode}
 				onLoad={(evt) => {
 					const map = evt.target;
 					if (onMapLoad) {
@@ -261,7 +279,7 @@ export const MapComponent = ({
 					}
 				}}
 				onPitch={(evt) => handlePitch(evt.viewState.pitch)}
-				terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
+				terrain={is3DMode ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
 			>
 				<MapControls
 					layers={availableLayers}
@@ -277,6 +295,8 @@ export const MapComponent = ({
 					onRouteSave={onRouteSave}
 					onRouteAdd={(route) => setLocalRoutes((prev) => [...prev, route])}
 					onModeChange={onDrawModeChange}
+					is3DMode={is3DMode}
+					onViewModeToggle={toggleViewMode}
 				/>
 
 				<TerrainLayer overlayStates={overlayStates} />

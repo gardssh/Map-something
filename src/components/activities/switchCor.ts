@@ -12,9 +12,13 @@ export interface RoutePoints {
 	endPoint: [number, number] | null;
 }
 
+export function hasValidPolyline(activity: Activity): boolean {
+	return Boolean(activity?.map?.summary_polyline && activity.map.summary_polyline.length > 0);
+}
+
 export function switchCoordinates(activity: Activity): RoutePoints {
-	// Only process if we have a polyline
-	if (!activity?.map?.summary_polyline) {
+	// Only process if we have a valid polyline
+	if (!hasValidPolyline(activity)) {
 		return {
 			coordinates: [],
 			startPoint: null,

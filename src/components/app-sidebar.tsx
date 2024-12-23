@@ -49,7 +49,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from './ui/badge';
 import { formatTime } from '@/lib/timeFormat';
 import { ACTIVITY_CATEGORIES, ActivityCategory, categorizeActivity } from '@/lib/categories';
-import type { DbRoute, DbWaypoint } from '@/types/supabase';
+import type { DbRoute, DbWaypoint, DbStravaActivity } from '@/types/supabase';
 import type { RouteWithDistance } from '@/types/route';
 import * as turf from '@turf/turf';
 import { LineString, Position } from 'geojson';
@@ -57,12 +57,12 @@ import { GpxUpload } from './MapComponent/controls/GpxUpload';
 import type { DrawnRoute } from '@/types/route';
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-	activities: any[];
+	activities: ActivityWithMap[];
 	visibleActivitiesId: number[];
 	selectedRouteId: string | number | null;
-	selectedActivity: any;
+	selectedActivity: ActivityWithMap | null;
 	map: mapboxgl.Map | null;
-	onActivitySelect?: (activity: any) => void;
+	onActivitySelect?: (activity: ActivityWithMap) => void;
 	selectedRoute: DbRoute | null;
 	selectedWaypoint: DbWaypoint | null;
 	routes?: DbRoute[];
@@ -100,6 +100,21 @@ interface RouteData {
 		};
 	}>;
 }
+
+interface ActivityMap {
+	summary_polyline: string;
+}
+
+interface ActivityWithMap extends DbStravaActivity {
+	map: ActivityMap;
+}
+
+const calculateRouteDistance = (coordinates: Position[]) => {
+	const validCoords = coordinates.filter(
+		(coord): coord is [number, number] => Array.isArray(coord) && coord.length === 2
+	);
+	return turf.length(turf.lineString(validCoords), { units: 'kilometers' });
+};
 
 export function AppSidebar({
 	activities = [],
@@ -142,11 +157,21 @@ export function AppSidebar({
 	const [editingWaypointId, setEditingWaypointId] = React.useState<string | null>(null);
 	const [editingWaypointName, setEditingWaypointName] = React.useState<string>('');
 
-	const getElevationData = React.useCallback(async (activity: any) => {
-		if (!activity?.map?.summary_polyline) return [];
+	const getElevationData = React.useCallback(async (source: ActivityWithMap | DbRoute) => {
+		let coordinates: Position[] = [];
 
-		const routePoints = switchCoordinates(activity);
-		const coordinates = routePoints.coordinates;
+		// Get coordinates based on source type
+		if ('sport_type' in source) {
+			// Handle activity
+			if (!source.map?.summary_polyline) return [];
+			const routePoints = switchCoordinates(source);
+			coordinates = routePoints.coordinates;
+		} else if ('geometry' in source && source.geometry) {
+			// Handle route
+			coordinates = (source.geometry as LineString).coordinates;
+		}
+
+		if (!coordinates || coordinates.length === 0) return [];
 
 		// Limit number of waypoints (Geoapify has a limit)
 		const maxWaypoints = 10; // Reduced from 25 to stay within limits
@@ -190,12 +215,22 @@ export function AppSidebar({
 			return points;
 		} catch (error) {
 			console.error('Error fetching elevation data:', error);
-			// Fall back to activity elevation data
-			return Array.from({ length: Math.ceil(activity.distance / 100) }, (_, i) => {
+			// Fall back to simple distance-based elevation for routes
+			if ('geometry' in source) {
+				return coordinates.map((_, i) => ({
+					distance: calculateRouteDistance(coordinates.slice(0, i + 1)),
+					elevation: 0, // We don't have elevation data for routes as fallback
+				}));
+			}
+			// Fall back to activity elevation data for activities
+			return Array.from({ length: Math.ceil((source as ActivityWithMap).distance / 100) }, (_, i) => {
 				const distance = (i * 100) / 1000; // Every 100 meters
+				const activity = source as ActivityWithMap;
+				const baseElevation = activity.elev_low ?? 0;
+				const elevGain = activity.total_elevation_gain ?? 0;
 				return {
 					distance,
-					elevation: activity.elev_low + activity.total_elevation_gain * (distance / (activity.distance / 1000)),
+					elevation: baseElevation + elevGain * (distance / (activity.distance / 1000)),
 				};
 			});
 		}
@@ -210,13 +245,16 @@ export function AppSidebar({
 			if (selectedActivity) {
 				const points = await getElevationData(selectedActivity);
 				setChartData(points);
+			} else if (selectedRoute) {
+				const points = await getElevationData(selectedRoute);
+				setChartData(points);
 			} else {
 				setChartData([]);
 			}
 		};
 
 		fetchElevationData();
-	}, [selectedActivity, getElevationData]);
+	}, [selectedActivity, selectedRoute, getElevationData]);
 
 	// Don't render anything until mounted
 	if (!mounted) return null;
@@ -227,14 +265,7 @@ export function AppSidebar({
 		avatar: user?.user_metadata?.avatar_url || '',
 	};
 
-	const visibleActivities = activities.filter((activity: any) => visibleActivitiesId.includes(activity.id));
-
-	const calculateRouteDistance = (coordinates: Position[]) => {
-		const validCoords = coordinates.filter(
-			(coord): coord is [number, number] => Array.isArray(coord) && coord.length === 2
-		);
-		return turf.length(turf.lineString(validCoords), { units: 'kilometers' });
-	};
+	const visibleActivities = activities.filter((activity) => visibleActivitiesId.includes(Number(activity.id)));
 
 	const chartConfig = {
 		elevation: {
@@ -475,6 +506,7 @@ export function AppSidebar({
 							<p>Created: {new Date(selectedRoute.created_at).toLocaleString()}</p>
 						</CardHeader>
 					</Card>
+					{renderElevationChart()}
 					<Button
 						variant="secondary"
 						className="w-full flex gap-2"
@@ -737,7 +769,7 @@ export function AppSidebar({
 												setOpen(true);
 												setSelectedRouteId(null);
 												onRouteSelect?.(null);
-												onActivitySelect?.(null);
+												if (onActivitySelect) onActivitySelect(null as any);
 												handleWaypointSelect?.(null);
 											}}
 											isActive={activeItem === item.id}

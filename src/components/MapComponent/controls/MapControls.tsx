@@ -3,6 +3,7 @@
 import { GeolocateControl, NavigationControl } from 'react-map-gl';
 import { LayersControl } from '../LayersControl';
 import DrawControl from './DrawControl';
+import { ViewModeControl } from './ViewModeControl';
 import type { DrawnRoute } from '@/types/route';
 import type { DbRoute } from '@/types/supabase';
 
@@ -24,6 +25,8 @@ interface MapControlsProps {
 	onRouteSave?: (route: DrawnRoute) => void;
 	onRouteAdd: (route: DbRoute) => void;
 	onModeChange: (evt: { mode: string }) => void;
+	is3DMode: boolean;
+	onViewModeToggle: () => void;
 }
 
 const MapControls = ({
@@ -40,6 +43,8 @@ const MapControls = ({
 	onRouteSave,
 	onRouteAdd,
 	onModeChange,
+	is3DMode,
+	onViewModeToggle,
 }: MapControlsProps) => {
 	return (
 		<>
@@ -67,6 +72,7 @@ const MapControls = ({
 				onRouteAdd={onRouteAdd}
 				onModeChange={onModeChange}
 			/>
+			<ViewModeControl is3DMode={is3DMode} onToggle={onViewModeToggle} />
 		</>
 	);
 };
