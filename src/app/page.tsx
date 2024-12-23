@@ -672,7 +672,7 @@ function AppSidebarAndMap({
 				setSelectedRouteId={setSelectedRouteId}
 				handleWaypointSelect={handleWaypointSelect}
 				onRouteSave={handleRouteSave}
-				userId={user?.id || ''}
+				userId={user?.id || ``}
 				onWaypointCommentUpdate={onWaypointCommentUpdate}
 				onRouteCommentUpdate={onRouteCommentUpdate}
 				activeItem={activeItem}
