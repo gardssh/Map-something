@@ -21,6 +21,7 @@ interface UseMapEventsProps {
 	isDrawing: boolean;
 	mapRef: React.MutableRefObject<MapRef | undefined> | React.RefObject<MapRef>;
 	switchCoordinates: (activity: Activity) => RoutePoints;
+	handleWaypointSelect?: (waypoint: Waypoint | null) => void;
 }
 
 export const useMapEvents = ({
@@ -34,6 +35,7 @@ export const useMapEvents = ({
 	isDrawing,
 	mapRef,
 	switchCoordinates,
+	handleWaypointSelect,
 }: UseMapEventsProps) => {
 	const onHover = useCallback(
 		(event: MapLayerMouseEvent) => {
@@ -156,13 +158,21 @@ export const useMapEvents = ({
 						}
 					}
 				}
+				// Handle waypoint clicks
+				else if (feature.layer.id === 'waypoints-layer') {
+					const waypoint = waypoints?.find((w) => w.id === (feature.id || properties.id));
+					if (waypoint) {
+						handleWaypointSelect?.(waypoint);
+					}
+				}
 			} else {
 				setSelectedRouteId(null);
 				setSelectedRoute(null);
 				onRouteSelect?.(null);
+				handleWaypointSelect?.(null);
 			}
 		},
-		[activities, routes, setSelectedRouteId, setSelectedRoute, onRouteSelect, mapRef, switchCoordinates]
+		[activities, routes, waypoints, setSelectedRouteId, setSelectedRoute, onRouteSelect, mapRef, switchCoordinates, handleWaypointSelect]
 	);
 
 	return {

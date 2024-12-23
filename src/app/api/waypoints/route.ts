@@ -124,12 +124,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { waypointId, newName } = await request.json();
+    const { waypointId, newName, comments } = await request.json();
     
-    // Update the waypoint name
+    // Update the waypoint
+    const updateData: { name?: string; comments?: string } = {};
+    if (newName !== undefined) updateData.name = newName;
+    if (comments !== undefined) updateData.comments = comments;
+
     const { error } = await supabase
       .from('waypoints')
-      .update({ name: newName })
+      .update(updateData)
       .eq('id', waypointId)
       .eq('user_id', session.user.id);
 
@@ -141,6 +145,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('PATCH Error:', error);
-    return NextResponse.json({ error: 'Failed to rename waypoint' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update waypoint' }, { status: 500 });
   }
 } 

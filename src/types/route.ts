@@ -9,9 +9,11 @@ export type DrawnRoute = {
         type: 'LineString';
         coordinates: [number, number][];
     };
+    comments: string | null;
     created_at: string;
+    updated_at: string;
     distance: number;
-    source?: 'draw' | 'gpx_upload';
+    source: 'draw' | 'gpx_upload';
 };
 
 export type RouteWithDistance = DbRoute & {

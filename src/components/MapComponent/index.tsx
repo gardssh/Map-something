@@ -36,6 +36,7 @@ export const MapComponent = ({
 	onWaypointSave,
 	onActivitySelect,
 	handleWaypointSelect,
+	selectedWaypoint: parentSelectedWaypoint,
 }: {
 	activities: Activity[];
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
@@ -49,6 +50,7 @@ export const MapComponent = ({
 	onWaypointSave?: (waypoint: Waypoint) => void;
 	onActivitySelect?: (activity: any | null) => void;
 	handleWaypointSelect?: (waypoint: Waypoint | null) => void;
+	selectedWaypoint?: Waypoint | null;
 }) => {
 	const mapRef = useRef<MapRef>();
 	const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
@@ -69,7 +71,7 @@ export const MapComponent = ({
 	const { data: session } = useSession();
 	const { open: isSidebarOpen } = useSidebar();
 	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
-	const [is3DMode, setIs3DMode] = useState(true);
+	const [is3DMode, setIs3DMode] = useState(false);
 
 	const { availableLayers, initialMapState, mapStyle, mapSettings, handlePitch } = useMapConfig({ mapRef });
 
@@ -168,7 +170,13 @@ export const MapComponent = ({
 				user_id: user.id,
 				name: newWaypointName,
 				coordinates: newWaypointCoords,
+				geometry: {
+					type: 'Point',
+					coordinates: newWaypointCoords,
+				},
+				comments: null,
 				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
 			};
 			onWaypointSave(waypoint);
 			setNewWaypointName('');
@@ -195,6 +203,7 @@ export const MapComponent = ({
 	const toggleViewMode = useCallback(() => {
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
+		if (!map.loaded()) return;
 		const newMode = !is3DMode;
 		setIs3DMode(newMode);
 
@@ -207,6 +216,10 @@ export const MapComponent = ({
 			map.setPitch(0);
 		}
 	}, [is3DMode]);
+
+	useEffect(() => {
+		setSelectedWaypoint(parentSelectedWaypoint || null);
+	}, [parentSelectedWaypoint]);
 
 	return (
 		<div className="absolute inset-0">

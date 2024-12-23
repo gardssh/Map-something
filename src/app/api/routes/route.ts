@@ -110,12 +110,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { routeId, newName } = await request.json();
+    const { routeId, newName, comments } = await request.json();
     
-    // Update the route name
+    // Update the route
+    const updateData: { name?: string; comments?: string } = {};
+    if (newName !== undefined) updateData.name = newName;
+    if (comments !== undefined) updateData.comments = comments;
+
     const { error } = await supabase
       .from('routes')
-      .update({ name: newName })
+      .update(updateData)
       .eq('id', routeId)
       .eq('user_id', session.user.id);
 
@@ -127,6 +131,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('PATCH Error:', error);
-    return NextResponse.json({ error: 'Failed to rename route' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update route' }, { status: 500 });
   }
 } 

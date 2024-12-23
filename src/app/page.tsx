@@ -307,6 +307,48 @@ export default function Home() {
 		}
 	};
 
+	const handleWaypointCommentUpdate = async (waypointId: string, comments: string) => {
+		try {
+			const response = await fetch('/api/waypoints', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ waypointId, comments }),
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to update waypoint comments');
+			}
+
+			// Update both the waypoints list and the selected waypoint
+			setWaypoints(waypoints.map((waypoint) => (waypoint.id === waypointId ? { ...waypoint, comments } : waypoint)));
+			setSelectedWaypoint(
+				selectedWaypoint && selectedWaypoint.id === waypointId ? { ...selectedWaypoint, comments } : selectedWaypoint
+			);
+		} catch (error) {
+			console.error('Error updating waypoint comments:', error);
+		}
+	};
+
+	const handleRouteCommentUpdate = async (routeId: string, comments: string) => {
+		try {
+			const response = await fetch('/api/routes', {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ routeId, comments }),
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to update route comments');
+			}
+
+			// Update both the routes list and the selected route
+			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, comments } : route)));
+			setSelectedRoute(selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, comments } : selectedRoute);
+		} catch (error) {
+			console.error('Error updating route comments:', error);
+		}
+	};
+
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center h-screen">
@@ -369,6 +411,8 @@ export default function Home() {
 					handleWaypointSave={handleWaypointSave}
 					setSelectedRouteId={setSelectedRouteId}
 					handleWaypointSelect={handleWaypointSelect}
+					onWaypointCommentUpdate={handleWaypointCommentUpdate}
+					onRouteCommentUpdate={handleRouteCommentUpdate}
 				/>
 			</SidebarProvider>
 			<HelpButton />
@@ -399,6 +443,8 @@ function AppSidebarAndMap({
 	handleWaypointSave,
 	setSelectedRouteId,
 	handleWaypointSelect,
+	onWaypointCommentUpdate,
+	onRouteCommentUpdate,
 }: {
 	activities: any[];
 	visibleActivitiesId: number[];
@@ -421,6 +467,8 @@ function AppSidebarAndMap({
 	handleWaypointSave: (waypoint: DbWaypoint) => void;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
 	handleWaypointSelect: (waypoint: DbWaypoint | null) => void;
+	onWaypointCommentUpdate: (waypointId: string, comments: string) => void;
+	onRouteCommentUpdate: (routeId: string, comments: string) => void;
 }) {
 	const { open: isSidebarOpen } = useSidebar();
 	const { user } = useAuth();
@@ -447,6 +495,8 @@ function AppSidebarAndMap({
 				handleWaypointSelect={handleWaypointSelect}
 				onRouteSave={handleRouteSave}
 				userId={user?.id || ''}
+				onWaypointCommentUpdate={onWaypointCommentUpdate}
+				onRouteCommentUpdate={onRouteCommentUpdate}
 			/>
 			<SidebarInset className="flex flex-col h-screen w-full">
 				<div className="flex-1 relative w-full">
@@ -463,6 +513,7 @@ function AppSidebarAndMap({
 						waypoints={waypoints}
 						onWaypointSave={handleWaypointSave}
 						handleWaypointSelect={handleWaypointSelect}
+						selectedWaypoint={selectedWaypoint}
 					/>
 				</div>
 			</SidebarInset>

@@ -25,6 +25,12 @@ export interface Database {
           user_id: string;
           name: string;
           coordinates: number[];
+          geometry: {
+            type: 'Point';
+            coordinates: number[];
+          };
+          comments: string | null;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -32,6 +38,12 @@ export interface Database {
           user_id: string;
           name: string;
           coordinates: number[];
+          geometry: {
+            type: 'Point';
+            coordinates: number[];
+          };
+          comments?: string | null;
+          updated_at?: string;
         };
         Update: {
           id?: string;
@@ -39,6 +51,12 @@ export interface Database {
           user_id?: string;
           name?: string;
           coordinates?: number[];
+          geometry?: {
+            type: 'Point';
+            coordinates: number[];
+          };
+          comments?: string | null;
+          updated_at?: string;
         };
       };
       routes: {
@@ -48,6 +66,10 @@ export interface Database {
           user_id: string;
           name: string;
           geometry: LineString;
+          comments: string | null;
+          updated_at: string;
+          distance: number;
+          source: string;
         };
         Insert: {
           id?: string;
@@ -55,6 +77,10 @@ export interface Database {
           user_id: string;
           name: string;
           geometry: LineString;
+          comments?: string | null;
+          updated_at?: string;
+          distance?: number;
+          source?: string;
         };
         Update: {
           id?: string;
@@ -62,6 +88,10 @@ export interface Database {
           user_id?: string;
           name?: string;
           geometry?: LineString;
+          comments?: string | null;
+          updated_at?: string;
+          distance?: number;
+          source?: string;
         };
       };
       profiles: {
