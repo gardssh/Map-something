@@ -20,7 +20,7 @@ const INTERACTIVE_LAYER_IDS = ['activities-layer', 'saved-routes-layer', 'saved-
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
 export const MapComponent = () => {
-	const mapRef = useRef<MapRef>();
+	const mapRef = useRef<MapRef | null>(null);
 	const [selectedRouteId, setSelectedRouteId] = useState<string | number | null>(null);
 	const [selectedRoute, setSelectedRoute] = useState<DbRoute | null>(null);
 	const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
