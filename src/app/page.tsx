@@ -83,7 +83,7 @@ export default function Home() {
 					setRoutes(
 						data.routes.map((route: DbRoute) => ({
 							...route,
-							distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
+							distance: turf.length(turf.lineString(route.geometry.coordinates), { units: `kilometers` }),
 						}))
 					);
 				})
@@ -160,7 +160,7 @@ export default function Home() {
 			setRoutes(
 				data.routes.map((route: DbRoute) => ({
 					...route,
-					distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
+					distance: turf.length(turf.lineString(route.geometry.coordinates), { units: `kilometers` }),
 				}))
 			);
 		} catch (error) {
@@ -384,7 +384,7 @@ export default function Home() {
 	}
 
 	if (!user) {
-		return redirect('/login');
+		return redirect(`/login`);
 	}
 
 	if (activitiesLoading) {
@@ -440,7 +440,7 @@ export default function Home() {
 					<div className="h-[calc(100vh-4rem)] w-full flex flex-col">
 						{!isOnline && (
 							<div className="bg-yellow-500 text-white px-4 py-2 text-sm">
-								You're offline. Some features may be limited.
+								You&apos;re offline. Some features may be limited.
 							</div>
 						)}
 						<div className="flex-1 relative">
