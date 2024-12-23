@@ -167,6 +167,8 @@ export default function DrawControl(props: DrawControlProps) {
 							coordinates: finalRoute,
 						},
 						created_at: new Date().toISOString(),
+						updated_at: new Date().toISOString(),
+						comments: null,
 						distance: turf.length(turf.lineString(finalRoute), { units: 'kilometers' }),
 						source: 'draw',
 					};
