@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { MapComponent } from '@/components/MapComponent';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthComponent from '@/components/Auth/AuthComponent';
-import MobileNotice from '@/components/MobileNotice';
 import { Button } from '@/components/ui/button';
 import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
@@ -23,9 +22,23 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { redirect } from 'next/navigation';
+import { MobileNavBar } from '@/components/MobileNavBar';
+import { cn } from '@/lib/utils';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
+import { MobileProfile } from '@/components/MobileProfile';
+import { MobileDrawer } from '@/components/MobileDrawer';
+import { formatTime } from '@/lib/timeFormat';
+import { Download } from 'lucide-react';
+import { RouteDetails } from '@/components/routes/RouteDetails';
+import { Edit2 } from 'lucide-react';
+import { EditDetailsForm } from '@/components/EditDetailsForm';
+import { ActivityDetails } from '@/components/activities/ActivityDetails';
+import { WaypointDetails } from '@/components/waypoints/WaypointDetails';
 
 export default function Home() {
 	const { user, loading, signOut } = useAuth();
+	const { isMobile, isPWA, isOnline } = useResponsiveLayout();
 	const [activities, setActivities] = useState<any[]>([]);
 	const [activitiesLoading, setActivitiesLoading] = useState(true);
 	const [visibleActivitiesId, setVisibleActivitiesId] = useState<number[]>([]);
@@ -36,58 +49,53 @@ export default function Home() {
 	const [routes, setRoutes] = useState<DbRoute[]>([]);
 	const [waypoints, setWaypoints] = useState<DbWaypoint[]>([]);
 	const [isOpen, setIsOpen] = useState(false);
-	const [isMobile, setIsMobile] = useState(false);
+	const [activeItem, setActiveItem] = useState(`nearby`);
+	const [selectedActivity, setSelectedActivity] = useState<any>(null);
+	const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
+	const [isEditingRoute, setIsEditingRoute] = useState(false);
+	const [isEditingWaypoint, setIsEditingWaypoint] = useState(false);
 
 	useEffect(() => {
-		const checkMobile = () => {
-			setIsMobile(window.innerWidth < 768); // 768px is a common breakpoint for tablets/mobile
-		};
-
-		// Check on mount
-		checkMobile();
-
-		// Check on resize
-		window.addEventListener('resize', checkMobile);
-
-		return () => {
-			window.removeEventListener('resize', checkMobile);
-		};
-	}, []);
+		if (!isOnline) {
+			// Handle offline state - could show a notification or load cached data
+			console.log(`App is offline, using cached data`);
+		}
+	}, [isOnline]);
 
 	useEffect(() => {
 		if (user) {
 			// Load activities
-			fetch('/api/activities')
+			fetch(`/api/activities`)
 				.then((res) => res.json())
 				.then((data) => {
 					setActivities(data.activities || []);
 					setActivitiesLoading(false);
 				})
 				.catch((error) => {
-					console.error('Error loading activities:', error);
+					console.error(`Error loading activities:`, error);
 					setActivitiesLoading(false);
 				});
 
 			// Load routes
-			fetch('/api/routes')
+			fetch(`/api/routes`)
 				.then((res) => res.json())
 				.then((data) => {
 					setRoutes(
 						data.routes.map((route: DbRoute) => ({
 							...route,
-							distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
+							distance: turf.length(turf.lineString(route.geometry.coordinates), { units: `kilometers` }),
 						}))
 					);
 				})
-				.catch((error) => console.error('Error loading routes:', error));
+				.catch((error) => console.error(`Error loading routes:`, error));
 
 			// Load waypoints
-			fetch('/api/waypoints')
+			fetch(`/api/waypoints`)
 				.then((res) => res.json())
 				.then((data) => {
 					setWaypoints(data.waypoints || []);
 				})
-				.catch((error) => console.error('Error loading waypoints:', error));
+				.catch((error) => console.error(`Error loading waypoints:`, error));
 		}
 	}, [user]);
 
@@ -97,10 +105,17 @@ export default function Home() {
 	const handleActivitySelect = (activity: any | null) => {
 		if (!activity) {
 			setSelectedRouteId(null);
+			setSelectedActivity(null);
+			setShowDetailsDrawer(false);
 			return;
 		}
 		setSelectedRouteId(activity.id);
+		setSelectedActivity(activity);
 		if (mapInstance) handleBounds(activity);
+		if (isMobile) {
+			setActiveItem(`nearby`);
+			setShowDetailsDrawer(true);
+		}
 	};
 
 	const handleBounds = (activity: any) => {
@@ -128,15 +143,15 @@ export default function Home() {
 
 	const handleRouteSave = async (newRoute: DbRoute) => {
 		try {
-			const response = await fetch('/api/routes', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/routes`, {
+				method: `POST`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify(newRoute),
 			});
 
 			if (!response.ok) {
 				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to save route');
+				throw new Error(errorData.error || `Failed to save route`);
 			}
 
 			// Fetch updated routes
@@ -145,18 +160,22 @@ export default function Home() {
 			setRoutes(
 				data.routes.map((route: DbRoute) => ({
 					...route,
-					distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
+					distance: turf.length(turf.lineString(route.geometry.coordinates), { units: `kilometers` }),
 				}))
 			);
 		} catch (error) {
-			console.error('Error saving route:', error);
+			console.error(`Error saving route:`, error);
 		}
 	};
 
 	const handleRouteSelect = (route: DbRoute | null) => {
 		setSelectedRoute(route);
+		if (isMobile) {
+			setActiveItem(`nearby`);
+			setShowDetailsDrawer(true);
+		}
 
-		if (route && mapInstance && 'coordinates' in route.geometry) {
+		if (route && mapInstance && `coordinates` in route.geometry) {
 			const coordinates = route.geometry.coordinates as [number, number][];
 			const bounds = coordinates.reduce(
 				(bounds, coord) => {
@@ -180,14 +199,14 @@ export default function Home() {
 
 	const handleRouteDelete = async (routeId: string) => {
 		try {
-			const response = await fetch('/api/routes', {
-				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/routes`, {
+				method: `DELETE`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ routeId }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to delete route');
+				throw new Error(`Failed to delete route`);
 			}
 
 			setRoutes(routes.filter((route) => route.id !== routeId));
@@ -196,20 +215,20 @@ export default function Home() {
 				setSelectedRouteId(null);
 			}
 		} catch (error) {
-			console.error('Error deleting route:', error);
+			console.error(`Error deleting route:`, error);
 		}
 	};
 
 	const handleRouteRename = async (routeId: string, newName: string) => {
 		try {
-			const response = await fetch('/api/routes', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/routes`, {
+				method: `PATCH`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ routeId, newName }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to rename route');
+				throw new Error(`Failed to rename route`);
 			}
 
 			// Update both the routes list and the selected route
@@ -218,47 +237,47 @@ export default function Home() {
 				selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, name: newName } : selectedRoute
 			);
 		} catch (error) {
-			console.error('Error renaming route:', error);
+			console.error(`Error renaming route:`, error);
 		}
 	};
 
 	const handleWaypointSave = async (newWaypoint: DbWaypoint) => {
 		try {
-			const response = await fetch('/api/waypoints', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/waypoints`, {
+				method: `POST`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ waypoints: [newWaypoint] }),
 			});
 
 			if (!response.ok) {
 				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to save waypoint');
+				throw new Error(errorData.error || `Failed to save waypoint`);
 			}
 
 			// Fetch updated waypoints
 			const getResponse = await fetch('/api/waypoints');
 			if (!getResponse.ok) {
-				throw new Error('Failed to fetch updated waypoints');
+				throw new Error(`Failed to fetch updated waypoints`);
 			}
 
 			const data = await getResponse.json();
 			setWaypoints(data.waypoints || []);
 		} catch (error) {
-			console.error('Error saving waypoint:', error);
+			console.error(`Error saving waypoint:`, error);
 			throw error;
 		}
 	};
 
 	const handleWaypointDelete = async (waypointId: string) => {
 		try {
-			const response = await fetch('/api/waypoints', {
-				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/waypoints`, {
+				method: `DELETE`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ waypointId }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to delete waypoint');
+				throw new Error(`Failed to delete waypoint`);
 			}
 
 			setWaypoints(waypoints.filter((waypoint) => waypoint.id !== waypointId));
@@ -266,12 +285,16 @@ export default function Home() {
 				setSelectedWaypoint(null);
 			}
 		} catch (error) {
-			console.error('Error deleting waypoint:', error);
+			console.error(`Error deleting waypoint:`, error);
 		}
 	};
 
 	const handleWaypointSelect = (waypoint: DbWaypoint | null) => {
 		setSelectedWaypoint(waypoint);
+		if (isMobile) {
+			setActiveItem(`nearby`);
+			setShowDetailsDrawer(true);
+		}
 		if (mapInstance && waypoint) {
 			mapInstance.flyTo({
 				center: waypoint.coordinates as [number, number],
@@ -283,14 +306,14 @@ export default function Home() {
 
 	const handleWaypointRename = async (waypointId: string, newName: string) => {
 		try {
-			const response = await fetch('/api/waypoints', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/waypoints`, {
+				method: `PATCH`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ waypointId, newName }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to rename waypoint');
+				throw new Error(`Failed to rename waypoint`);
 			}
 
 			// Update both the waypoints list and the selected waypoint
@@ -303,20 +326,20 @@ export default function Home() {
 					: selectedWaypoint
 			);
 		} catch (error) {
-			console.error('Error renaming waypoint:', error);
+			console.error(`Error renaming waypoint:`, error);
 		}
 	};
 
 	const handleWaypointCommentUpdate = async (waypointId: string, comments: string) => {
 		try {
-			const response = await fetch('/api/waypoints', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/waypoints`, {
+				method: `PATCH`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ waypointId, comments }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to update waypoint comments');
+				throw new Error(`Failed to update waypoint comments`);
 			}
 
 			// Update both the waypoints list and the selected waypoint
@@ -325,27 +348,27 @@ export default function Home() {
 				selectedWaypoint && selectedWaypoint.id === waypointId ? { ...selectedWaypoint, comments } : selectedWaypoint
 			);
 		} catch (error) {
-			console.error('Error updating waypoint comments:', error);
+			console.error(`Error updating waypoint comments:`, error);
 		}
 	};
 
 	const handleRouteCommentUpdate = async (routeId: string, comments: string) => {
 		try {
-			const response = await fetch('/api/routes', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+			const response = await fetch(`/api/routes`, {
+				method: `PATCH`,
+				headers: { 'Content-Type': `application/json` },
 				body: JSON.stringify({ routeId, comments }),
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to update route comments');
+				throw new Error(`Failed to update route comments`);
 			}
 
 			// Update both the routes list and the selected route
 			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, comments } : route)));
 			setSelectedRoute(selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, comments } : selectedRoute);
 		} catch (error) {
-			console.error('Error updating route comments:', error);
+			console.error(`Error updating route comments:`, error);
 		}
 	};
 
@@ -360,12 +383,8 @@ export default function Home() {
 		);
 	}
 
-	if (isMobile) {
-		return <MobileNotice />;
-	}
-
 	if (!user) {
-		return redirect('/login');
+		return redirect(`/login`);
 	}
 
 	if (activitiesLoading) {
@@ -384,38 +403,193 @@ export default function Home() {
 			<SidebarProvider
 				style={
 					{
-						'--sidebar-width': '350px',
+						'--sidebar-width': `350px`,
 					} as React.CSSProperties
 				}
 				className="h-full w-full"
 			>
-				<AppSidebarAndMap
-					activities={activities}
-					visibleActivitiesId={visibleActivitiesId}
-					selectedRouteId={selectedRouteId}
-					currentActivity={currentActivity}
-					mapInstance={mapInstance}
-					setMapInstance={setMapInstance}
-					handleActivitySelect={handleActivitySelect}
-					selectedRoute={selectedRoute}
-					selectedWaypoint={selectedWaypoint}
-					routes={routes}
-					handleRouteSelect={handleRouteSelect}
-					handleRouteDelete={handleRouteDelete}
-					handleRouteRename={handleRouteRename}
-					waypoints={waypoints}
-					handleWaypointDelete={handleWaypointDelete}
-					handleWaypointRename={handleWaypointRename}
-					setVisibleActivitiesId={setVisibleActivitiesId}
-					handleRouteSave={handleRouteSave}
-					handleWaypointSave={handleWaypointSave}
-					setSelectedRouteId={setSelectedRouteId}
-					handleWaypointSelect={handleWaypointSelect}
-					onWaypointCommentUpdate={handleWaypointCommentUpdate}
-					onRouteCommentUpdate={handleRouteCommentUpdate}
-				/>
+				{!isMobile ? (
+					<AppSidebarAndMap
+						activities={activities}
+						visibleActivitiesId={visibleActivitiesId}
+						selectedRouteId={selectedRouteId}
+						currentActivity={selectedActivity}
+						mapInstance={mapInstance}
+						setMapInstance={setMapInstance}
+						handleActivitySelect={handleActivitySelect}
+						selectedRoute={selectedRoute}
+						selectedWaypoint={selectedWaypoint}
+						routes={routes}
+						handleRouteSelect={handleRouteSelect}
+						handleRouteDelete={handleRouteDelete}
+						handleRouteRename={handleRouteRename}
+						waypoints={waypoints}
+						handleWaypointDelete={handleWaypointDelete}
+						handleWaypointRename={handleWaypointRename}
+						setVisibleActivitiesId={setVisibleActivitiesId}
+						handleRouteSave={handleRouteSave}
+						handleWaypointSave={handleWaypointSave}
+						setSelectedRouteId={setSelectedRouteId}
+						handleWaypointSelect={handleWaypointSelect}
+						onWaypointCommentUpdate={handleWaypointCommentUpdate}
+						onRouteCommentUpdate={handleRouteCommentUpdate}
+						activeItem={activeItem}
+						setActiveItem={setActiveItem}
+					/>
+				) : (
+					<div className="h-[calc(100vh-4rem)] w-full flex flex-col">
+						{!isOnline && (
+							<div className="bg-yellow-500 text-white px-4 py-2 text-sm">
+								You&apos;re offline. Some features may be limited.
+							</div>
+						)}
+						<div className="flex-1 relative">
+							{activeItem === `profile` ? (
+								<MobileProfile />
+							) : (
+								<>
+									<MapComponent
+										activities={activities}
+										setVisibleActivitiesId={setVisibleActivitiesId}
+										selectedRouteId={selectedRouteId}
+										setSelectedRouteId={setSelectedRouteId}
+										onMapLoad={(map) => setMapInstance(map)}
+										onRouteSave={handleRouteSave}
+										onRouteSelect={handleRouteSelect}
+										onActivitySelect={handleActivitySelect}
+										routes={routes}
+										waypoints={waypoints}
+										onWaypointSave={handleWaypointSave}
+										handleWaypointSelect={handleWaypointSelect}
+										selectedWaypoint={selectedWaypoint}
+									/>
+									<MobileDrawer
+										isOpen={[`activities`, `routes`, `waypoints`].includes(activeItem)}
+										onClose={() => setActiveItem(`nearby`)}
+										title={activeItem.charAt(0).toUpperCase() + activeItem.slice(1)}
+									>
+										{activeItem === `activities` && (
+											<div className="space-y-4">
+												{activities.map((activity) => (
+													<div
+														key={activity.id}
+														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+														onClick={() => handleActivitySelect(activity)}
+													>
+														<h3 className="font-medium">{activity.name}</h3>
+														<p className="text-sm text-muted-foreground">
+															{new Date(activity.start_date).toLocaleDateString()}
+														</p>
+													</div>
+												))}
+											</div>
+										)}
+										{activeItem === `routes` && (
+											<div className="space-y-4">
+												{routes.map((route) => (
+													<div
+														key={route.id}
+														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+														onClick={() => handleRouteSelect(route)}
+													>
+														<div className="flex justify-between items-start">
+															<div>
+																<h3 className="font-medium">{route.name}</h3>
+																<p className="text-sm text-muted-foreground">
+																	Distance: {route.distance?.toFixed(1)} km
+																</p>
+															</div>
+															<button
+																className="p-2 hover:bg-accent rounded-full"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	const newName = window.prompt(`Enter new name:`, route.name);
+																	if (newName && newName !== route.name) {
+																		handleRouteRename(route.id as string, newName);
+																	}
+																	const newComment = window.prompt(`Enter comment:`, route.comments || ``);
+																	if (newComment !== null && newComment !== route.comments) {
+																		handleRouteCommentUpdate(route.id as string, newComment);
+																	}
+																}}
+															>
+																<Edit2 className="h-4 w-4" />
+															</button>
+														</div>
+														{route.comments && <p className="text-sm text-muted-foreground mt-2">{route.comments}</p>}
+													</div>
+												))}
+											</div>
+										)}
+										{activeItem === `waypoints` && (
+											<div className="space-y-4">
+												{waypoints.map((waypoint) => (
+													<div
+														key={waypoint.id}
+														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+														onClick={() => handleWaypointSelect(waypoint)}
+													>
+														<div className="flex justify-between items-start">
+															<div>
+																<h3 className="font-medium">{waypoint.name}</h3>
+																{waypoint.comments && (
+																	<p className="text-sm text-muted-foreground">{waypoint.comments}</p>
+																)}
+															</div>
+															<button
+																className="p-2 hover:bg-accent rounded-full"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	const newName = window.prompt(`Enter new name:`, waypoint.name);
+																	if (newName && newName !== waypoint.name) {
+																		handleWaypointRename(waypoint.id as string, newName);
+																	}
+																	const newComment = window.prompt(`Enter comment:`, waypoint.comments || ``);
+																	if (newComment !== null && newComment !== waypoint.comments) {
+																		handleWaypointCommentUpdate(waypoint.id as string, newComment);
+																	}
+																}}
+															>
+																<Edit2 className="h-4 w-4" />
+															</button>
+														</div>
+													</div>
+												))}
+											</div>
+										)}
+									</MobileDrawer>
+									<MobileDrawer
+										isOpen={showDetailsDrawer && (!!selectedActivity || !!selectedRoute || !!selectedWaypoint)}
+										onClose={() => {
+											setShowDetailsDrawer(false);
+											setSelectedActivity(null);
+											setSelectedRoute(null);
+											setSelectedWaypoint(null);
+											setSelectedRouteId(null);
+										}}
+										title={
+											selectedActivity
+												? `Activity Details`
+												: selectedRoute
+													? `Route Details`
+													: selectedWaypoint
+														? `Waypoint Details`
+														: ``
+										}
+									>
+										{selectedActivity && <ActivityDetails activity={selectedActivity} />}
+										{selectedRoute && <RouteDetails route={selectedRoute} />}
+										{selectedWaypoint && <WaypointDetails waypoint={selectedWaypoint} />}
+									</MobileDrawer>
+								</>
+							)}
+						</div>
+						<MobileNavBar activeItem={activeItem} onItemSelect={setActiveItem} />
+					</div>
+				)}
+				<HelpButton activeItem={activeItem} />
+				{isMobile && !isPWA && <PWAInstallPrompt />}
 			</SidebarProvider>
-			<HelpButton />
 		</main>
 	);
 }
@@ -445,6 +619,8 @@ function AppSidebarAndMap({
 	handleWaypointSelect,
 	onWaypointCommentUpdate,
 	onRouteCommentUpdate,
+	activeItem,
+	setActiveItem,
 }: {
 	activities: any[];
 	visibleActivitiesId: number[];
@@ -469,6 +645,8 @@ function AppSidebarAndMap({
 	handleWaypointSelect: (waypoint: DbWaypoint | null) => void;
 	onWaypointCommentUpdate: (waypointId: string, comments: string) => void;
 	onRouteCommentUpdate: (routeId: string, comments: string) => void;
+	activeItem: string;
+	setActiveItem: React.Dispatch<React.SetStateAction<string>>;
 }) {
 	const { open: isSidebarOpen } = useSidebar();
 	const { user } = useAuth();
@@ -494,12 +672,14 @@ function AppSidebarAndMap({
 				setSelectedRouteId={setSelectedRouteId}
 				handleWaypointSelect={handleWaypointSelect}
 				onRouteSave={handleRouteSave}
-				userId={user?.id || ''}
+				userId={user?.id || ``}
 				onWaypointCommentUpdate={onWaypointCommentUpdate}
 				onRouteCommentUpdate={onRouteCommentUpdate}
+				activeItem={activeItem}
+				setActiveItem={setActiveItem}
 			/>
 			<SidebarInset className="flex flex-col h-screen w-full">
-				<div className="flex-1 relative w-full">
+				<div className="flex-1 relative w-full pb-16 md:pb-0">
 					<MapComponent
 						activities={activities}
 						setVisibleActivitiesId={setVisibleActivitiesId}

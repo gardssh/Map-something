@@ -2,13 +2,7 @@
 
 import { Marker } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
-
-interface Activity {
-	id: number;
-	map: {
-		summary_polyline: string;
-	};
-}
+import type { Activity } from '@/types/activity';
 
 export default function AddMarker({ activity }: { activity: Activity }) {
 	const { startPoint, endPoint } = switchCoordinates(activity);

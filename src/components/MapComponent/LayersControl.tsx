@@ -1,11 +1,7 @@
 'use client';
 import { Layers, Footprints, Bike, Waves, Snowflake, CircleHelp } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { createPortal } from 'react-dom';
 
 interface LayerOption {
@@ -25,15 +21,15 @@ interface LayersControlProps {
 }
 
 export const LayersControl = ({
-	layers,
+	layers = [],
 	currentBaseLayer,
 	overlayStates,
 	onLayerToggle,
 	selectedCategories,
 	onCategoryToggle,
 }: LayersControlProps) => {
-	const baseLayers = layers.filter(l => l.isBase);
-	const overlayLayers = layers.filter(l => !l.isBase);
+	const baseLayers = layers?.filter((l) => l.isBase) || [];
+	const overlayLayers = layers?.filter((l) => !l.isBase) || [];
 	const [isOpen, setIsOpen] = useState(false);
 	const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
 
@@ -66,18 +62,18 @@ export const LayersControl = ({
 					</svg>
 				</div>
 			`;
-			
+
 			const handleClick = () => {
 				setButtonRect(button.getBoundingClientRect());
-				setIsOpen(prev => !prev);
+				setIsOpen((prev) => !prev);
 			};
-			
+
 			button.addEventListener('click', handleClick);
 			container.appendChild(button);
 
 			return () => {
-					button.removeEventListener('click', handleClick);
-					controlGroup.removeChild(container);
+				button.removeEventListener('click', handleClick);
+				controlGroup.removeChild(container);
 			};
 		}
 	}, []);
@@ -93,7 +89,7 @@ export const LayersControl = ({
 	return (
 		<>
 			{isOpen && buttonRect && (
-				<div 
+				<div
 					className="fixed bg-white rounded-md shadow-lg p-4 min-w-[200px]"
 					style={{
 						right: window.innerWidth - buttonRect.left + 5,
@@ -105,7 +101,7 @@ export const LayersControl = ({
 					<div className="mb-6">
 						<div className="text-sm font-semibold text-gray-500 mb-3">Base Maps</div>
 						<div className="flex flex-col space-y-2">
-							{baseLayers.map(layer => (
+							{baseLayers.map((layer) => (
 								<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
 									<input
 										type="radio"
@@ -124,7 +120,7 @@ export const LayersControl = ({
 					<div className="mb-6">
 						<div className="text-sm font-semibold text-gray-500 mb-3">Overlays</div>
 						<div className="flex flex-col space-y-2">
-							{overlayLayers.map(layer => (
+							{overlayLayers.map((layer) => (
 								<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
 									<input
 										type="checkbox"
@@ -142,14 +138,14 @@ export const LayersControl = ({
 					<div>
 						<div className="text-sm font-semibold text-gray-500 mb-3">Sport Types</div>
 						<div className="flex flex-col space-y-2">
-							{sportCategories.map(category => (
+							{sportCategories.map((category) => (
 								<label key={category.id} className="flex items-center space-x-2 cursor-pointer">
 									<input
 										type="checkbox"
 										checked={selectedCategories.includes(category.id)}
 										onChange={() => {
 											const newCategories = selectedCategories.includes(category.id)
-												? selectedCategories.filter(id => id !== category.id)
+												? selectedCategories.filter((id) => id !== category.id)
 												: [...selectedCategories, category.id];
 											onCategoryToggle(newCategories);
 										}}

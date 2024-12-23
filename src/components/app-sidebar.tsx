@@ -56,6 +56,7 @@ import { LineString, Position } from 'geojson';
 import { GpxUpload } from './MapComponent/controls/GpxUpload';
 import type { DrawnRoute } from '@/types/route';
 import { Textarea } from './ui/textarea';
+import type { Activity } from '@/types/activity';
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activities: ActivityWithMap[];
@@ -79,6 +80,8 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	handleWaypointSelect?: (waypoint: DbWaypoint | null) => void;
 	onRouteSave?: (route: DrawnRoute) => void;
 	userId: string;
+	activeItem?: string;
+	setActiveItem?: (item: string) => void;
 }
 
 const navigationItems = [
@@ -141,13 +144,19 @@ export function AppSidebar({
 	handleWaypointSelect,
 	onRouteSave,
 	userId,
+	activeItem: externalActiveItem,
+	setActiveItem: externalSetActiveItem,
 	...props
 }: AppSidebarProps) {
-	// All hooks must be called before any conditional returns
 	const { user } = useAuth();
 	const { open, setOpen } = useSidebar();
 	const [mounted, setMounted] = React.useState(false);
-	const [activeItem, setActiveItem] = React.useState('nearby');
+	const [internalActiveItem, setInternalActiveItem] = React.useState('nearby');
+
+	// Use external or internal state
+	const activeItem = externalActiveItem || internalActiveItem;
+	const setActiveItem = externalSetActiveItem || setInternalActiveItem;
+
 	const [editingRouteId, setEditingRouteId] = React.useState<string | null>(null);
 	const [editingName, setEditingName] = React.useState<string>('');
 	const [editingComments, setEditingComments] = React.useState<string>('');
@@ -171,7 +180,7 @@ export function AppSidebar({
 		if ('sport_type' in source) {
 			// Handle activity
 			if (!source.map?.summary_polyline) return [];
-			const routePoints = switchCoordinates(source);
+			const routePoints = switchCoordinates(source as unknown as Activity);
 			coordinates = routePoints.coordinates;
 		} else if ('geometry' in source && source.geometry) {
 			// Handle route
@@ -262,9 +271,6 @@ export function AppSidebar({
 
 		fetchElevationData();
 	}, [selectedActivity, selectedRoute, getElevationData]);
-
-	// Don't render anything until mounted
-	if (!mounted) return null;
 
 	const userData = {
 		name: user?.user_metadata?.first_name || 'User',
@@ -612,7 +618,15 @@ export function AppSidebar({
 				<div id="slide" className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
 					<div className="flex justify-between items-center">
 						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedActivity.name}</h3>
-						<Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setSelectedRouteId(null)}>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-8 w-8 p-0"
+							onClick={() => {
+								setSelectedRouteId(null);
+								if (onActivitySelect) onActivitySelect(null as any);
+							}}
+						>
 							<X className="h-4 w-4" />
 							<span className="sr-only">Close activity</span>
 						</Button>
@@ -847,7 +861,7 @@ export function AppSidebar({
 					</SidebarGroup>
 				</SidebarContent>
 				<SidebarFooter>
-					<NavUser user={userData} />
+					<NavUser />
 				</SidebarFooter>
 			</Sidebar>
 
@@ -860,11 +874,7 @@ export function AppSidebar({
 						</div>
 					</div>
 				</SidebarHeader>
-				<SidebarContent>
-					<SidebarGroup className="px-0">
-						<SidebarGroupContent>{renderContent()}</SidebarGroupContent>
-					</SidebarGroup>
-				</SidebarContent>
+				<SidebarContent>{renderContent()}</SidebarContent>
 			</Sidebar>
 		</Sidebar>
 	);
