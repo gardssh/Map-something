@@ -94,7 +94,7 @@ export const MapComponent = () => {
 		setHoverInfo,
 		isDrawing: false,
 		mapRef,
-		switchCoordinates: (activity) => ({ coordinates: [] }),
+		switchCoordinates: (activity) => ({ type: 'LineString', coordinates: [] }),
 		handleWaypointSelect: (waypoint) => {
 			setSelectedWaypoint(waypoint);
 			setShowDetailsDrawer(!!waypoint);
