@@ -503,11 +503,11 @@ export default function Home() {
 																className="p-2 hover:bg-accent rounded-full"
 																onClick={(e) => {
 																	e.stopPropagation();
-																	const newName = window.prompt('Enter new name:', route.name);
+																	const newName = window.prompt(`Enter new name:`, route.name);
 																	if (newName && newName !== route.name) {
 																		handleRouteRename(route.id as string, newName);
 																	}
-																	const newComment = window.prompt('Enter comment:', route.comments || '');
+																	const newComment = window.prompt(`Enter comment:`, route.comments || ``);
 																	if (newComment !== null && newComment !== route.comments) {
 																		handleRouteCommentUpdate(route.id as string, newComment);
 																	}
@@ -540,11 +540,11 @@ export default function Home() {
 																className="p-2 hover:bg-accent rounded-full"
 																onClick={(e) => {
 																	e.stopPropagation();
-																	const newName = window.prompt('Enter new name:', waypoint.name);
+																	const newName = window.prompt(`Enter new name:`, waypoint.name);
 																	if (newName && newName !== waypoint.name) {
 																		handleWaypointRename(waypoint.id as string, newName);
 																	}
-																	const newComment = window.prompt('Enter comment:', waypoint.comments || '');
+																	const newComment = window.prompt(`Enter comment:`, waypoint.comments || ``);
 																	if (newComment !== null && newComment !== waypoint.comments) {
 																		handleWaypointCommentUpdate(waypoint.id as string, newComment);
 																	}
