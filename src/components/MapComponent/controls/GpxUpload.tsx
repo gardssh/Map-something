@@ -31,6 +31,8 @@ export function GpxUpload({ onRouteSave, userId, className }: GpxUploadProps) {
 					coordinates: geometry.coordinates as [number, number][],
 				},
 				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString(),
+				comments: null,
 				distance: 0,
 				source: 'gpx_upload',
 			};
