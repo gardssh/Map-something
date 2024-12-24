@@ -1,15 +1,13 @@
+import { Activity } from '@/types/activity';
+import { formatDistance, formatDuration } from '@/lib/utils';
 import { useRef, useEffect } from 'react';
-import type { Activity } from '@/types/activity';
 import type { Waypoint } from '@/types/waypoint';
 import type { DbRoute } from '@/types/supabase';
-import { cn } from '@/lib/utils';
-import { getSportEmoji } from '@/lib/utils';
-import { formatTime } from '@/lib/timeFormat';
 
 interface ActivityCardsProps {
 	activities: Activity[];
-	routes: DbRoute[];
-	waypoints: Waypoint[];
+	routes?: DbRoute[];
+	waypoints?: Waypoint[];
 	selectedActivity: Activity | null;
 	selectedRoute: DbRoute | null;
 	selectedWaypoint: Waypoint | null;
@@ -28,16 +26,16 @@ type CardItem = {
 	id: string | number;
 	type: 'activity' | 'route' | 'waypoint';
 	name: string;
-	date: string;
+	date?: string;
 	distance?: number;
 	duration?: number;
 	item: Activity | DbRoute | Waypoint;
 };
 
-export const ActivityCards = ({
+export function ActivityCards({
 	activities,
-	routes,
-	waypoints,
+	routes = [],
+	waypoints = [],
 	selectedActivity,
 	selectedRoute,
 	selectedWaypoint,
@@ -50,7 +48,7 @@ export const ActivityCards = ({
 	visibleActivitiesId,
 	visibleRoutesId,
 	visibleWaypointsId,
-}: ActivityCardsProps) => {
+}: ActivityCardsProps) {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const isScrollingRef = useRef(false);
 	const scrollTimeoutRef = useRef<NodeJS.Timeout>();
@@ -63,7 +61,7 @@ export const ActivityCards = ({
 				id: activity.id,
 				type: 'activity' as const,
 				name: activity.name,
-				date: activity.start_date || new Date().toISOString(),
+				date: activity.start_date,
 				distance: activity.distance,
 				duration: activity.moving_time,
 				item: activity,
@@ -74,7 +72,7 @@ export const ActivityCards = ({
 				id: route.id,
 				type: 'route' as const,
 				name: route.name || 'Unnamed Route',
-				date: route.created_at || new Date().toISOString(),
+				date: route.created_at,
 				distance: route.distance,
 				item: route,
 			})),
@@ -83,91 +81,136 @@ export const ActivityCards = ({
 			.map((waypoint) => ({
 				id: waypoint.id,
 				type: 'waypoint' as const,
-				name: waypoint.name || 'Unnamed Waypoint',
-				date: waypoint.created_at || new Date().toISOString(),
+				name: waypoint.name,
+				date: waypoint.created_at,
 				item: waypoint,
 			})),
 	];
 
-	console.log('Filtered items:', {
-		activities: activities.filter((activity) => visibleActivitiesId.includes(Number(activity.id))).length,
-		routes: routes.filter((route) => visibleRoutesId.includes(route.id)).length,
-		waypoints: waypoints.filter((waypoint) => visibleWaypointsId.includes(waypoint.id)).length,
-	});
-
-	// Reset scroll position when selection changes
+	// Reset scroll only when selection changes and we're not actively scrolling
 	useEffect(() => {
-		if (scrollContainerRef.current && !isScrollingRef.current) {
-			scrollContainerRef.current.scrollLeft = 0;
-		}
-	}, [selectedActivity, selectedRoute, selectedWaypoint]);
+		const selectedId = selectedActivity?.id || selectedRoute?.id || selectedWaypoint?.id;
+		if (!selectedId || isScrollingRef.current) return;
 
-	const handleScroll = () => {
-		isScrollingRef.current = true;
-		if (scrollTimeoutRef.current) {
+		const container = scrollContainerRef.current;
+		if (!container) return;
+
+		const selectedIndex = items.findIndex((item) => item.id === selectedId);
+		if (selectedIndex === -1) return;
+
+		const cardWidth = 280 + 16; // card width + gap
+		container.scrollLeft = selectedIndex * cardWidth;
+	}, [selectedActivity, selectedRoute, selectedWaypoint, items]);
+
+	// Handle scroll end to highlight the card in view
+	useEffect(() => {
+		const container = scrollContainerRef.current;
+		if (!container) return;
+
+		const handleScroll = () => {
+			isScrollingRef.current = true;
 			clearTimeout(scrollTimeoutRef.current);
+
+			scrollTimeoutRef.current = setTimeout(() => {
+				isScrollingRef.current = false;
+				const scrollLeft = container.scrollLeft;
+				const cardIndex = Math.round(scrollLeft / (280 + 16)); // card width + gap
+				const item = items[cardIndex];
+				if (item) {
+					switch (item.type) {
+						case 'activity':
+							onActivityHighlight(item.item as Activity);
+							break;
+						case 'route':
+							onRouteHighlight(item.item as DbRoute);
+							break;
+						case 'waypoint':
+							onWaypointHighlight(item.item as Waypoint);
+							break;
+					}
+				}
+			}, 150); // Wait for scroll to finish
+		};
+
+		container.addEventListener('scroll', handleScroll);
+		return () => {
+			container.removeEventListener('scroll', handleScroll);
+			clearTimeout(scrollTimeoutRef.current);
+		};
+	}, [items, onActivityHighlight, onRouteHighlight, onWaypointHighlight]);
+
+	const handleItemClick = (item: CardItem) => {
+		switch (item.type) {
+			case 'activity':
+				onActivitySelect(item.item as Activity);
+				break;
+			case 'route':
+				onRouteSelect(item.item as DbRoute);
+				break;
+			case 'waypoint':
+				onWaypointSelect(item.item as Waypoint);
+				break;
 		}
-		scrollTimeoutRef.current = setTimeout(() => {
-			isScrollingRef.current = false;
-		}, 150);
+	};
+
+	const isSelected = (item: CardItem) => {
+		switch (item.type) {
+			case 'activity':
+				return selectedActivity?.id === item.id;
+			case 'route':
+				return selectedRoute?.id === item.id;
+			case 'waypoint':
+				return selectedWaypoint?.id === item.id;
+			default:
+				return false;
+		}
+	};
+
+	const getItemIcon = (type: CardItem['type']) => {
+		switch (type) {
+			case 'activity':
+				return '🏃‍♂️';
+			case 'route':
+				return '🗺️';
+			case 'waypoint':
+				return '📍';
+		}
 	};
 
 	return (
-		<div
-			ref={scrollContainerRef}
-			className="absolute bottom-0 left-0 right-0 flex gap-4 p-4 overflow-x-auto z-[20] pb-safe"
-			onScroll={handleScroll}
-		>
-			{items.map((item) => (
-				<div
-					key={`${item.type}-${item.id}`}
-					className={cn(
-						'flex-none w-48 p-4 rounded-lg shadow-lg cursor-pointer transition-all',
-						'bg-background border border-border hover:border-primary',
-						(item.type === 'activity' && selectedActivity?.id === item.id) ||
-							(item.type === 'route' && selectedRoute?.id === item.id) ||
-							(item.type === 'waypoint' && selectedWaypoint?.id === item.id)
-							? 'border-primary'
-							: ''
-					)}
-					onClick={() => {
-						if (item.type === 'activity') {
-							onActivitySelect(item.item as Activity);
-						} else if (item.type === 'route') {
-							onRouteSelect(item.item as DbRoute);
-						} else if (item.type === 'waypoint') {
-							onWaypointSelect(item.item as Waypoint);
-						}
-					}}
-					onMouseEnter={() => {
-						if (item.type === 'activity') {
-							onActivityHighlight(item.item as Activity);
-						} else if (item.type === 'route') {
-							onRouteHighlight(item.item as DbRoute);
-						} else if (item.type === 'waypoint') {
-							onWaypointHighlight(item.item as Waypoint);
-						}
-					}}
-				>
-					<div className="space-y-2">
-						<div className="flex items-center gap-2">
-							<span className="text-xl">
-								{item.type === 'activity'
-									? getSportEmoji((item.item as Activity).sport_type)
-									: item.type === 'route'
-										? '🗺️'
-										: '📍'}
-							</span>
-							<h3 className="font-medium truncate">{item.name}</h3>
-						</div>
-						<div className="text-sm text-muted-foreground">
-							{item.distance && <p>{(item.distance / 1000).toFixed(2)} km</p>}
-							{item.duration && <p>{formatTime(item.duration)}</p>}
-							<p>{new Date(item.date).toLocaleDateString()}</p>
+		<div className="fixed bottom-16 left-0 right-0 px-4 pb-4 z-[20]">
+			<div
+				ref={scrollContainerRef}
+				className="overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-hide"
+				style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+			>
+				{items.map((item) => (
+					<div
+						key={`${item.type}-${item.id}`}
+						className={`flex-shrink-0 w-[280px] snap-center cursor-pointer rounded-lg bg-background p-4 shadow-lg transition-all ${
+							isSelected(item) ? 'border border-gray-400' : ''
+						}`}
+						onClick={() => handleItemClick(item)}
+					>
+						<div className="space-y-2">
+							<div className="flex items-center gap-2">
+								<span>{getItemIcon(item.type)}</span>
+								<h3 className="font-semibold truncate">{item.name}</h3>
+							</div>
+							<div className="text-sm text-muted-foreground space-y-1">
+								{(item.distance !== undefined || item.duration !== undefined) && (
+									<p>
+										{item.distance !== undefined && formatDistance(item.distance)}
+										{item.distance !== undefined && item.duration !== undefined && ' • '}
+										{item.duration !== undefined && formatDuration(item.duration)}
+									</p>
+								)}
+								<p>{item.date ? new Date(item.date).toLocaleDateString() : 'Date not available'}</p>
+							</div>
 						</div>
 					</div>
-				</div>
-			))}
+				))}
+			</div>
 		</div>
 	);
-};
+}

@@ -25,11 +25,6 @@ import { ViewModeControl } from './controls/ViewModeControl';
 import { handleBounds } from './utils/mapUtils';
 import { ActivityCards } from '@/components/ActivityCards';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { MobileDrawer } from '@/components/MobileDrawer';
-import { ActivityDetails } from '@/components/activities/ActivityDetails';
-import { RouteDetails } from '@/components/routes/RouteDetails';
-import { WaypointDetails } from '@/components/waypoints/WaypointDetails';
-import { formatTime } from '@/lib/timeFormat';
 
 export const MapComponent = ({
 	activities,
@@ -104,12 +99,6 @@ export const MapComponent = ({
 
 		const waypointFeatures = map.queryRenderedFeatures(undefined, {
 			layers: ['waypoints-layer'],
-		});
-
-		console.log('Visible features:', {
-			activities: activityFeatures.map((f) => f.properties?.id),
-			routes: routeFeatures.map((f) => f.properties?.id),
-			waypoints: waypointFeatures.map((f) => f.properties?.id),
 		});
 
 		return {
@@ -524,129 +513,38 @@ export const MapComponent = ({
 			</Map>
 
 			{isMobile && (
-				<>
-					<ActivityCards
-						activities={activities}
-						routes={routes}
-						waypoints={waypoints}
-						selectedActivity={selectedActivity}
-						selectedRoute={selectedRoute}
-						selectedWaypoint={selectedWaypoint}
-						onActivitySelect={handleActivitySelect}
-						onRouteSelect={(route) => {
-							setSelectedRouteId(route.id);
-							setSelectedRoute(route);
-							onRouteSelect?.(route);
-							if ('coordinates' in route.geometry) {
-								handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
-							}
-						}}
-						onWaypointSelect={(waypoint) => {
-							handleWaypointSelect?.(waypoint);
-							if (mapRef.current && waypoint.coordinates) {
-								mapRef.current.getMap().flyTo({
-									center: waypoint.coordinates as [number, number],
-									zoom: 14,
-								});
-							}
-						}}
-						onActivityHighlight={handleActivityHighlight}
-						onRouteHighlight={handleRouteHighlight}
-						onWaypointHighlight={handleWaypointHighlight}
-						visibleActivitiesId={visibleActivitiesId}
-						visibleRoutesId={visibleRoutesId}
-						visibleWaypointsId={visibleWaypointsId}
-					/>
-					<MobileDrawer
-						isOpen={!!selectedActivity || !!selectedRoute || !!selectedWaypoint}
-						onClose={() => {
-							setSelectedActivity(null);
-							setSelectedRoute(null);
-							setSelectedWaypoint(null);
-							setSelectedRouteId(null);
-						}}
-						title={
-							selectedActivity
-								? 'Activity Details'
-								: selectedRoute
-									? 'Route Details'
-									: selectedWaypoint
-										? 'Waypoint Details'
-										: ''
+				<ActivityCards
+					activities={activities}
+					routes={routes}
+					waypoints={waypoints}
+					selectedActivity={selectedActivity}
+					selectedRoute={selectedRoute}
+					selectedWaypoint={selectedWaypoint}
+					onActivitySelect={handleActivitySelect}
+					onRouteSelect={(route) => {
+						setSelectedRouteId(route.id);
+						setSelectedRoute(route);
+						onRouteSelect?.(route);
+						if ('coordinates' in route.geometry) {
+							handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
 						}
-						peekContent={
-							selectedActivity ? (
-								<div className="space-y-4">
-									<h2 className="text-xl font-semibold">{selectedActivity.name}</h2>
-									<div className="grid grid-cols-2 gap-4">
-										<div>
-											<p className="text-sm text-muted-foreground">Type</p>
-											<p>{selectedActivity.sport_type}</p>
-										</div>
-										<div>
-											<p className="text-sm text-muted-foreground">Distance</p>
-											<p>{((selectedActivity.distance || 0) / 1000).toFixed(2)} km</p>
-										</div>
-										<div>
-											<p className="text-sm text-muted-foreground">Duration</p>
-											<p>{formatTime(selectedActivity.moving_time || 0)}</p>
-										</div>
-										<div>
-											<p className="text-sm text-muted-foreground">Elevation Gain</p>
-											<p>{selectedActivity.total_elevation_gain || 0} m</p>
-										</div>
-									</div>
-								</div>
-							) : selectedRoute ? (
-								<div className="space-y-4">
-									<h2 className="text-xl font-semibold">{selectedRoute.name}</h2>
-									<div className="grid grid-cols-2 gap-4">
-										<div>
-											<p className="text-sm text-muted-foreground">Distance</p>
-											<p>{((selectedRoute.distance || 0) / 1000).toFixed(2)} km</p>
-										</div>
-										<div>
-											<p className="text-sm text-muted-foreground">Created</p>
-											<p>{new Date(selectedRoute.created_at).toLocaleDateString()}</p>
-										</div>
-										{selectedRoute.comments && (
-											<div className="col-span-2">
-												<p className="text-sm text-muted-foreground">Comments</p>
-												<p>{selectedRoute.comments}</p>
-											</div>
-										)}
-									</div>
-								</div>
-							) : selectedWaypoint ? (
-								<div className="space-y-4">
-									<h2 className="text-xl font-semibold">{selectedWaypoint.name}</h2>
-									<div className="grid grid-cols-2 gap-4">
-										<div>
-											<p className="text-sm text-muted-foreground">Coordinates</p>
-											<p>
-												{selectedWaypoint.coordinates[0].toFixed(6)}, {selectedWaypoint.coordinates[1].toFixed(6)}
-											</p>
-										</div>
-										<div>
-											<p className="text-sm text-muted-foreground">Created</p>
-											<p>{new Date(selectedWaypoint.created_at).toLocaleDateString()}</p>
-										</div>
-										{selectedWaypoint.comments && (
-											<div className="col-span-2">
-												<p className="text-sm text-muted-foreground">Comments</p>
-												<p>{selectedWaypoint.comments}</p>
-											</div>
-										)}
-									</div>
-								</div>
-							) : null
+					}}
+					onWaypointSelect={(waypoint) => {
+						handleWaypointSelect?.(waypoint);
+						if (mapRef.current && waypoint.coordinates) {
+							mapRef.current.getMap().flyTo({
+								center: waypoint.coordinates as [number, number],
+								zoom: 14,
+							});
 						}
-					>
-						{selectedActivity && <ActivityDetails activity={selectedActivity} />}
-						{selectedRoute && <RouteDetails route={selectedRoute} />}
-						{selectedWaypoint && <WaypointDetails waypoint={selectedWaypoint} />}
-					</MobileDrawer>
-				</>
+					}}
+					onActivityHighlight={handleActivityHighlight}
+					onRouteHighlight={handleRouteHighlight}
+					onWaypointHighlight={handleWaypointHighlight}
+					visibleActivitiesId={visibleActivitiesId}
+					visibleRoutesId={visibleRoutesId}
+					visibleWaypointsId={visibleWaypointsId}
+				/>
 			)}
 		</div>
 	);

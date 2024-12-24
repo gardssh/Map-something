@@ -12,7 +12,7 @@ interface MobileDrawerProps {
 	peekContent?: React.ReactNode;
 }
 
-const DRAWER_PEEK_HEIGHT = 400; // Increased from 280 to show more content
+const DRAWER_PEEK_HEIGHT = 280; // Height of the peek view in pixels
 const DRAWER_FULL_HEIGHT = 'calc(100vh - 4rem)';
 
 export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: MobileDrawerProps) => {

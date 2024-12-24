@@ -467,6 +467,67 @@ export default function Home() {
 										isOpen={[`activities`, `routes`, `waypoints`].includes(activeItem)}
 										onClose={() => setActiveItem(`nearby`)}
 										title={activeItem.charAt(0).toUpperCase() + activeItem.slice(1)}
+										peekContent={
+											activeItem === 'activities' && activities.length > 0 ? (
+												<div className="space-y-4 overflow-auto max-h-[200px]">
+													{activities.slice(0, 3).map((activity) => (
+														<div
+															key={activity.id}
+															className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+															onClick={() => handleActivitySelect(activity)}
+														>
+															<h3 className="font-medium">{activity.name}</h3>
+															<div className="grid grid-cols-2 gap-4 mt-2">
+																<div>
+																	<p className="text-sm text-muted-foreground">Type</p>
+																	<p>{activity.sport_type}</p>
+																</div>
+																<div>
+																	<p className="text-sm text-muted-foreground">Distance</p>
+																	<p>{((activity.distance || 0) / 1000).toFixed(2)} km</p>
+																</div>
+															</div>
+														</div>
+													))}
+												</div>
+											) : activeItem === 'routes' && routes.length > 0 ? (
+												<div className="space-y-4 overflow-auto max-h-[200px]">
+													{routes.slice(0, 3).map((route) => (
+														<div
+															key={route.id}
+															className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+															onClick={() => {
+																handleRouteSelect(route);
+																setSelectedRoute(route);
+																setSelectedRouteId(route.id);
+															}}
+														>
+															<h3 className="font-medium">{route.name}</h3>
+															<div className="mt-2">
+																<p className="text-sm text-muted-foreground">Distance</p>
+																<p>{route.distance?.toFixed(1)} km</p>
+															</div>
+															{route.comments && <p className="text-sm text-muted-foreground mt-2">{route.comments}</p>}
+														</div>
+													))}
+												</div>
+											) : activeItem === 'waypoints' && waypoints.length > 0 ? (
+												<div className="space-y-4 overflow-auto max-h-[200px]">
+													{waypoints.slice(0, 3).map((waypoint) => (
+														<div
+															key={waypoint.id}
+															className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+															onClick={() => handleWaypointSelect(waypoint)}
+														>
+															<h3 className="font-medium">{waypoint.name}</h3>
+															{waypoint.comments && (
+																<p className="text-sm text-muted-foreground mt-2">{waypoint.comments}</p>
+															)}
+														</div>
+													))}
+												</div>
+											) : null
+										}
 									>
 										{activeItem === `activities` && (
 											<div className="space-y-4">
@@ -490,7 +551,11 @@ export default function Home() {
 													<div
 														key={route.id}
 														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
-														onClick={() => handleRouteSelect(route)}
+														onClick={() => {
+															handleRouteSelect(route);
+															setSelectedRoute(route);
+															setSelectedRouteId(route.id);
+														}}
 													>
 														<div className="flex justify-between items-start">
 															<div>
