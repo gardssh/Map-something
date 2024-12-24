@@ -90,16 +90,23 @@ export function ActivityCards({
 	// Reset scroll only when selection changes and we're not actively scrolling
 	useEffect(() => {
 		const selectedId = selectedActivity?.id || selectedRoute?.id || selectedWaypoint?.id;
-		if (!selectedId || isScrollingRef.current) return;
+		const selectedType = selectedActivity ? 'activity' : selectedRoute ? 'route' : selectedWaypoint ? 'waypoint' : null;
+		if (!selectedId || !selectedType || isScrollingRef.current) return;
 
 		const container = scrollContainerRef.current;
 		if (!container) return;
 
-		const selectedIndex = items.findIndex((item) => item.id === selectedId);
+		const selectedIndex = items.findIndex((item) => item.id === selectedId && item.type === selectedType);
 		if (selectedIndex === -1) return;
 
-		const cardWidth = 280 + 16; // card width + gap
-		container.scrollLeft = selectedIndex * cardWidth;
+		// Only scroll if the selection was triggered by a map click, not by card scroll
+		if (!isScrollingRef.current) {
+			const cardWidth = 280 + 16; // card width + gap
+			container.scrollTo({
+				left: selectedIndex * cardWidth,
+				behavior: 'smooth',
+			});
+		}
 	}, [selectedActivity, selectedRoute, selectedWaypoint, items]);
 
 	// Handle scroll end to highlight the card in view
@@ -112,11 +119,16 @@ export function ActivityCards({
 			clearTimeout(scrollTimeoutRef.current);
 
 			scrollTimeoutRef.current = setTimeout(() => {
-				isScrollingRef.current = false;
 				const scrollLeft = container.scrollLeft;
 				const cardIndex = Math.round(scrollLeft / (280 + 16)); // card width + gap
 				const item = items[cardIndex];
 				if (item) {
+					// Clear other selections first
+					if (item.type !== 'activity') onActivityHighlight({} as Activity);
+					if (item.type !== 'route') onRouteHighlight({} as DbRoute);
+					if (item.type !== 'waypoint') onWaypointHighlight({} as Waypoint);
+
+					// Then highlight the current item
 					switch (item.type) {
 						case 'activity':
 							onActivityHighlight(item.item as Activity);
@@ -129,6 +141,7 @@ export function ActivityCards({
 							break;
 					}
 				}
+				isScrollingRef.current = false;
 			}, 150); // Wait for scroll to finish
 		};
 
@@ -140,15 +153,24 @@ export function ActivityCards({
 	}, [items, onActivityHighlight, onRouteHighlight, onWaypointHighlight]);
 
 	const handleItemClick = (item: CardItem) => {
+		// Clear other selections first
+		if (item.type !== 'activity') onActivityHighlight({} as Activity);
+		if (item.type !== 'route') onRouteHighlight({} as DbRoute);
+		if (item.type !== 'waypoint') onWaypointHighlight({} as Waypoint);
+
+		// Then select the clicked item
 		switch (item.type) {
 			case 'activity':
 				onActivitySelect(item.item as Activity);
+				onActivityHighlight(item.item as Activity);
 				break;
 			case 'route':
 				onRouteSelect(item.item as DbRoute);
+				onRouteHighlight(item.item as DbRoute);
 				break;
 			case 'waypoint':
 				onWaypointSelect(item.item as Waypoint);
+				onWaypointHighlight(item.item as Waypoint);
 				break;
 		}
 	};
