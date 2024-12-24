@@ -576,6 +576,49 @@ export default function Home() {
 														? `Waypoint Details`
 														: ``
 										}
+										peekContent={
+											selectedActivity ? (
+												<div className="space-y-4">
+													<h2 className="text-xl font-semibold">{selectedActivity.name}</h2>
+													<div className="grid grid-cols-2 gap-4">
+														<div>
+															<p className="text-sm text-muted-foreground">Type</p>
+															<p>{selectedActivity.sport_type}</p>
+														</div>
+														<div>
+															<p className="text-sm text-muted-foreground">Distance</p>
+															<p>{((selectedActivity.distance || 0) / 1000).toFixed(2)} km</p>
+														</div>
+														<div>
+															<p className="text-sm text-muted-foreground">Duration</p>
+															<p>{formatTime(selectedActivity.moving_time || 0)}</p>
+														</div>
+														<div>
+															<p className="text-sm text-muted-foreground">Elevation Gain</p>
+															<p>{selectedActivity.total_elevation_gain || 0} m</p>
+														</div>
+													</div>
+												</div>
+											) : selectedRoute ? (
+												<div className="space-y-4">
+													<h2 className="text-xl font-semibold">{selectedRoute.name}</h2>
+													<div>
+														<p className="text-sm text-muted-foreground">Distance</p>
+														<p>{((selectedRoute.distance || 0) / 1000).toFixed(2)} km</p>
+													</div>
+												</div>
+											) : selectedWaypoint ? (
+												<div className="space-y-4">
+													<h2 className="text-xl font-semibold">{selectedWaypoint.name}</h2>
+													<div>
+														<p className="text-sm text-muted-foreground">Coordinates</p>
+														<p>
+															{selectedWaypoint.coordinates[0].toFixed(6)}, {selectedWaypoint.coordinates[1].toFixed(6)}
+														</p>
+													</div>
+												</div>
+											) : null
+										}
 									>
 										{selectedActivity && <ActivityDetails activity={selectedActivity} />}
 										{selectedRoute && <RouteDetails route={selectedRoute} />}

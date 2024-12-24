@@ -40,7 +40,7 @@ export default function LoginPage() {
 			<AuthNav />
 
 			<div className="relative z-10 flex flex-col items-center">
-				<Card className="w-[400px]">
+				<Card className="w-full max-w-[400px] mx-4">
 					<CardHeader>
 						<CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
 						<CardDescription>Log in and start exploring</CardDescription>

@@ -23,6 +23,13 @@ import { useSidebar } from '@/components/ui/sidebar';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { ViewModeControl } from './controls/ViewModeControl';
 import { handleBounds } from './utils/mapUtils';
+import { ActivityCards } from '@/components/ActivityCards';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { MobileDrawer } from '@/components/MobileDrawer';
+import { ActivityDetails } from '@/components/activities/ActivityDetails';
+import { RouteDetails } from '@/components/routes/RouteDetails';
+import { WaypointDetails } from '@/components/waypoints/WaypointDetails';
+import { formatTime } from '@/lib/timeFormat';
 
 export const MapComponent = ({
 	activities,
@@ -73,35 +80,67 @@ export const MapComponent = ({
 	const { open: isSidebarOpen } = useSidebar();
 	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
 	const [is3DMode, setIs3DMode] = useState(false);
+	const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+	const [visibleActivitiesId, setLocalVisibleActivitiesId] = useState<number[]>([]);
+	const [visibleRoutesId, setVisibleRoutesId] = useState<(string | number)[]>([]);
+	const [visibleWaypointsId, setVisibleWaypointsId] = useState<(string | number)[]>([]);
+	const { isMobile } = useResponsiveLayout();
 
 	const { availableLayers, initialMapState, mapStyle, mapSettings, handlePitch } = useMapConfig({ mapRef });
 
 	const { currentBaseLayer, overlayStates, handleLayerToggle } = useMapLayers({ mapRef });
 
-	const getVisibleActivities = useCallback(() => {
-		if (!mapRef.current) return [];
+	const getVisibleFeatures = useCallback(() => {
+		if (!mapRef.current) return { activities: [], routes: [], waypoints: [] };
 		const map = mapRef.current.getMap();
 
-		const features = map.queryRenderedFeatures(undefined, {
+		const activityFeatures = map.queryRenderedFeatures(undefined, {
 			layers: ['foot-sports', 'cycle-sports', 'water-sports', 'winter-sports', 'other-sports'],
 		});
 
-		return features;
+		const routeFeatures = map.queryRenderedFeatures(undefined, {
+			layers: ['saved-routes-layer', 'saved-routes-border'],
+		});
+
+		const waypointFeatures = map.queryRenderedFeatures(undefined, {
+			layers: ['waypoints-layer'],
+		});
+
+		console.log('Visible features:', {
+			activities: activityFeatures.map((f) => f.properties?.id),
+			routes: routeFeatures.map((f) => f.properties?.id),
+			waypoints: waypointFeatures.map((f) => f.properties?.id),
+		});
+
+		return {
+			activities: activityFeatures,
+			routes: routeFeatures,
+			waypoints: waypointFeatures,
+		};
 	}, []);
 
-	const updateVisibleActivitiesIds = useCallback(() => {
-		const visibleFeatures = getVisibleActivities();
-		const visibleIds = visibleFeatures.map((feature) => feature.properties?.id).filter((id) => id != null);
-		setVisibleActivitiesId(visibleIds);
-	}, [getVisibleActivities, setVisibleActivitiesId]);
+	const updateVisibleIds = useCallback(() => {
+		const { activities, routes, waypoints } = getVisibleFeatures();
 
-	// Update visible activities when the map moves or loads
+		const visibleActivityIds = activities.map((feature) => feature.properties?.id).filter((id) => id != null);
+
+		const visibleRouteIds = routes.map((feature) => feature.properties?.id).filter((id) => id != null);
+
+		const visibleWaypointIds = waypoints.map((feature) => feature.properties?.id).filter((id) => id != null);
+
+		setLocalVisibleActivitiesId(visibleActivityIds);
+		setVisibleActivitiesId(visibleActivityIds);
+		setVisibleRoutesId(visibleRouteIds);
+		setVisibleWaypointsId(visibleWaypointIds);
+	}, [getVisibleFeatures, setVisibleActivitiesId]);
+
+	// Update visible features when the map moves or loads
 	useEffect(() => {
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
 
 		const handleMapUpdate = () => {
-			updateVisibleActivitiesIds();
+			updateVisibleIds();
 		};
 
 		map.on('moveend', handleMapUpdate);
@@ -111,7 +150,7 @@ export const MapComponent = ({
 			map.off('moveend', handleMapUpdate);
 			map.off('load', handleMapUpdate);
 		};
-	}, [updateVisibleActivitiesIds]);
+	}, [updateVisibleIds]);
 
 	const { onHover, onClick } = useMapEvents({
 		activities,
@@ -133,12 +172,12 @@ export const MapComponent = ({
 
 			// Wait for the map to be idle before updating visible activities
 			const onIdle = () => {
-				updateVisibleActivitiesIds();
+				updateVisibleIds();
 				map.off('idle', onIdle);
 			};
 			map.on('idle', onIdle);
 		}
-	}, [onMapLoad, updateVisibleActivitiesIds]);
+	}, [onMapLoad, updateVisibleIds]);
 
 	useEffect(() => {
 		if (selectedRouteId === null) {
@@ -235,6 +274,34 @@ export const MapComponent = ({
 		setSelectedWaypoint(parentSelectedWaypoint || null);
 	}, [parentSelectedWaypoint]);
 
+	const handleActivityHighlight = useCallback(
+		(activity: Activity) => {
+			setSelectedActivity(activity);
+			setSelectedRouteId(activity.id);
+		},
+		[setSelectedRouteId]
+	);
+
+	const handleRouteHighlight = useCallback(
+		(route: DbRoute) => {
+			setSelectedRoute(route);
+			setSelectedRouteId(route.id);
+		},
+		[setSelectedRouteId]
+	);
+
+	const handleWaypointHighlight = useCallback((waypoint: Waypoint) => {
+		setSelectedWaypoint(waypoint);
+	}, []);
+
+	const handleActivitySelect = useCallback(
+		(activity: Activity) => {
+			handleActivityHighlight(activity);
+			onActivitySelect?.(activity);
+		},
+		[handleActivityHighlight, onActivitySelect]
+	);
+
 	return (
 		<div className="absolute inset-0">
 			<Map
@@ -243,7 +310,7 @@ export const MapComponent = ({
 				initialViewState={initialMapState}
 				style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
 				mapStyle={mapStyle}
-				onMoveEnd={() => updateVisibleActivitiesIds()}
+				onMoveEnd={() => updateVisibleIds()}
 				onMouseMove={onHover}
 				onClick={(e) => {
 					if (isDrawing) return;
@@ -397,11 +464,17 @@ export const MapComponent = ({
 				dragPan={true}
 				touchZoomRotate={true}
 				touchPitch={is3DMode}
+				maxPitch={85}
+				minPitch={0}
+				keyboard={true}
 				onLoad={(evt) => {
 					const map = evt.target;
 					if (onMapLoad) {
 						onMapLoad(map);
 					}
+					// Enable touch pitch gesture
+					map.touchZoomRotate.enableRotation();
+					map.touchPitch.enable();
 				}}
 				onPitch={(evt) => handlePitch(evt.viewState.pitch)}
 				terrain={is3DMode ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
@@ -449,6 +522,132 @@ export const MapComponent = ({
 					handleWaypointSave={handleWaypointSave}
 				/>
 			</Map>
+
+			{isMobile && (
+				<>
+					<ActivityCards
+						activities={activities}
+						routes={routes}
+						waypoints={waypoints}
+						selectedActivity={selectedActivity}
+						selectedRoute={selectedRoute}
+						selectedWaypoint={selectedWaypoint}
+						onActivitySelect={handleActivitySelect}
+						onRouteSelect={(route) => {
+							setSelectedRouteId(route.id);
+							setSelectedRoute(route);
+							onRouteSelect?.(route);
+							if ('coordinates' in route.geometry) {
+								handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
+							}
+						}}
+						onWaypointSelect={(waypoint) => {
+							handleWaypointSelect?.(waypoint);
+							if (mapRef.current && waypoint.coordinates) {
+								mapRef.current.getMap().flyTo({
+									center: waypoint.coordinates as [number, number],
+									zoom: 14,
+								});
+							}
+						}}
+						onActivityHighlight={handleActivityHighlight}
+						onRouteHighlight={handleRouteHighlight}
+						onWaypointHighlight={handleWaypointHighlight}
+						visibleActivitiesId={visibleActivitiesId}
+						visibleRoutesId={visibleRoutesId}
+						visibleWaypointsId={visibleWaypointsId}
+					/>
+					<MobileDrawer
+						isOpen={!!selectedActivity || !!selectedRoute || !!selectedWaypoint}
+						onClose={() => {
+							setSelectedActivity(null);
+							setSelectedRoute(null);
+							setSelectedWaypoint(null);
+							setSelectedRouteId(null);
+						}}
+						title={
+							selectedActivity
+								? 'Activity Details'
+								: selectedRoute
+									? 'Route Details'
+									: selectedWaypoint
+										? 'Waypoint Details'
+										: ''
+						}
+						peekContent={
+							selectedActivity ? (
+								<div className="space-y-4">
+									<h2 className="text-xl font-semibold">{selectedActivity.name}</h2>
+									<div className="grid grid-cols-2 gap-4">
+										<div>
+											<p className="text-sm text-muted-foreground">Type</p>
+											<p>{selectedActivity.sport_type}</p>
+										</div>
+										<div>
+											<p className="text-sm text-muted-foreground">Distance</p>
+											<p>{((selectedActivity.distance || 0) / 1000).toFixed(2)} km</p>
+										</div>
+										<div>
+											<p className="text-sm text-muted-foreground">Duration</p>
+											<p>{formatTime(selectedActivity.moving_time || 0)}</p>
+										</div>
+										<div>
+											<p className="text-sm text-muted-foreground">Elevation Gain</p>
+											<p>{selectedActivity.total_elevation_gain || 0} m</p>
+										</div>
+									</div>
+								</div>
+							) : selectedRoute ? (
+								<div className="space-y-4">
+									<h2 className="text-xl font-semibold">{selectedRoute.name}</h2>
+									<div className="grid grid-cols-2 gap-4">
+										<div>
+											<p className="text-sm text-muted-foreground">Distance</p>
+											<p>{((selectedRoute.distance || 0) / 1000).toFixed(2)} km</p>
+										</div>
+										<div>
+											<p className="text-sm text-muted-foreground">Created</p>
+											<p>{new Date(selectedRoute.created_at).toLocaleDateString()}</p>
+										</div>
+										{selectedRoute.comments && (
+											<div className="col-span-2">
+												<p className="text-sm text-muted-foreground">Comments</p>
+												<p>{selectedRoute.comments}</p>
+											</div>
+										)}
+									</div>
+								</div>
+							) : selectedWaypoint ? (
+								<div className="space-y-4">
+									<h2 className="text-xl font-semibold">{selectedWaypoint.name}</h2>
+									<div className="grid grid-cols-2 gap-4">
+										<div>
+											<p className="text-sm text-muted-foreground">Coordinates</p>
+											<p>
+												{selectedWaypoint.coordinates[0].toFixed(6)}, {selectedWaypoint.coordinates[1].toFixed(6)}
+											</p>
+										</div>
+										<div>
+											<p className="text-sm text-muted-foreground">Created</p>
+											<p>{new Date(selectedWaypoint.created_at).toLocaleDateString()}</p>
+										</div>
+										{selectedWaypoint.comments && (
+											<div className="col-span-2">
+												<p className="text-sm text-muted-foreground">Comments</p>
+												<p>{selectedWaypoint.comments}</p>
+											</div>
+										)}
+									</div>
+								</div>
+							) : null
+						}
+					>
+						{selectedActivity && <ActivityDetails activity={selectedActivity} />}
+						{selectedRoute && <RouteDetails route={selectedRoute} />}
+						{selectedWaypoint && <WaypointDetails waypoint={selectedWaypoint} />}
+					</MobileDrawer>
+				</>
+			)}
 		</div>
 	);
 };

@@ -6,6 +6,7 @@ import DrawControl from './DrawControl';
 import { ViewModeControl } from './ViewModeControl';
 import type { DrawnRoute } from '@/types/route';
 import type { DbRoute } from '@/types/supabase';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 interface MapControlsProps {
 	layers: Array<{
@@ -46,10 +47,12 @@ const MapControls = ({
 	is3DMode,
 	onViewModeToggle,
 }: MapControlsProps) => {
+	const { isMobile } = useResponsiveLayout();
+
 	return (
 		<>
 			<GeolocateControl position="top-right" />
-			<NavigationControl position="top-right" visualizePitch={true} showZoom={true} showCompass={true} />
+			{!isMobile && <NavigationControl position="top-right" visualizePitch={true} showZoom={true} showCompass={true} />}
 			<LayersControl
 				layers={layers}
 				currentBaseLayer={currentBaseLayer}
