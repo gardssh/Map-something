@@ -74,14 +74,14 @@ export const MapComponent = ({
 	const { data: session } = useSession();
 	const { open: isSidebarOpen } = useSidebar();
 	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
-	const [is3DMode, setIs3DMode] = useState(false);
+	const [is3DMode, setIs3DMode] = useState(true);
 	const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 	const [visibleActivitiesId, setLocalVisibleActivitiesId] = useState<number[]>([]);
 	const [visibleRoutesId, setVisibleRoutesId] = useState<(string | number)[]>([]);
 	const [visibleWaypointsId, setVisibleWaypointsId] = useState<(string | number)[]>([]);
 	const { isMobile } = useResponsiveLayout();
 
-	const { availableLayers, initialMapState, mapStyle, mapSettings, handlePitch } = useMapConfig({ mapRef });
+	const { availableLayers, initialMapState, mapStyle, mapSettings } = useMapConfig({ mapRef });
 
 	const { currentBaseLayer, overlayStates, handleLayerToggle } = useMapLayers({ mapRef });
 
@@ -242,10 +242,26 @@ export const MapComponent = ({
 		}
 	}, [isSidebarOpen]);
 
+	// Initialize map controls
+	useEffect(() => {
+		if (!mapRef.current) return;
+		const map = mapRef.current.getMap();
+
+		if (is3DMode) {
+			map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+			map.touchZoomRotate.enableRotation();
+			map.touchPitch.enable();
+		} else {
+			map.setTerrain(null);
+			map.setPitch(0);
+			map.touchZoomRotate.disableRotation();
+			map.touchPitch.disable();
+		}
+	}, [is3DMode]);
+
 	const toggleViewMode = useCallback(() => {
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
-		if (!map.loaded()) return;
 		const newMode = !is3DMode;
 		setIs3DMode(newMode);
 
@@ -461,11 +477,10 @@ export const MapComponent = ({
 					if (onMapLoad) {
 						onMapLoad(map);
 					}
-					// Enable touch pitch gesture
+					// Enable touch controls
 					map.touchZoomRotate.enableRotation();
 					map.touchPitch.enable();
 				}}
-				onPitch={(evt) => handlePitch(evt.viewState.pitch)}
 				terrain={is3DMode ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
 			>
 				<MapControls

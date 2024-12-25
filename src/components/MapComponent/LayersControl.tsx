@@ -20,8 +20,17 @@ interface LayersControlProps {
 	onCategoryToggle: (categories: string[]) => void;
 }
 
+const defaultLayers: LayerOption[] = [
+	{ id: 'default', name: 'Default', isBase: true },
+	{ id: 'satellite', name: 'Satellite', isBase: true },
+	{ id: 'norge-topo', name: 'Norge Topo', isBase: true },
+	{ id: 'bratthet', name: 'Bratthet' },
+	{ id: 'snoskred', name: 'Snøskred' },
+	{ id: 'custom-tileset', name: 'Heatmap 2000m Norge' },
+];
+
 export const LayersControl = ({
-	layers = [],
+	layers = defaultLayers,
 	currentBaseLayer,
 	overlayStates,
 	onLayerToggle,
