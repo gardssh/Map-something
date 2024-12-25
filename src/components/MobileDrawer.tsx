@@ -89,6 +89,7 @@ export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: 
 							style={{
 								height: DRAWER_FULL_HEIGHT,
 								y,
+								touchAction: 'none',
 							}}
 							drag="y"
 							dragConstraints={{ top: 0, bottom: window.innerHeight }}
@@ -134,6 +135,13 @@ export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: 
 									height: `calc(${DRAWER_FULL_HEIGHT} - 5rem)`,
 									opacity: fullContentOpacity,
 									display: drawerState === 'peek' ? 'none' : 'block',
+									overscrollBehavior: 'contain',
+									touchAction: 'pan-y',
+								}}
+								onPointerDown={(e) => {
+									if (!(e.target as HTMLElement).closest('.overflow-auto')) {
+										e.preventDefault();
+									}
 								}}
 							>
 								<div className="p-4">{children}</div>
