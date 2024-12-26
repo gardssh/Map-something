@@ -87,11 +87,11 @@ export function ActivityCards({
 			})),
 	];
 
-	// Reset scroll only when selection changes and we're not actively scrolling
+	// Reset scroll when selection changes
 	useEffect(() => {
 		const selectedId = selectedActivity?.id || selectedRoute?.id || selectedWaypoint?.id;
 		const selectedType = selectedActivity ? 'activity' : selectedRoute ? 'route' : selectedWaypoint ? 'waypoint' : null;
-		if (!selectedId || !selectedType || isScrollingRef.current) return;
+		if (!selectedId || !selectedType) return;
 
 		const container = scrollContainerRef.current;
 		if (!container) return;
@@ -99,40 +99,26 @@ export function ActivityCards({
 		const selectedIndex = items.findIndex((item) => item.id === selectedId && item.type === selectedType);
 		if (selectedIndex === -1) return;
 
-		// Only scroll if the selection was triggered by a map click, not by card scroll
-		if (!isScrollingRef.current) {
-			const cardWidth = 280 + 16; // card width + gap
-			container.scrollTo({
-				left: selectedIndex * cardWidth,
-				behavior: 'smooth',
-			});
-		}
+		const cardWidth = 280 + 16; // card width + gap
+		container.scrollTo({
+			left: selectedIndex * cardWidth,
+			behavior: 'smooth',
+		});
 	}, [selectedActivity, selectedRoute, selectedWaypoint, items]);
 
-	// Handle scroll end to highlight the card in view
+	// Handle scroll to highlight card in view
 	useEffect(() => {
 		const container = scrollContainerRef.current;
 		if (!container) return;
 
 		const handleScroll = () => {
-			if (!isScrollingRef.current) {
-				isScrollingRef.current = true;
-			}
-
+			isScrollingRef.current = true;
 			clearTimeout(scrollTimeoutRef.current);
 
 			scrollTimeoutRef.current = setTimeout(() => {
 				const scrollLeft = container.scrollLeft;
-				const containerWidth = container.offsetWidth;
-				const cardWidth = 280 + 16; // card width + gap
-
-				// Calculate the center point of the viewport
-				const viewportCenter = scrollLeft + containerWidth / 2;
-
-				// Find the card closest to the center
-				const cardIndex = Math.round(viewportCenter / cardWidth);
+				const cardIndex = Math.round(scrollLeft / (280 + 16)); // card width + gap
 				const item = items[cardIndex];
-
 				if (item) {
 					// Clear other selections first
 					if (item.type !== 'activity') onActivityHighlight({} as Activity);
@@ -153,7 +139,7 @@ export function ActivityCards({
 					}
 				}
 				isScrollingRef.current = false;
-			}, 100); // Reduced timeout for more responsive updates
+			}, 150); // Wait for scroll to finish
 		};
 
 		container.addEventListener('scroll', handleScroll);
