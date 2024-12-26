@@ -50,7 +50,7 @@ const MapControls = ({
 	const { isMobile } = useResponsiveLayout();
 
 	return (
-		<>
+		<div className="absolute top-4 right-4 flex flex-col gap-2">
 			<GeolocateControl position="top-right" />
 			{!isMobile && <NavigationControl position="top-right" visualizePitch={true} showZoom={true} showCompass={true} />}
 			<LayersControl
@@ -76,7 +76,7 @@ const MapControls = ({
 				onModeChange={onModeChange}
 			/>
 			<ViewModeControl is3DMode={is3DMode} onToggle={onViewModeToggle} />
-		</>
+		</div>
 	);
 };
 

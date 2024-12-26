@@ -25,6 +25,8 @@ import { ViewModeControl } from './controls/ViewModeControl';
 import { handleBounds } from './utils/mapUtils';
 import { ActivityCards } from '@/components/ActivityCards';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { AddWaypointControl } from './controls/AddWaypointControl';
+import { CrosshairOverlay } from './controls/CrosshairOverlay';
 
 export const MapComponent = ({
 	activities,
@@ -80,9 +82,7 @@ export const MapComponent = ({
 	const [visibleRoutesId, setVisibleRoutesId] = useState<(string | number)[]>([]);
 	const [visibleWaypointsId, setVisibleWaypointsId] = useState<(string | number)[]>([]);
 	const { isMobile } = useResponsiveLayout();
-	const [touchStartTime, setTouchStartTime] = useState<number | null>(null);
-	const [touchStartCoords, setTouchStartCoords] = useState<[number, number] | null>(null);
-	const LONG_PRESS_DURATION = 500; // 500ms for long press
+	const [isAddingWaypoint, setIsAddingWaypoint] = useState(false);
 
 	const { availableLayers, initialMapState, mapStyle, mapSettings } = useMapConfig({ mapRef });
 
@@ -310,32 +310,13 @@ export const MapComponent = ({
 		[handleActivityHighlight, onActivitySelect]
 	);
 
-	const handleTouchStart = useCallback(
-		(e: MapLayerTouchEvent) => {
-			if (isDrawing) return;
-			const map = mapRef.current?.getMap();
-			if (!map) return;
-
-			setTouchStartTime(Date.now());
-			const point = e.point;
-			const coords = map.unproject(point);
-			setTouchStartCoords([coords.lng, coords.lat]);
-		},
-		[isDrawing]
-	);
+	const handleTouchStart = useCallback((e: MapLayerTouchEvent) => {
+		// Only handle basic touch events
+	}, []);
 
 	const handleTouchEnd = useCallback(
 		(e: MapLayerTouchEvent) => {
 			if (isDrawing) return;
-			const touchEndTime = Date.now();
-
-			// If this was a long press, create a waypoint
-			if (touchStartTime && touchEndTime - touchStartTime >= LONG_PRESS_DURATION && touchStartCoords) {
-				setNewWaypointCoords(touchStartCoords);
-				setShowWaypointDialog(true);
-				e.preventDefault();
-				return;
-			}
 
 			// Handle normal touch interactions (your existing touch end code)
 			if (!mapRef.current) return;
@@ -403,8 +384,6 @@ export const MapComponent = ({
 		},
 		[
 			isDrawing,
-			touchStartTime,
-			touchStartCoords,
 			activities,
 			routes,
 			waypoints,
@@ -414,6 +393,14 @@ export const MapComponent = ({
 			handleWaypointSelect,
 		]
 	);
+
+	const handleWaypointPlacementConfirm = useCallback(() => {
+		if (!mapRef.current) return;
+		const center = mapRef.current.getMap().getCenter();
+		setNewWaypointCoords([center.lng, center.lat]);
+		setShowWaypointDialog(true);
+		setIsAddingWaypoint(false);
+	}, []);
 
 	return (
 		<div className="absolute inset-0">
@@ -541,6 +528,8 @@ export const MapComponent = ({
 					onViewModeToggle={toggleViewMode}
 				/>
 
+				<AddWaypointControl isActive={isAddingWaypoint} onClick={() => setIsAddingWaypoint(!isAddingWaypoint)} />
+
 				<TerrainLayer overlayStates={overlayStates} />
 
 				<ActivityLayers
@@ -565,9 +554,13 @@ export const MapComponent = ({
 					setNewWaypointName={setNewWaypointName}
 					handleWaypointSave={handleWaypointSave}
 				/>
+
+				{isAddingWaypoint && (
+					<CrosshairOverlay onConfirm={handleWaypointPlacementConfirm} onCancel={() => setIsAddingWaypoint(false)} />
+				)}
 			</Map>
 
-			{isMobile && (
+			{isMobile && !isAddingWaypoint && (
 				<ActivityCards
 					activities={activities}
 					routes={routes}
