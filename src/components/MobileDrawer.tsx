@@ -89,9 +89,9 @@ export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: 
 							style={{
 								height: DRAWER_FULL_HEIGHT,
 								y,
-								touchAction: 'none',
+								touchAction: drawerState === 'full' ? 'none' : 'manipulation',
 							}}
-							drag="y"
+							drag={drawerState === 'full' ? false : 'y'}
 							dragConstraints={{ top: 0, bottom: window.innerHeight }}
 							dragElastic={0.2}
 							dragMomentum={false}
@@ -105,8 +105,16 @@ export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: 
 								stiffness: 300,
 							}}
 						>
-							<div className="p-4 border-b">
-								<div className="w-12 h-1.5 bg-muted-foreground/20 mx-auto rounded-full mb-4" />
+							<div className="p-4 border-b" onPointerDown={(e) => e.stopPropagation()}>
+								<div
+									className="w-12 h-1.5 bg-muted-foreground/20 mx-auto rounded-full mb-4 cursor-grab active:cursor-grabbing"
+									onPointerDown={(e) => {
+										if (drawerState === 'full') {
+											setDrawerState('peek');
+											controls.start({ y: window.innerHeight - DRAWER_PEEK_HEIGHT });
+										}
+									}}
+								/>
 								<div className="flex justify-between items-center">
 									<h2 className="text-lg font-semibold">{title}</h2>
 									<button onClick={onClose} className="p-2 hover:bg-accent rounded-full">
@@ -138,11 +146,7 @@ export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: 
 									overscrollBehavior: 'contain',
 									touchAction: 'pan-y',
 								}}
-								onPointerDown={(e) => {
-									if (!(e.target as HTMLElement).closest('.overflow-auto')) {
-										e.preventDefault();
-									}
-								}}
+								onPointerDown={(e) => e.stopPropagation()}
 							>
 								<div className="p-4">{children}</div>
 							</motion.div>
