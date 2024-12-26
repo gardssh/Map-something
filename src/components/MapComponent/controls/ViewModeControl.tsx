@@ -23,12 +23,18 @@ export const ViewModeControl = ({ is3DMode, onToggle }: ViewModeControlProps) =>
 				</div>
 			`;
 
-			button.addEventListener('click', onToggle);
+			button.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				onToggle();
+			});
 			container.appendChild(button);
 
 			return () => {
 				button.removeEventListener('click', onToggle);
-				controlGroup.removeChild(container);
+				if (controlGroup.contains(container)) {
+					controlGroup.removeChild(container);
+				}
 			};
 		}
 	}, [is3DMode, onToggle]);

@@ -23,6 +23,8 @@ import { useSidebar } from '@/components/ui/sidebar';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { ViewModeControl } from './controls/ViewModeControl';
 import { handleBounds } from './utils/mapUtils';
+import { ActivityCards } from '@/components/ActivityCards';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export const MapComponent = ({
 	activities,
@@ -72,36 +74,65 @@ export const MapComponent = ({
 	const { data: session } = useSession();
 	const { open: isSidebarOpen } = useSidebar();
 	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
-	const [is3DMode, setIs3DMode] = useState(false);
+	const [is3DMode, setIs3DMode] = useState(true);
+	const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+	const [visibleActivitiesId, setLocalVisibleActivitiesId] = useState<number[]>([]);
+	const [visibleRoutesId, setVisibleRoutesId] = useState<(string | number)[]>([]);
+	const [visibleWaypointsId, setVisibleWaypointsId] = useState<(string | number)[]>([]);
+	const { isMobile } = useResponsiveLayout();
+	const [touchStartTime, setTouchStartTime] = useState<number | null>(null);
+	const [touchStartCoords, setTouchStartCoords] = useState<[number, number] | null>(null);
+	const LONG_PRESS_DURATION = 500; // 500ms for long press
 
-	const { availableLayers, initialMapState, mapStyle, mapSettings, handlePitch } = useMapConfig({ mapRef });
+	const { availableLayers, initialMapState, mapStyle, mapSettings } = useMapConfig({ mapRef });
 
 	const { currentBaseLayer, overlayStates, handleLayerToggle } = useMapLayers({ mapRef });
 
-	const getVisibleActivities = useCallback(() => {
-		if (!mapRef.current) return [];
+	const getVisibleFeatures = useCallback(() => {
+		if (!mapRef.current) return { activities: [], routes: [], waypoints: [] };
 		const map = mapRef.current.getMap();
 
-		const features = map.queryRenderedFeatures(undefined, {
+		const activityFeatures = map.queryRenderedFeatures(undefined, {
 			layers: ['foot-sports', 'cycle-sports', 'water-sports', 'winter-sports', 'other-sports'],
 		});
 
-		return features;
+		const routeFeatures = map.queryRenderedFeatures(undefined, {
+			layers: ['saved-routes-layer', 'saved-routes-border'],
+		});
+
+		const waypointFeatures = map.queryRenderedFeatures(undefined, {
+			layers: ['waypoints-layer'],
+		});
+
+		return {
+			activities: activityFeatures,
+			routes: routeFeatures,
+			waypoints: waypointFeatures,
+		};
 	}, []);
 
-	const updateVisibleActivitiesIds = useCallback(() => {
-		const visibleFeatures = getVisibleActivities();
-		const visibleIds = visibleFeatures.map((feature) => feature.properties?.id).filter((id) => id != null);
-		setVisibleActivitiesId(visibleIds);
-	}, [getVisibleActivities, setVisibleActivitiesId]);
+	const updateVisibleIds = useCallback(() => {
+		const { activities, routes, waypoints } = getVisibleFeatures();
 
-	// Update visible activities when the map moves or loads
+		const visibleActivityIds = activities.map((feature) => feature.properties?.id).filter((id) => id != null);
+
+		const visibleRouteIds = routes.map((feature) => feature.properties?.id).filter((id) => id != null);
+
+		const visibleWaypointIds = waypoints.map((feature) => feature.properties?.id).filter((id) => id != null);
+
+		setLocalVisibleActivitiesId(visibleActivityIds);
+		setVisibleActivitiesId(visibleActivityIds);
+		setVisibleRoutesId(visibleRouteIds);
+		setVisibleWaypointsId(visibleWaypointIds);
+	}, [getVisibleFeatures, setVisibleActivitiesId]);
+
+	// Update visible features when the map moves or loads
 	useEffect(() => {
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
 
 		const handleMapUpdate = () => {
-			updateVisibleActivitiesIds();
+			updateVisibleIds();
 		};
 
 		map.on('moveend', handleMapUpdate);
@@ -111,7 +142,7 @@ export const MapComponent = ({
 			map.off('moveend', handleMapUpdate);
 			map.off('load', handleMapUpdate);
 		};
-	}, [updateVisibleActivitiesIds]);
+	}, [updateVisibleIds]);
 
 	const { onHover, onClick } = useMapEvents({
 		activities,
@@ -133,12 +164,12 @@ export const MapComponent = ({
 
 			// Wait for the map to be idle before updating visible activities
 			const onIdle = () => {
-				updateVisibleActivitiesIds();
+				updateVisibleIds();
 				map.off('idle', onIdle);
 			};
 			map.on('idle', onIdle);
 		}
-	}, [onMapLoad, updateVisibleActivitiesIds]);
+	}, [onMapLoad, updateVisibleIds]);
 
 	useEffect(() => {
 		if (selectedRouteId === null) {
@@ -214,10 +245,26 @@ export const MapComponent = ({
 		}
 	}, [isSidebarOpen]);
 
+	// Initialize map controls
+	useEffect(() => {
+		if (!mapRef.current) return;
+		const map = mapRef.current.getMap();
+
+		if (is3DMode) {
+			map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+			map.touchZoomRotate.enableRotation();
+			map.touchPitch.enable();
+		} else {
+			map.setTerrain(null);
+			map.setPitch(0);
+			map.touchZoomRotate.disableRotation();
+			map.touchPitch.disable();
+		}
+	}, [is3DMode]);
+
 	const toggleViewMode = useCallback(() => {
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
-		if (!map.loaded()) return;
 		const newMode = !is3DMode;
 		setIs3DMode(newMode);
 
@@ -235,6 +282,139 @@ export const MapComponent = ({
 		setSelectedWaypoint(parentSelectedWaypoint || null);
 	}, [parentSelectedWaypoint]);
 
+	const handleActivityHighlight = useCallback(
+		(activity: Activity) => {
+			setSelectedActivity(activity);
+			setSelectedRouteId(activity.id);
+		},
+		[setSelectedRouteId]
+	);
+
+	const handleRouteHighlight = useCallback(
+		(route: DbRoute) => {
+			setSelectedRoute(route);
+			setSelectedRouteId(route.id);
+		},
+		[setSelectedRouteId]
+	);
+
+	const handleWaypointHighlight = useCallback((waypoint: Waypoint) => {
+		setSelectedWaypoint(waypoint);
+	}, []);
+
+	const handleActivitySelect = useCallback(
+		(activity: Activity) => {
+			handleActivityHighlight(activity);
+			onActivitySelect?.(activity);
+		},
+		[handleActivityHighlight, onActivitySelect]
+	);
+
+	const handleTouchStart = useCallback(
+		(e: MapLayerTouchEvent) => {
+			if (isDrawing) return;
+			const map = mapRef.current?.getMap();
+			if (!map) return;
+
+			setTouchStartTime(Date.now());
+			const point = e.point;
+			const coords = map.unproject(point);
+			setTouchStartCoords([coords.lng, coords.lat]);
+		},
+		[isDrawing]
+	);
+
+	const handleTouchEnd = useCallback(
+		(e: MapLayerTouchEvent) => {
+			if (isDrawing) return;
+			const touchEndTime = Date.now();
+
+			// If this was a long press, create a waypoint
+			if (touchStartTime && touchEndTime - touchStartTime >= LONG_PRESS_DURATION && touchStartCoords) {
+				setNewWaypointCoords(touchStartCoords);
+				setShowWaypointDialog(true);
+				e.preventDefault();
+				return;
+			}
+
+			// Handle normal touch interactions (your existing touch end code)
+			if (!mapRef.current) return;
+			const map = mapRef.current.getMap();
+			const point = e.point;
+
+			const features = map.queryRenderedFeatures(point, {
+				layers: [
+					'foot-sports',
+					'cycle-sports',
+					'water-sports',
+					'winter-sports',
+					'other-sports',
+					'waypoints-layer',
+					'saved-routes-layer',
+					'saved-routes-border',
+				],
+			});
+
+			// Clear all selections first
+			setSelectedRouteId(null);
+			setSelectedRoute(null);
+			onRouteSelect?.(null);
+			onActivitySelect?.(null);
+			handleWaypointSelect?.(null);
+
+			if (features.length === 0) return;
+
+			const feature = features[0];
+			const properties = feature.properties;
+
+			if (!properties) return;
+
+			// Handle activity touches
+			if (properties.isActivity) {
+				const activity = activities.find((a) => a.id === properties.id);
+				if (activity) {
+					setSelectedRouteId(activity.id);
+					onActivitySelect?.(activity);
+				}
+				return;
+			}
+
+			// Handle route touches
+			if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
+				const route = routes?.find((r) => r.id === properties.id);
+				if (route) {
+					setSelectedRouteId(route.id);
+					setSelectedRoute(route);
+					onRouteSelect?.(route);
+					if ('coordinates' in route.geometry) {
+						handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
+					}
+				}
+				return;
+			}
+
+			// Handle waypoint touches
+			if (feature.layer.id === 'waypoints-layer') {
+				const waypoint = waypoints?.find((w) => w.id === properties.id);
+				if (waypoint) {
+					handleWaypointSelect?.(waypoint);
+				}
+			}
+		},
+		[
+			isDrawing,
+			touchStartTime,
+			touchStartCoords,
+			activities,
+			routes,
+			waypoints,
+			setSelectedRouteId,
+			onRouteSelect,
+			onActivitySelect,
+			handleWaypointSelect,
+		]
+	);
+
 	return (
 		<div className="absolute inset-0">
 			<Map
@@ -243,7 +423,7 @@ export const MapComponent = ({
 				initialViewState={initialMapState}
 				style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
 				mapStyle={mapStyle}
-				onMoveEnd={() => updateVisibleActivitiesIds()}
+				onMoveEnd={() => updateVisibleIds()}
 				onMouseMove={onHover}
 				onClick={(e) => {
 					if (isDrawing) return;
@@ -299,86 +479,18 @@ export const MapComponent = ({
 						return;
 					}
 				}}
-				onTouchStart={(e) => {
-					// Don't prevent default touch behavior to allow map panning
-				}}
-				onTouchEnd={(e: MapLayerTouchEvent) => {
-					if (isDrawing) return;
-
-					// Get features at touch point
-					if (!mapRef.current) return;
-					const map = mapRef.current.getMap();
-					const point = e.point;
-
-					const features = map.queryRenderedFeatures(point, {
-						layers: [
-							'foot-sports',
-							'cycle-sports',
-							'water-sports',
-							'winter-sports',
-							'other-sports',
-							'waypoints-layer',
-							'saved-routes-layer',
-							'saved-routes-border',
-						],
-					});
-
-					// Clear all selections first
-					setSelectedRouteId(null);
-					setSelectedRoute(null);
-					onRouteSelect?.(null);
-					onActivitySelect?.(null);
-					handleWaypointSelect?.(null);
-
-					if (features.length === 0) {
-						return;
-					}
-
-					const feature = features[0]; // Only handle the topmost feature
-					const properties = feature.properties;
-
-					if (!properties) return;
-
-					// Handle activity touches
-					if (properties.isActivity) {
-						const activity = activities.find((a) => a.id === properties.id);
-						if (activity) {
-							setSelectedRouteId(activity.id);
-							onActivitySelect?.(activity);
-						}
-						return;
-					}
-
-					// Handle route touches
-					if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
-						const route = routes?.find((r) => r.id === properties.id);
-						if (route) {
-							setSelectedRouteId(route.id);
-							setSelectedRoute(route);
-							onRouteSelect?.(route);
-							if ('coordinates' in route.geometry) {
-								handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
-							}
-						}
-						return;
-					}
-
-					// Handle waypoint touches
-					if (feature.layer.id === 'waypoints-layer') {
-						const waypoint = waypoints?.find((w) => w.id === properties.id);
-						if (waypoint) {
-							handleWaypointSelect?.(waypoint);
-						}
-						return;
-					}
-				}}
 				onContextMenu={(e) => {
-					e.preventDefault();
-					if (!isDrawing) {
-						setNewWaypointCoords([e.lngLat.lng, e.lngLat.lat]);
+					if (isDrawing) return;
+					if (!isMobile) {
+						// Only handle right-click on desktop
+						e.preventDefault();
+						const coords = e.lngLat;
+						setNewWaypointCoords([coords.lng, coords.lat]);
 						setShowWaypointDialog(true);
 					}
 				}}
+				onTouchStart={handleTouchStart}
+				onTouchEnd={handleTouchEnd}
 				interactiveLayerIds={[
 					'foot-sports',
 					'cycle-sports',
@@ -397,13 +509,18 @@ export const MapComponent = ({
 				dragPan={true}
 				touchZoomRotate={true}
 				touchPitch={is3DMode}
+				maxPitch={85}
+				minPitch={0}
+				keyboard={true}
 				onLoad={(evt) => {
 					const map = evt.target;
 					if (onMapLoad) {
 						onMapLoad(map);
 					}
+					// Enable touch controls
+					map.touchZoomRotate.enableRotation();
+					map.touchPitch.enable();
 				}}
-				onPitch={(evt) => handlePitch(evt.viewState.pitch)}
 				terrain={is3DMode ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
 			>
 				<MapControls
@@ -449,6 +566,41 @@ export const MapComponent = ({
 					handleWaypointSave={handleWaypointSave}
 				/>
 			</Map>
+
+			{isMobile && (
+				<ActivityCards
+					activities={activities}
+					routes={routes}
+					waypoints={waypoints}
+					selectedActivity={selectedActivity}
+					selectedRoute={selectedRoute}
+					selectedWaypoint={selectedWaypoint}
+					onActivitySelect={handleActivitySelect}
+					onRouteSelect={(route) => {
+						setSelectedRouteId(route.id);
+						setSelectedRoute(route);
+						onRouteSelect?.(route);
+						if ('coordinates' in route.geometry) {
+							handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
+						}
+					}}
+					onWaypointSelect={(waypoint) => {
+						handleWaypointSelect?.(waypoint);
+						if (mapRef.current && waypoint.coordinates) {
+							mapRef.current.getMap().flyTo({
+								center: waypoint.coordinates as [number, number],
+								zoom: 14,
+							});
+						}
+					}}
+					onActivityHighlight={handleActivityHighlight}
+					onRouteHighlight={handleRouteHighlight}
+					onWaypointHighlight={handleWaypointHighlight}
+					visibleActivitiesId={visibleActivitiesId}
+					visibleRoutesId={visibleRoutesId}
+					visibleWaypointsId={visibleWaypointsId}
+				/>
+			)}
 		</div>
 	);
 };

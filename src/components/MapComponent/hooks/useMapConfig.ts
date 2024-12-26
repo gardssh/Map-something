@@ -15,6 +15,7 @@ export const useMapConfig = ({ mapRef }: MapConfigOptions) => {
 		{ id: 'norge-topo', name: 'Norge Topo', isBase: true },
 		{ id: 'bratthet', name: 'Bratthet', isBase: false },
 		{ id: 'snoskred', name: 'Snøskred', isBase: false },
+		{ id: 'custom-tileset', name: 'Heatmap 2000m Norge', isBase: false },
 	];
 	const initialMapState = {
 		longitude: 8.296987,
@@ -22,22 +23,18 @@ export const useMapConfig = ({ mapRef }: MapConfigOptions) => {
 		zoom: 14,
 		pitch: 0,
 	};
-	const handlePitch = (pitch: number) => {
-		if (mapRef.current) {
-			mapRef.current.getMap().setPitch(pitch);
-		}
-	};
+
 	const mapSettings = (isDrawing: boolean) => ({
 		renderWorldCopies: false,
 		maxTileCacheSize: 50,
-		trackResize: false,
-		dragRotate: true,
-		pitchWithRotate: true,
-		dragPan: true,
-		touchZoomRotate: true,
-		touchPitch: true,
-		interactiveLayerIds: isDrawing ? [] : ['waypoints-layer', 'activities-layer', 'saved-routes-layer'],
+			trackResize: false,
+			dragRotate: true,
+			pitchWithRotate: true,
+			dragPan: true,
+			touchZoomRotate: true,
+			touchPitch: true,
+			interactiveLayerIds: isDrawing ? [] : ['waypoints-layer', 'activities-layer', 'saved-routes-layer'],
 	});
 
-	return { mapStyle, mapSettings, availableLayers, initialMapState, handlePitch };
+	return { mapStyle, mapSettings, availableLayers, initialMapState };
 }; 
