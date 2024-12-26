@@ -18,8 +18,8 @@ const navigationItems = [
 
 export function MobileNavBar({ activeItem, onItemSelect }: MobileNavBarProps) {
 	return (
-		<div className="fixed bottom-0 left-0 right-0 bg-background border-t md:hidden h-16 z-[10]">
-			<nav className="flex justify-around items-center h-full">
+		<div className="fixed bottom-0 left-0 right-0 bg-background border-t md:hidden z-[10]">
+			<nav className="flex justify-around items-center h-16 pb-[env(safe-area-inset-bottom,16px)]">
 				{navigationItems.map((item) => {
 					const Icon = item.icon;
 					return (
