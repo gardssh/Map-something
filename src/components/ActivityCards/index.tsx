@@ -115,13 +115,24 @@ export function ActivityCards({
 		if (!container) return;
 
 		const handleScroll = () => {
-			isScrollingRef.current = true;
+			if (!isScrollingRef.current) {
+				isScrollingRef.current = true;
+			}
+
 			clearTimeout(scrollTimeoutRef.current);
 
 			scrollTimeoutRef.current = setTimeout(() => {
 				const scrollLeft = container.scrollLeft;
-				const cardIndex = Math.round(scrollLeft / (280 + 16)); // card width + gap
+				const containerWidth = container.offsetWidth;
+				const cardWidth = 280 + 16; // card width + gap
+
+				// Calculate the center point of the viewport
+				const viewportCenter = scrollLeft + containerWidth / 2;
+
+				// Find the card closest to the center
+				const cardIndex = Math.round(viewportCenter / cardWidth);
 				const item = items[cardIndex];
+
 				if (item) {
 					// Clear other selections first
 					if (item.type !== 'activity') onActivityHighlight({} as Activity);
@@ -142,7 +153,7 @@ export function ActivityCards({
 					}
 				}
 				isScrollingRef.current = false;
-			}, 150); // Wait for scroll to finish
+			}, 100); // Reduced timeout for more responsive updates
 		};
 
 		container.addEventListener('scroll', handleScroll);
@@ -210,7 +221,7 @@ export function ActivityCards({
 					<div
 						key={`${item.type}-${item.id}`}
 						className={`flex-shrink-0 w-[280px] snap-center cursor-pointer rounded-lg bg-background p-4 shadow-lg transition-all ${
-							isSelected(item) ? 'border border-gray-400' : ''
+							isSelected(item) ? 'ring-2 ring-primary' : ''
 						}`}
 						onClick={() => handleItemClick(item)}
 					>
