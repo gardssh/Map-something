@@ -559,6 +559,7 @@ export default function Home() {
 																	handleRouteSelect(route);
 																	setSelectedRoute(route);
 																	setSelectedRouteId(route.id);
+																	setShowDetailsDrawer(true);
 																}}
 															>
 																<div className="flex justify-between items-start">
@@ -567,27 +568,11 @@ export default function Home() {
 																		<p className="text-sm text-muted-foreground">
 																			Distance: {route.distance?.toFixed(1)} km
 																		</p>
+																		{route.comments && (
+																			<p className="text-sm text-muted-foreground mt-2">{route.comments}</p>
+																		)}
 																	</div>
-																	<button
-																		className="p-2 hover:bg-accent rounded-full"
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			const newName = window.prompt(`Enter new name:`, route.name);
-																			if (newName && newName !== route.name) {
-																				handleRouteRename(route.id as string, newName);
-																			}
-																			const newComment = window.prompt(`Enter comment:`, route.comments || ``);
-																			if (newComment !== null && newComment !== route.comments) {
-																				handleRouteCommentUpdate(route.id as string, newComment);
-																			}
-																		}}
-																	>
-																		<Edit2 className="h-4 w-4" />
-																	</button>
 																</div>
-																{route.comments && (
-																	<p className="text-sm text-muted-foreground mt-2">{route.comments}</p>
-																)}
 															</div>
 														))}
 													</div>
@@ -598,7 +583,10 @@ export default function Home() {
 															<div
 																key={waypoint.id}
 																className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
-																onClick={() => handleWaypointSelect(waypoint)}
+																onClick={() => {
+																	handleWaypointSelect(waypoint);
+																	setShowDetailsDrawer(true);
+																}}
 															>
 																<div className="flex justify-between items-start">
 																	<div>
@@ -607,22 +595,6 @@ export default function Home() {
 																			<p className="text-sm text-muted-foreground">{waypoint.comments}</p>
 																		)}
 																	</div>
-																	<button
-																		className="p-2 hover:bg-accent rounded-full"
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			const newName = window.prompt(`Enter new name:`, waypoint.name);
-																			if (newName && newName !== waypoint.name) {
-																				handleWaypointRename(waypoint.id as string, newName);
-																			}
-																			const newComment = window.prompt(`Enter comment:`, waypoint.comments || ``);
-																			if (newComment !== null && newComment !== waypoint.comments) {
-																				handleWaypointCommentUpdate(waypoint.id as string, newComment);
-																			}
-																		}}
-																	>
-																		<Edit2 className="h-4 w-4" />
-																	</button>
 																</div>
 															</div>
 														))}
@@ -693,8 +665,29 @@ export default function Home() {
 												}
 											>
 												{selectedActivity && <ActivityDetails activity={selectedActivity} />}
-												{selectedRoute && <RouteDetails route={selectedRoute} />}
-												{selectedWaypoint && <WaypointDetails waypoint={selectedWaypoint} />}
+												{selectedRoute && (
+													<RouteDetails
+														route={selectedRoute}
+														onDelete={handleRouteDelete}
+														onEdit={(routeId, newName, newComment) => {
+															handleRouteRename(routeId, newName);
+															handleRouteCommentUpdate(routeId, newComment);
+														}}
+													/>
+												)}
+												{selectedWaypoint && (
+													<WaypointDetails
+														waypoint={selectedWaypoint}
+														onDelete={(waypointId) => {
+															handleWaypointDelete(waypointId);
+															setShowDetailsDrawer(false);
+														}}
+														onEdit={(waypointId, newName, newComment) => {
+															handleWaypointRename(waypointId, newName);
+															handleWaypointCommentUpdate(waypointId, newComment);
+														}}
+													/>
+												)}
 											</MobileDrawer>
 										</>
 									)}

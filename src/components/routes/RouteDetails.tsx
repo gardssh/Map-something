@@ -4,9 +4,15 @@ import { useEffect, useState } from 'react';
 import type { DbRoute } from '@/types/supabase';
 import { ElevationChart } from '../ElevationChart';
 import * as turf from '@turf/turf';
+import { Edit2, Trash2, X, Check } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
 
 interface RouteDetailsProps {
 	route: DbRoute;
+	onDelete?: (routeId: string) => void;
+	onEdit?: (routeId: string, newName: string, newComment: string) => void;
 }
 
 interface ElevationPoint {
@@ -14,8 +20,24 @@ interface ElevationPoint {
 	elevation: number;
 }
 
-export const RouteDetails = ({ route }: RouteDetailsProps) => {
+export const RouteDetails = ({ route, onDelete, onEdit }: RouteDetailsProps) => {
 	const [elevationData, setElevationData] = useState<ElevationPoint[]>([]);
+	const [isEditing, setIsEditing] = useState(false);
+	const [editName, setEditName] = useState(route.name);
+	const [editComment, setEditComment] = useState(route.comments || '');
+
+	const handleSave = () => {
+		if (!onEdit) return;
+		if (editName.trim() === '') return;
+		onEdit(route.id as string, editName, editComment);
+		setIsEditing(false);
+	};
+
+	const handleCancel = () => {
+		setEditName(route.name);
+		setEditComment(route.comments || '');
+		setIsEditing(false);
+	};
 
 	useEffect(() => {
 		const fetchElevationData = async () => {
@@ -80,68 +102,63 @@ export const RouteDetails = ({ route }: RouteDetailsProps) => {
 	}, [route.geometry?.coordinates]);
 
 	return (
-		<div className="p-6 space-y-6">
-			<h2 className="text-2xl font-semibold">{route.name}</h2>
-			<div className="grid grid-cols-2 gap-6">
-				<div className="bg-muted rounded-lg p-4">
-					<p className="text-sm text-muted-foreground mb-1">Distance</p>
-					<p className="text-lg font-medium">{(route.distance / 1000).toFixed(2)} km</p>
+		<div className="p-4 space-y-4">
+			<div className="flex justify-between items-start">
+				<div className="flex-1 mr-4">
+					{isEditing ? (
+						<div className="space-y-2">
+							<Input
+								value={editName}
+								onChange={(e) => setEditName(e.target.value)}
+								placeholder="Route name"
+								className="font-semibold text-lg"
+							/>
+							<Textarea
+								value={editComment}
+								onChange={(e) => setEditComment(e.target.value)}
+								placeholder="Add a comment..."
+								className="min-h-[100px]"
+							/>
+						</div>
+					) : (
+						<>
+							<h2 className="text-xl font-semibold">{route.name}</h2>
+							<p className="text-sm text-muted-foreground">Distance: {route.distance?.toFixed(1)} km</p>
+							{route.comments && <p className="text-sm text-muted-foreground mt-2">{route.comments}</p>}
+						</>
+					)}
 				</div>
-				<div className="bg-muted rounded-lg p-4">
-					<p className="text-sm text-muted-foreground mb-1">Created</p>
-					<p className="text-lg font-medium">{new Date(route.created_at).toLocaleDateString()}</p>
+				<div className="flex gap-2">
+					{isEditing ? (
+						<>
+							<Button variant="ghost" size="icon" onClick={handleSave}>
+								<Check className="h-4 w-4" />
+							</Button>
+							<Button variant="ghost" size="icon" onClick={handleCancel}>
+								<X className="h-4 w-4" />
+							</Button>
+						</>
+					) : (
+						<>
+							<Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
+								<Edit2 className="h-4 w-4" />
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => {
+									if (!onDelete) return;
+									if (window.confirm('Are you sure you want to delete this route?')) {
+										onDelete(route.id as string);
+									}
+								}}
+							>
+								<Trash2 className="h-4 w-4" />
+							</Button>
+						</>
+					)}
 				</div>
-				{route.comments && (
-					<div className="col-span-2 bg-muted rounded-lg p-4">
-						<p className="text-sm text-muted-foreground mb-1">Comments</p>
-						<p className="text-lg font-medium">{route.comments}</p>
-					</div>
-				)}
 			</div>
-			{elevationData.length > 0 && <ElevationChart data={elevationData} />}
-			<button
-				onClick={() => {
-					if (!route.geometry) return;
-					const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Map Something">
-    <trk>
-        <name>${route.name}</name>
-        <trkseg>
-            ${(route.geometry.coordinates as [number, number][])
-							.map(([lon, lat]) => `            <trkpt lat="${lat}" lon="${lon}"></trkpt>`)
-							.join('\n')}
-        </trkseg>
-    </trk>
-</gpx>`;
-					const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-					const url = window.URL.createObjectURL(blob);
-					const a = document.createElement('a');
-					a.href = url;
-					a.download = `${route.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.gpx`;
-					document.body.appendChild(a);
-					a.click();
-					document.body.removeChild(a);
-					window.URL.revokeObjectURL(url);
-				}}
-				className="w-full flex items-center justify-center gap-2 bg-muted hover:bg-muted/80 text-foreground py-3 px-4 rounded-lg transition-colors"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="16"
-					height="16"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="2"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				>
-					<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-					<polyline points="7 10 12 15 17 10" />
-					<line x1="12" y1="15" x2="12" y2="3" />
-				</svg>
-				Download GPX
-			</button>
 		</div>
 	);
 };
