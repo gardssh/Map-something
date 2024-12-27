@@ -368,7 +368,7 @@ export const MapComponent = ({
 			if (!properties) return;
 
 			// Handle activity touches
-			if (properties.isActivity) {
+			if (properties.isActivity || feature.layer.id.endsWith('-touch')) {
 				const activity = activities.find((a) => a.id === properties.id);
 				if (activity) {
 					setSelectedRouteId(activity.id);
@@ -382,7 +382,11 @@ export const MapComponent = ({
 			}
 
 			// Handle route touches
-			if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
+			if (
+				feature.layer.id === 'saved-routes-layer' ||
+				feature.layer.id === 'saved-routes-border' ||
+				feature.layer.id === 'saved-routes-touch'
+			) {
 				const route = routes?.find((r) => r.id === properties.id);
 				if (route) {
 					setSelectedRouteId(route.id);
@@ -560,13 +564,20 @@ export const MapComponent = ({
 				onTouchEnd={handleTouchEnd}
 				interactiveLayerIds={[
 					'foot-sports',
+					'foot-sports-touch',
 					'cycle-sports',
+					'cycle-sports-touch',
 					'water-sports',
+					'water-sports-touch',
 					'winter-sports',
+					'winter-sports-touch',
 					'other-sports',
+					'other-sports-touch',
 					'waypoints-layer',
+					'waypoints-layer-touch',
 					'saved-routes-layer',
 					'saved-routes-border',
+					'saved-routes-touch',
 				]}
 				renderWorldCopies={false}
 				maxTileCacheSize={50}

@@ -46,33 +46,51 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
 				}),
 			}}
 		>
-			{['Foot Sports', 'Cycle Sports', 'Water Sports', 'Winter Sports', 'Other Sports'].map((category) => (
-				<Layer
-					key={category.toLowerCase().replace(' ', '-')}
-					id={category.toLowerCase().replace(' ', '-')}
-					type="line"
-					layout={{
-						'line-join': 'round',
-						'line-cap': 'round',
-						visibility: selectedCategories.includes(category) ? 'visible' : 'none',
-					}}
-					paint={{
-						'line-color':
-							category === 'Foot Sports'
-								? '#D14A00'
-								: category === 'Cycle Sports'
-									? '#2BD44A'
-									: category === 'Water Sports'
-										? '#3357FF'
-										: category === 'Winter Sports'
-											? '#FF33A1'
-											: '#FFC300',
-						'line-width': ['case', ['==', ['get', 'id'], effectiveSelectedId], 5, 3],
-						'line-opacity': 0.8,
-					}}
-					filter={['==', ['get', 'activityType'], category]}
-				/>
-			))}
+			{['Foot Sports', 'Cycle Sports', 'Water Sports', 'Winter Sports', 'Other Sports']
+				.map((category) => [
+					<Layer
+						key={`${category.toLowerCase().replace(' ', '-')}-touch`}
+						id={`${category.toLowerCase().replace(' ', '-')}-touch`}
+						type="line"
+						layout={{
+							'line-join': 'round',
+							'line-cap': 'round',
+							visibility: selectedCategories.includes(category) ? 'visible' : 'none',
+						}}
+						paint={{
+							'line-color': '#000000',
+							'line-width': ['interpolate', ['linear'], ['zoom'], 0, 20, 10, 25, 15, 30, 20, 35],
+							'line-opacity': 0,
+						}}
+						filter={['==', ['get', 'activityType'], category]}
+					/>,
+					<Layer
+						key={category.toLowerCase().replace(' ', '-')}
+						id={category.toLowerCase().replace(' ', '-')}
+						type="line"
+						layout={{
+							'line-join': 'round',
+							'line-cap': 'round',
+							visibility: selectedCategories.includes(category) ? 'visible' : 'none',
+						}}
+						paint={{
+							'line-color':
+								category === 'Foot Sports'
+									? '#D14A00'
+									: category === 'Cycle Sports'
+										? '#2BD44A'
+										: category === 'Water Sports'
+											? '#3357FF'
+											: category === 'Winter Sports'
+												? '#FF33A1'
+												: '#FFC300',
+							'line-width': ['case', ['==', ['get', 'id'], effectiveSelectedId], 5, 3],
+							'line-opacity': 0.8,
+						}}
+						filter={['==', ['get', 'activityType'], category]}
+					/>,
+				])
+				.flat()}
 
 			<Layer
 				id="selected-route-border"
