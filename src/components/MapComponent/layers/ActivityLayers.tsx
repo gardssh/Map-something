@@ -15,6 +15,9 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
 	// Filter out activities without valid polylines
 	const validActivities = activities.filter(hasValidPolyline);
 
+	// Only use selectedRouteId if it belongs to an activity
+	const effectiveSelectedId = validActivities.some((a) => a.id === selectedRouteId) ? selectedRouteId : null;
+
 	return (
 		<Source
 			id="routes"
@@ -64,7 +67,7 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
 										: category === 'Winter Sports'
 											? '#FF33A1'
 											: '#FFC300',
-						'line-width': ['case', ['==', ['get', 'id'], selectedRouteId], 5, 3],
+						'line-width': ['case', ['==', ['get', 'id'], effectiveSelectedId], 5, 3],
 						'line-opacity': 0.8,
 					}}
 					filter={['==', ['get', 'activityType'], category]}
@@ -77,7 +80,7 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
 				layout={{
 					'line-join': 'round',
 					'line-cap': 'round',
-					visibility: selectedRouteId ? 'visible' : 'none',
+					visibility: effectiveSelectedId ? 'visible' : 'none',
 				}}
 				paint={{
 					'line-color': [
@@ -98,7 +101,7 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
 					'line-width': 9,
 					'line-opacity': 1,
 				}}
-				filter={['==', ['get', 'id'], selectedRouteId]}
+				filter={['==', ['get', 'id'], effectiveSelectedId]}
 			/>
 
 			<Layer
@@ -107,7 +110,7 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
 				layout={{
 					'line-join': 'round',
 					'line-cap': 'round',
-					visibility: selectedRouteId ? 'visible' : 'none',
+					visibility: effectiveSelectedId ? 'visible' : 'none',
 				}}
 				paint={{
 					'line-color': [
@@ -128,7 +131,7 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
 					'line-width': 5,
 					'line-opacity': 1,
 				}}
-				filter={['==', ['get', 'id'], selectedRouteId]}
+				filter={['==', ['get', 'id'], effectiveSelectedId]}
 			/>
 		</Source>
 	);
