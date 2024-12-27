@@ -586,8 +586,8 @@ export const MapComponent = ({
 				pitchWithRotate={is3DMode}
 				dragPan={true}
 				touchZoomRotate={true}
-				touchPitch={is3DMode}
-				maxPitch={85}
+				touchPitch={false}
+				maxPitch={isMobile ? 0 : 85}
 				minPitch={0}
 				keyboard={true}
 				onLoad={(evt) => {
@@ -595,9 +595,14 @@ export const MapComponent = ({
 					if (onMapLoad) {
 						onMapLoad(map);
 					}
-					// Enable touch controls
-					map.touchZoomRotate.enableRotation();
-					map.touchPitch.enable();
+					// Only enable touch controls if 3D mode is on
+					if (is3DMode && !isMobile) {
+						map.touchZoomRotate.enableRotation();
+						map.touchPitch.enable();
+					} else {
+						map.touchZoomRotate.disableRotation();
+						map.touchPitch.disable();
+					}
 				}}
 				terrain={is3DMode && !isMobile ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
 			>
