@@ -1,5 +1,6 @@
-import { Source, Layer, LayerProps } from 'react-map-gl';
+import { Source, Layer, LayerProps, useMap } from 'react-map-gl';
 import type { Waypoint } from '@/types/waypoint';
+import { useEffect, useMemo } from 'react';
 
 interface WaypointLayerProps {
 	waypoints?: Waypoint[];
@@ -23,21 +24,70 @@ const circlePaint: LayerProps['paint'] = {
 };
 
 export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProps) => {
-	if (!waypoints?.length) return null;
+	const { current: map } = useMap();
 
-	const features = waypoints.map((waypoint) => ({
-		type: 'Feature' as const,
-		id: waypoint.id,
-		geometry: {
-			type: 'Point' as const,
-			coordinates: waypoint.coordinates,
-		},
-		properties: {
+	// Create features only when waypoints or selection changes
+	const features = useMemo(() => {
+		if (!waypoints?.length) return [];
+
+		return waypoints.map((waypoint) => ({
+			type: 'Feature' as const,
 			id: waypoint.id,
-			name: waypoint.name,
-			selected: selectedWaypoint?.id === waypoint.id,
-		},
-	}));
+			geometry: {
+				type: 'Point' as const,
+				coordinates: waypoint.coordinates,
+			},
+
+			properties: {
+				id: waypoint.id,
+				name: waypoint.name,
+				selected: selectedWaypoint?.id === waypoint.id,
+				type: 'waypoint',
+			},
+		}));
+	}, [waypoints, selectedWaypoint]);
+
+	// Initialize layer only once when map is ready
+	useEffect(() => {
+		if (!map || !features.length) return;
+
+		const initializeLayer = () => {
+			try {
+				// Initialize each layer independently
+				const mainLayer = map.getMap().getLayer('waypoints-layer');
+				if (mainLayer) {
+					map.getMap().setLayoutProperty('waypoints-layer', 'visibility', 'visible');
+				}
+
+				const touchLayer = map.getMap().getLayer('waypoints-layer-touch');
+				if (touchLayer) {
+					map.getMap().setLayoutProperty('waypoints-layer-touch', 'visibility', 'visible');
+				}
+
+				// If either layer is missing, try again
+				if (!mainLayer || !touchLayer) {
+					setTimeout(initializeLayer, 50);
+				}
+			} catch (error) {
+				setTimeout(initializeLayer, 50);
+			}
+		};
+
+		// Initial setup
+		initializeLayer();
+
+		// Handle style changes
+		const handleStyleData = () => {
+			initializeLayer();
+		};
+		map.getMap().on('styledata', handleStyleData);
+
+		return () => {
+			map.getMap().off('styledata', handleStyleData);
+		};
+	}, [map, features]);
+
+	if (!features.length) return null;
 
 	return (
 		<Source
@@ -47,9 +97,37 @@ export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProp
 				type: 'FeatureCollection',
 				features,
 			}}
-			generateId={false}
 		>
-			<Layer id="waypoints-layer" type="circle" source="waypoints" paint={circlePaint} />
+			<Layer
+				id="waypoints-layer"
+				type="circle"
+				source="waypoints"
+				paint={circlePaint}
+				filter={['==', ['get', 'type'], 'waypoint']}
+				layout={{
+					visibility: 'visible',
+				}}
+				minzoom={0}
+				maxzoom={24}
+			/>
+			<Layer
+				id="waypoints-layer-touch"
+				type="circle"
+				source="waypoints"
+				paint={{
+					'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 15, 10, 20, 15, 25, 20, 30],
+					'circle-opacity': 0,
+					'circle-stroke-width': 0,
+					'circle-stroke-opacity': 0,
+				}}
+				filter={['==', ['get', 'type'], 'waypoint']}
+				layout={{
+					visibility: 'visible',
+				}}
+				minzoom={0}
+				maxzoom={24}
+				beforeId="waypoints-layer"
+			/>
 		</Source>
 	);
 };

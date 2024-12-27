@@ -48,7 +48,7 @@ export const ActivityDetails = ({ activity }: ActivityDetailsProps) => {
 
 				// Get elevation data from Geoapify
 				const waypoints = limitedCoordinates.map((coord: Position) => `${coord[1]},${coord[0]}`).join('|');
-				const url = `https://api.geoapify.com/v1/routing?waypoints=${waypoints}&mode=hike&details=elevation&apiKey=9098bef0b0a04aaf8dfbd2ec98548de4`;
+				const url = `https://api.geoapify.com/v1/routing?waypoints=${waypoints}&mode=hike&details=elevation&apiKey=${process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}`;
 
 				console.log('Fetching elevation data...');
 				const response = await fetch(url);
@@ -123,7 +123,13 @@ export const ActivityDetails = ({ activity }: ActivityDetailsProps) => {
 					</div>
 				)}
 			</div>
-			{elevationData.length > 0 && <ElevationChart data={elevationData} />}
+			{elevationData.length > 0 && (
+				<div>
+					<div className="h-[160px]">
+						<ElevationChart data={elevationData} />
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };
