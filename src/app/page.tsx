@@ -721,8 +721,26 @@ export default function Home() {
 										}
 									>
 										{selectedActivity && <ActivityDetails activity={selectedActivity} />}
-										{selectedRoute && <RouteDetails route={selectedRoute} />}
-										{selectedWaypoint && <WaypointDetails waypoint={selectedWaypoint} />}
+										{selectedRoute && (
+											<RouteDetails
+												route={selectedRoute}
+												onDelete={handleRouteDelete}
+												onEdit={(routeId, newName, newComment) => {
+													handleRouteRename(routeId, newName);
+													handleRouteCommentUpdate(routeId, newComment);
+												}}
+											/>
+										)}
+										{selectedWaypoint && (
+											<WaypointDetails
+												waypoint={selectedWaypoint}
+												onDelete={handleWaypointDelete}
+												onEdit={(waypointId, newName, newComment) => {
+													handleWaypointRename(waypointId, newName);
+													handleWaypointCommentUpdate(waypointId, newComment);
+												}}
+											/>
+										)}
 									</MobileDrawer>
 								</>
 							)}
