@@ -79,13 +79,13 @@ export const MapComponent = ({
 	const { user } = useAuth();
 	const { data: session } = useSession();
 	const { open: isSidebarOpen } = useSidebar();
+	const { isMobile } = useResponsiveLayout();
 	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
-	const [is3DMode, setIs3DMode] = useState(true);
+	const [is3DMode, setIs3DMode] = useState(!isMobile);
 	const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 	const [visibleActivitiesId, setLocalVisibleActivitiesId] = useState<number[]>([]);
 	const [visibleRoutesId, setVisibleRoutesId] = useState<(string | number)[]>([]);
 	const [visibleWaypointsId, setVisibleWaypointsId] = useState<(string | number)[]>([]);
-	const { isMobile } = useResponsiveLayout();
 	const [isAddingWaypoint, setIsAddingWaypoint] = useState(false);
 	const [mapCenter, setMapCenter] = useState({ lat: 61.375172, lng: 8.296987 });
 
@@ -255,7 +255,7 @@ export const MapComponent = ({
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
 
-		if (is3DMode) {
+		if (is3DMode && !isMobile) {
 			map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 			map.touchZoomRotate.enableRotation();
 			map.touchPitch.enable();
@@ -265,9 +265,10 @@ export const MapComponent = ({
 			map.touchZoomRotate.disableRotation();
 			map.touchPitch.disable();
 		}
-	}, [is3DMode]);
+	}, [is3DMode, isMobile]);
 
 	const toggleViewMode = useCallback(() => {
+		if (isMobile) return; // Prevent toggling on mobile
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
 		const newMode = !is3DMode;
@@ -281,7 +282,7 @@ export const MapComponent = ({
 			map.setTerrain(null);
 			map.setPitch(0);
 		}
-	}, [is3DMode]);
+	}, [is3DMode, isMobile]);
 
 	useEffect(() => {
 		setSelectedWaypoint(parentSelectedWaypoint || null);
@@ -570,11 +571,11 @@ export const MapComponent = ({
 				renderWorldCopies={false}
 				maxTileCacheSize={50}
 				trackResize={false}
-				dragRotate={true}
-				pitchWithRotate={true}
+				dragRotate={is3DMode}
+				pitchWithRotate={is3DMode}
 				dragPan={true}
 				touchZoomRotate={true}
-				touchPitch={true}
+				touchPitch={is3DMode}
 				maxPitch={85}
 				minPitch={0}
 				keyboard={true}
@@ -584,11 +585,10 @@ export const MapComponent = ({
 						onMapLoad(map);
 					}
 					// Enable touch controls
-					map.touchZoomRotate.enable();
 					map.touchZoomRotate.enableRotation();
 					map.touchPitch.enable();
 				}}
-				terrain={is3DMode ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
+				terrain={is3DMode && !isMobile ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
 			>
 				<MapControls
 					layers={availableLayers}

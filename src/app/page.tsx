@@ -35,6 +35,7 @@ import { Edit2 } from 'lucide-react';
 import { EditDetailsForm } from '@/components/EditDetailsForm';
 import { ActivityDetails } from '@/components/activities/ActivityDetails';
 import { WaypointDetails } from '@/components/waypoints/WaypointDetails';
+import { ElevationChart } from '@/components/ElevationChart';
 
 export default function Home() {
 	const { user, loading, signOut } = useAuth();
@@ -54,6 +55,7 @@ export default function Home() {
 	const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
 	const [isEditingRoute, setIsEditingRoute] = useState(false);
 	const [isEditingWaypoint, setIsEditingWaypoint] = useState(false);
+	const [elevationData, setElevationData] = useState<{ distance: number; elevation: number }[]>([]);
 
 	useEffect(() => {
 		if (!isOnline) {
@@ -98,6 +100,52 @@ export default function Home() {
 				.catch((error) => console.error(`Error loading waypoints:`, error));
 		}
 	}, [user]);
+
+	useEffect(() => {
+		if (!selectedRoute || !selectedRoute.geometry?.coordinates) return;
+
+		const fetchElevationData = async () => {
+			const coordinates = selectedRoute.geometry.coordinates;
+			const maxWaypoints = 25;
+			const skipPoints = Math.max(1, Math.floor(coordinates.length / maxWaypoints));
+			const limitedCoordinates = coordinates.filter((_, index) => index % skipPoints === 0);
+
+			try {
+				const waypoints = limitedCoordinates.map((coord) => `${coord[1]},${coord[0]}`).join('|');
+				const url = `https://api.geoapify.com/v1/routing?waypoints=${waypoints}&mode=hike&details=elevation&apiKey=${process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}`;
+
+				const response = await fetch(url);
+				if (!response.ok) {
+					throw new Error(`Geoapify API error: ${response.status}`);
+				}
+
+				const data = await response.json();
+				const points: { distance: number; elevation: number }[] = [];
+				let cumulativeDistance = 0;
+
+				if (!data.features?.[0]?.properties?.legs) {
+					throw new Error('Invalid response format');
+				}
+
+				data.features[0].properties.legs.forEach((leg: any) => {
+					leg.elevation_range.forEach(([distance, elevation]: [number, number]) => {
+						points.push({
+							distance: (cumulativeDistance + distance) / 1000,
+							elevation: elevation,
+						});
+					});
+					cumulativeDistance += leg.distance;
+				});
+
+				setElevationData(points);
+			} catch (error) {
+				console.error('Error fetching elevation data:', error);
+				setElevationData([]);
+			}
+		};
+
+		fetchElevationData();
+	}, [selectedRoute]);
 
 	const filteredActivities = activities;
 	const currentActivity = activities.find((activity) => activity.id === selectedRouteId) || null;
@@ -618,6 +666,58 @@ export default function Home() {
 													: selectedWaypoint
 														? 'Waypoint Details'
 														: ''
+										}
+										peekContent={
+											selectedRoute ? (
+												<div className="space-y-4">
+													<div className="p-4 border rounded-lg">
+														<h3 className="font-medium">{selectedRoute.name}</h3>
+														<div className="grid grid-cols-2 gap-4 mt-2">
+															<div>
+																<p className="text-sm text-muted-foreground">Distance</p>
+																<p>{selectedRoute.distance?.toFixed(1)} km</p>
+															</div>
+															{selectedRoute.comments && (
+																<div>
+																	<p className="text-sm text-muted-foreground">Comments</p>
+																	<p className="truncate">{selectedRoute.comments}</p>
+																</div>
+															)}
+														</div>
+														<div className="mt-4 h-[100px]">
+															<ElevationChart data={elevationData} />
+														</div>
+													</div>
+												</div>
+											) : selectedActivity ? (
+												<div className="space-y-4 overflow-auto max-h-[200px]">
+													<div className="p-4 border rounded-lg">
+														<h3 className="font-medium">{selectedActivity.name}</h3>
+														<div className="grid grid-cols-2 gap-4 mt-2">
+															<div>
+																<p className="text-sm text-muted-foreground">Type</p>
+																<p>{selectedActivity.sport_type}</p>
+															</div>
+															<div>
+																<p className="text-sm text-muted-foreground">Distance</p>
+																<p>{((selectedActivity.distance || 0) / 1000).toFixed(2)} km</p>
+															</div>
+														</div>
+													</div>
+												</div>
+											) : selectedWaypoint ? (
+												<div className="space-y-4">
+													<div className="p-4 border rounded-lg">
+														<h3 className="font-medium">{selectedWaypoint.name}</h3>
+														{selectedWaypoint.comments && (
+															<p className="text-sm text-muted-foreground mt-2">{selectedWaypoint.comments}</p>
+														)}
+														<p className="text-sm text-muted-foreground mt-2">
+															{selectedWaypoint.coordinates[0].toFixed(6)}, {selectedWaypoint.coordinates[1].toFixed(6)}
+														</p>
+													</div>
+												</div>
+											) : null
 										}
 									>
 										{selectedActivity && <ActivityDetails activity={selectedActivity} />}

@@ -115,19 +115,7 @@ export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProp
 				type="circle"
 				source="waypoints"
 				paint={{
-					'circle-radius': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						0,
-						20, // At zoom level 0, radius is 20px
-						10,
-						25, // At zoom level 10, radius is 25px
-						15,
-						30, // At zoom level 15, radius is 30px
-						20,
-						35, // At zoom level 20, radius is 35px
-					],
+					'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 15, 10, 20, 15, 25, 20, 30],
 					'circle-opacity': 0,
 					'circle-stroke-width': 0,
 					'circle-stroke-opacity': 0,
