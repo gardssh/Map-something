@@ -1,9 +1,14 @@
 import type { LineString, Feature, GeoJsonProperties } from 'geojson';
 import type { RoutePoints } from '@/components/activities/switchCor';
+import type { DbStravaActivity } from './supabase';
 
 export interface ActivityMap {
   summary_polyline: string;
   geometry?: RoutePoints | null;
+}
+
+export interface ActivityWithMap extends DbStravaActivity {
+  map: ActivityMap;
 }
 
 export interface Activity {

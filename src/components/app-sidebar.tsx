@@ -61,6 +61,31 @@ import { ElevationDetails } from './ElevationDetails';
 import { ActivityList } from './ActivityList';
 import { RouteDetails } from './RouteDetails';
 import { WaypointDetails } from './WaypointDetails';
+import type { ActivityWithMap } from '@/types/activity';
+import { SidebarNavigation, navigationItems } from './SidebarNavigation';
+
+interface ElevationPoint {
+	distance: number; // distance in km
+	elevation: number; // elevation in meters
+}
+
+interface RouteData {
+	features: Array<{
+		properties: {
+			legs: Array<{
+				distance: number;
+				elevation_range: Array<[number, number]>;
+			}>;
+		};
+	}>;
+}
+
+const calculateRouteDistance = (coordinates: Position[]) => {
+	const validCoords = coordinates.filter(
+		(coord): coord is [number, number] => Array.isArray(coord) && coord.length === 2
+	);
+	return turf.length(turf.lineString(validCoords), { units: 'kilometers' });
+};
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activities: ActivityWithMap[];
@@ -87,44 +112,6 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activeItem?: string;
 	setActiveItem?: (item: string) => void;
 }
-
-const navigationItems = [
-	{ id: 'nearby', icon: Navigation, label: 'Nearby' },
-	{ id: 'activities', icon: Medal, label: 'Activities' },
-	{ id: 'routes', icon: Route, label: 'Routes' },
-	{ id: 'waypoints', icon: MapPin, label: 'Waypoints' },
-] as const;
-
-interface ElevationPoint {
-	distance: number; // distance in km
-	elevation: number; // elevation in meters
-}
-
-interface RouteData {
-	features: Array<{
-		properties: {
-			legs: Array<{
-				distance: number;
-				elevation_range: Array<[number, number]>;
-			}>;
-		};
-	}>;
-}
-
-interface ActivityMap {
-	summary_polyline: string;
-}
-
-interface ActivityWithMap extends DbStravaActivity {
-	map: ActivityMap;
-}
-
-const calculateRouteDistance = (coordinates: Position[]) => {
-	const validCoords = coordinates.filter(
-		(coord): coord is [number, number] => Array.isArray(coord) && coord.length === 2
-	);
-	return turf.length(turf.lineString(validCoords), { units: 'kilometers' });
-};
 
 export function AppSidebar({
 	activities = [],
@@ -282,8 +269,6 @@ export function AppSidebar({
 		avatar: user?.user_metadata?.avatar_url || '',
 	};
 
-	const visibleActivities = activities.filter((activity) => visibleActivitiesId.includes(Number(activity.id)));
-
 	const chartConfig = {
 		elevation: {
 			label: 'Elevation (m)',
@@ -357,12 +342,6 @@ export function AppSidebar({
 					</ChartContainer>
 				</CardContent>
 			</Card>
-		);
-	};
-
-	const toggleCategory = (category: ActivityCategory) => {
-		setSelectedCategories((prev) =>
-			prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
 		);
 	};
 
@@ -690,63 +669,25 @@ export function AppSidebar({
 		);
 	};
 
+	const handleNavigate = (itemId: string) => {
+		setActiveItem(itemId);
+		setOpen(true);
+		setSelectedRouteId(null);
+		onRouteSelect?.(null);
+		if (onActivitySelect) onActivitySelect(null as any);
+		handleWaypointSelect?.(null);
+	};
+
 	return (
 		<Sidebar collapsible="icon" className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row" {...props}>
-			{/* First sidebar - Navigation */}
-			<Sidebar collapsible="none" className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r">
-				<SidebarHeader>
-					<SidebarMenu>
-						<SidebarMenuItem>
-							<SidebarMenuButton isActive={open} className="px-2.5 md:px-2" onClick={() => setOpen(!open)}>
-								{open ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
-								<span>Toggle Sidebar</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-					</SidebarMenu>
-					<div className="mx-2 my-2 h-[1px] bg-border" />
-				</SidebarHeader>
-				<SidebarContent>
-					<SidebarGroup>
-						<SidebarGroupContent className="px-1.5 md:px-0">
-							<SidebarMenu>
-								{navigationItems.map((item) => (
-									<SidebarMenuItem key={item.id}>
-										<SidebarMenuButton
-											tooltip={{
-												children: item.label,
-												hidden: false,
-											}}
-											onClick={() => {
-												setActiveItem(item.id);
-												setOpen(true);
-												setSelectedRouteId(null);
-												onRouteSelect?.(null);
-												if (onActivitySelect) onActivitySelect(null as any);
-												handleWaypointSelect?.(null);
-											}}
-											isActive={activeItem === item.id}
-											className="px-2.5 md:px-2"
-										>
-											<item.icon className="h-4 w-4" />
-											<span>{item.label}</span>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								))}
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
-				</SidebarContent>
-				<SidebarFooter>
-					<NavUser />
-				</SidebarFooter>
-			</Sidebar>
+			<SidebarNavigation activeItem={activeItem} open={open} setOpen={setOpen} onNavigate={handleNavigate} />
 
 			{/* Second sidebar - Content */}
 			<Sidebar collapsible="none" className="hidden flex-1 md:flex">
 				<SidebarHeader className="gap-3.5 border-b p-4">
 					<div className="flex w-full items-center justify-between">
 						<div className="text-base font-medium text-foreground">
-							{navigationItems.find((item) => item.id === activeItem)?.label}
+							{navigationItems.find((item: { id: string; label: string }) => item.id === activeItem)?.label}
 						</div>
 					</div>
 				</SidebarHeader>

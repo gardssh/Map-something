@@ -5,16 +5,8 @@ import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/lib/timeFormat';
 import { ACTIVITY_CATEGORIES, ActivityCategory, categorizeActivity } from '@/lib/categories';
-import type { DbStravaActivity } from '@/types/supabase';
+import type { ActivityWithMap } from '@/types/activity';
 import { useRef } from 'react';
-
-interface ActivityMap {
-	summary_polyline: string;
-}
-
-interface ActivityWithMap extends DbStravaActivity {
-	map: ActivityMap;
-}
 
 interface ActivityListProps {
 	activities: ActivityWithMap[];
