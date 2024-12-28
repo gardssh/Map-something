@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/features/shared/components/ui/button';
 import { Download } from 'lucide-react';
 
 export function PWAInstallPrompt() {

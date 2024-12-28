@@ -2,9 +2,16 @@
 // Noe fix
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/features/shared/components/ui/button';
+import { Input } from '@/features/shared/components/ui/input';
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from '@/features/shared/components/ui/card';
 import Link from 'next/link';
 import { AuthNav } from '@/components/auth-nav';
 

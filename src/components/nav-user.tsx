@@ -1,7 +1,7 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/features/shared/components/ui/avatar';
+import { Button } from '@/features/shared/components/ui/button';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -9,7 +9,7 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/features/shared/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { Menu } from 'lucide-react';
 

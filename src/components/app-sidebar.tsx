@@ -22,12 +22,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavUser } from '@/components/nav-user';
-import { Label } from './ui/label';
+import { Label } from '@/features/shared/components/ui/label';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { switchCoordinates } from '@/components/activities/switchCor';
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/features/shared/components/ui/chart';
+import { switchCoordinates } from '@/features/map/shared/utils/coordinates';
 import {
 	Sidebar,
 	SidebarContent,
@@ -39,24 +39,33 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	useSidebar,
+	SidebarInset,
+	SidebarProvider,
 	SidebarTrigger,
-} from '@/components/ui/sidebar';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from './ui/card';
-import { Badge } from './ui/badge';
-import { formatTime } from '@/lib/timeFormat';
+	useSidebar,
+} from '@/features/shared/components/ui/sidebar';
+import { Switch } from '@/features/shared/components/ui/switch';
+import { Button } from '@/features/shared/components/ui/button';
+import { Input } from '@/features/shared/components/ui/input';
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+	CardFooter,
+} from '@/features/shared/components/ui/card';
+import { Badge } from '@/features/shared/components/ui/badge';
+import { formatTime } from '@/features/map/shared/utils/timeFormat';
 import { ACTIVITY_CATEGORIES, ActivityCategory, categorizeActivity } from '@/lib/categories';
 import type { DbRoute, DbWaypoint, DbStravaActivity } from '@/types/supabase';
 import type { RouteWithDistance } from '@/types/route';
 import * as turf from '@turf/turf';
 import { LineString, Position } from 'geojson';
-import { GpxUpload } from './MapComponent/controls/GpxUpload';
+import { GpxUpload } from '../features/map/shared/components/controls/GpxUpload';
 import type { DrawnRoute } from '@/types/route';
-import { Textarea } from './ui/textarea';
-import type { Activity } from '@/types/activity';
+import { Textarea } from '@/features/shared/components/ui/textarea';
+import type { Activity } from '@/features/map/shared/types/activity';
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activities: ActivityWithMap[];

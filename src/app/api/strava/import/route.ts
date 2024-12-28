@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { switchCoordinates, type RoutePoints } from '@/components/activities/switchCor';
-import { type Activity } from '@/types/activity';
+import { switchCoordinates, type RoutePoints } from '@/features/map/shared/utils/coordinates';
+import { type Activity } from '@/features/map/shared/types/activity';
 import * as turf from '@turf/turf';
 import type { Feature, LineString, GeoJsonProperties } from 'geojson';
 import polyline from 'polyline';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 interface ActivityMap {
     summary_polyline: string;
