@@ -86,7 +86,7 @@ export const useMapEvents = ({
 			}
 
 			// Handle route hover
-			if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
+			if (feature.layer?.id === 'saved-routes-layer' || feature.layer?.id === 'saved-routes-border') {
 				const route = routes?.find(r => r.id === properties.id);
 				if (route) {
 					setHoverInfo({
@@ -102,7 +102,7 @@ export const useMapEvents = ({
 			}
 
 			// Handle waypoint hover
-			if (feature.layer.id === 'waypoints-layer') {
+			if (feature.layer?.id === 'waypoints-layer') {
 				const waypoint = waypoints?.find(w => w.id === properties.id);
 				if (waypoint) {
 					setHoverInfo({
@@ -161,7 +161,7 @@ export const useMapEvents = ({
 			}
 
 			// Handle route clicks
-			if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
+			if (feature.layer?.id === 'saved-routes-layer' || feature.layer?.id === 'saved-routes-border') {
 				console.log('Clicked on route with ID:', properties.id);
 				const route = routes?.find(r => r.id === properties.id);
 				console.log('Found route:', route);
@@ -177,7 +177,7 @@ export const useMapEvents = ({
 			}
 
 			// Handle waypoint clicks
-			if (feature.layer.id === 'waypoints-layer') {
+			if (feature.layer?.id === 'waypoints-layer') {
 				console.log('Clicked on waypoint with ID:', properties.id);
 				const waypoint = waypoints?.find(w => w.id === properties.id);
 				console.log('Found waypoint:', waypoint);
