@@ -37,6 +37,17 @@ import { ActivityDetails } from '@/components/activities/ActivityDetails';
 import { WaypointDetails } from '@/components/waypoints/WaypointDetails';
 import { ElevationChart } from '@/components/ElevationChart';
 import { AppSidebarAndMap } from '@/components/AppSidebarAndMap';
+import {
+	handleRouteSave as apiHandleRouteSave,
+	handleRouteDelete as apiHandleRouteDelete,
+	handleRouteRename as apiHandleRouteRename,
+	handleRouteCommentUpdate as apiHandleRouteCommentUpdate,
+	handleWaypointSave as apiHandleWaypointSave,
+	handleWaypointDelete as apiHandleWaypointDelete,
+	handleWaypointRename as apiHandleWaypointRename,
+	handleWaypointCommentUpdate as apiHandleWaypointCommentUpdate,
+} from '@/services/api';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function Home() {
 	const { user, loading, signOut } = useAuth();
@@ -192,26 +203,8 @@ export default function Home() {
 
 	const handleRouteSave = async (newRoute: DbRoute) => {
 		try {
-			const response = await fetch(`/api/routes`, {
-				method: `POST`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify(newRoute),
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || `Failed to save route`);
-			}
-
-			// Fetch updated routes
-			const getResponse = await fetch('/api/routes');
-			const data = await getResponse.json();
-			setRoutes(
-				data.routes.map((route: DbRoute) => ({
-					...route,
-					distance: turf.length(turf.lineString(route.geometry.coordinates), { units: `kilometers` }),
-				}))
-			);
+			const updatedRoutes = await apiHandleRouteSave(newRoute);
+			setRoutes(updatedRoutes);
 		} catch (error) {
 			console.error(`Error saving route:`, error);
 		}
@@ -248,16 +241,7 @@ export default function Home() {
 
 	const handleRouteDelete = async (routeId: string) => {
 		try {
-			const response = await fetch(`/api/routes`, {
-				method: `DELETE`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ routeId }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to delete route`);
-			}
-
+			await apiHandleRouteDelete(routeId);
 			setRoutes(routes.filter((route) => route.id !== routeId));
 			if (selectedRoute?.id === routeId) {
 				setSelectedRoute(null);
@@ -270,17 +254,7 @@ export default function Home() {
 
 	const handleRouteRename = async (routeId: string, newName: string) => {
 		try {
-			const response = await fetch(`/api/routes`, {
-				method: `PATCH`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ routeId, newName }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to rename route`);
-			}
-
-			// Update both the routes list and the selected route
+			await apiHandleRouteRename(routeId, newName);
 			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, name: newName } : route)));
 			setSelectedRoute(
 				selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, name: newName } : selectedRoute
@@ -290,27 +264,20 @@ export default function Home() {
 		}
 	};
 
+	const handleRouteCommentUpdate = async (routeId: string, comments: string) => {
+		try {
+			await apiHandleRouteCommentUpdate(routeId, comments);
+			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, comments } : route)));
+			setSelectedRoute(selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, comments } : selectedRoute);
+		} catch (error) {
+			console.error(`Error updating route comments:`, error);
+		}
+	};
+
 	const handleWaypointSave = async (newWaypoint: DbWaypoint) => {
 		try {
-			const response = await fetch(`/api/waypoints`, {
-				method: `POST`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ waypoints: [newWaypoint] }),
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || `Failed to save waypoint`);
-			}
-
-			// Fetch updated waypoints
-			const getResponse = await fetch('/api/waypoints');
-			if (!getResponse.ok) {
-				throw new Error(`Failed to fetch updated waypoints`);
-			}
-
-			const data = await getResponse.json();
-			setWaypoints(data.waypoints || []);
+			const updatedWaypoints = await apiHandleWaypointSave(newWaypoint);
+			setWaypoints(updatedWaypoints);
 		} catch (error) {
 			console.error(`Error saving waypoint:`, error);
 			throw error;
@@ -319,16 +286,7 @@ export default function Home() {
 
 	const handleWaypointDelete = async (waypointId: string) => {
 		try {
-			const response = await fetch(`/api/waypoints`, {
-				method: `DELETE`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ waypointId }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to delete waypoint`);
-			}
-
+			await apiHandleWaypointDelete(waypointId);
 			setWaypoints(waypoints.filter((waypoint) => waypoint.id !== waypointId));
 			if (selectedWaypoint?.id === waypointId) {
 				setSelectedWaypoint(null);
@@ -355,17 +313,7 @@ export default function Home() {
 
 	const handleWaypointRename = async (waypointId: string, newName: string) => {
 		try {
-			const response = await fetch(`/api/waypoints`, {
-				method: `PATCH`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ waypointId, newName }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to rename waypoint`);
-			}
-
-			// Update both the waypoints list and the selected waypoint
+			await apiHandleWaypointRename(waypointId, newName);
 			setWaypoints(
 				waypoints.map((waypoint) => (waypoint.id === waypointId ? { ...waypoint, name: newName } : waypoint))
 			);
@@ -381,17 +329,7 @@ export default function Home() {
 
 	const handleWaypointCommentUpdate = async (waypointId: string, comments: string) => {
 		try {
-			const response = await fetch(`/api/waypoints`, {
-				method: `PATCH`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ waypointId, comments }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to update waypoint comments`);
-			}
-
-			// Update both the waypoints list and the selected waypoint
+			await apiHandleWaypointCommentUpdate(waypointId, comments);
 			setWaypoints(waypoints.map((waypoint) => (waypoint.id === waypointId ? { ...waypoint, comments } : waypoint)));
 			setSelectedWaypoint(
 				selectedWaypoint && selectedWaypoint.id === waypointId ? { ...selectedWaypoint, comments } : selectedWaypoint
@@ -401,35 +339,8 @@ export default function Home() {
 		}
 	};
 
-	const handleRouteCommentUpdate = async (routeId: string, comments: string) => {
-		try {
-			const response = await fetch(`/api/routes`, {
-				method: `PATCH`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ routeId, comments }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to update route comments`);
-			}
-
-			// Update both the routes list and the selected route
-			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, comments } : route)));
-			setSelectedRoute(selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, comments } : selectedRoute);
-		} catch (error) {
-			console.error(`Error updating route comments:`, error);
-		}
-	};
-
 	if (loading) {
-		return (
-			<div className="flex items-center justify-center h-screen">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-					<p>Loading authentication...</p>
-				</div>
-			</div>
-		);
+		return <LoadingSpinner message="Loading authentication..." />;
 	}
 
 	if (!user) {
@@ -437,14 +348,7 @@ export default function Home() {
 	}
 
 	if (activitiesLoading) {
-		return (
-			<div className="flex items-center justify-center h-screen">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-					<p>Loading activities...</p>
-				</div>
-			</div>
-		);
+		return <LoadingSpinner message="Loading activities..." />;
 	}
 
 	return (
