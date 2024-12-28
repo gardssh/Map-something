@@ -291,13 +291,13 @@ export function AppSidebar({
 		if (chartData.length === 0) return null;
 
 		return (
-			<Card>
-				<CardHeader>
-					<CardTitle>Elevation Profile</CardTitle>
+			<Card className="w-full overflow-hidden">
+				<CardHeader className="pb-1">
+					<CardTitle className="text-base">Elevation Profile</CardTitle>
 				</CardHeader>
 				<CardContent className="pl-0">
 					<ChartContainer config={chartConfig}>
-						<LineChart data={chartData} margin={{ left: 48, right: 8, bottom: 24, top: 8 }} height={300}>
+						<LineChart data={chartData} margin={{ left: 48, right: 8, bottom: 20, top: 8 }} height={250}>
 							<CartesianGrid vertical={false} strokeDasharray="3 3" />
 							<XAxis
 								dataKey="distance"
@@ -311,6 +311,7 @@ export function AppSidebar({
 								type="number"
 								interval="preserveEnd"
 								minTickGap={30}
+								tick={{ fontSize: 11 }}
 							/>
 							<YAxis
 								dataKey="elevation"
@@ -323,6 +324,7 @@ export function AppSidebar({
 								allowDataOverflow={false}
 								interval="preserveStartEnd"
 								width={40}
+								tick={{ fontSize: 11 }}
 							/>
 							<Line
 								dataKey="elevation"
@@ -472,10 +474,12 @@ export function AppSidebar({
 
 		if (selectedRoute) {
 			return (
-				<div className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-					<div className="flex justify-between items-center">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedRoute.name}</h3>
-						<div className="flex gap-1">
+				<div className="grow p-4 flex flex-col gap-4 relative overflow-y-auto max-w-full">
+					<div className="flex justify-between items-center w-full">
+						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight break-all flex-1 mr-2 min-w-0">
+							{selectedRoute.name}
+						</h3>
+						<div className="flex gap-1 shrink-0">
 							<Button
 								variant="ghost"
 								size="icon"
@@ -516,11 +520,11 @@ export function AppSidebar({
 						</div>
 					</div>
 					{editingRouteId === selectedRoute.id ? (
-						<div className="space-y-4">
+						<div className="space-y-4 w-full">
 							<div className="flex gap-2">
-								<Input value={editingName} onChange={(e) => setEditingName(e.target.value)} className="h-8" />
+								<Input value={editingName} onChange={(e) => setEditingName(e.target.value)} className="h-8 w-full" />
 							</div>
-							<Card>
+							<Card className="w-full">
 								<CardHeader>
 									<CardTitle>Comments</CardTitle>
 								</CardHeader>
@@ -541,6 +545,11 @@ export function AppSidebar({
 										onRouteRename?.(selectedRoute.id, editingName);
 										onRouteCommentUpdate?.(selectedRoute.id, editingComments);
 										setEditingRouteId(null);
+										// Force update the selected route with new name
+										if (selectedRoute) {
+											const updatedRoute = { ...selectedRoute, name: editingName, comments: editingComments };
+											onRouteSelect?.(updatedRoute);
+										}
 									}}
 								>
 									<Check className="h-4 w-4 mr-1" />
@@ -554,22 +563,24 @@ export function AppSidebar({
 						</div>
 					) : (
 						<>
-							<Card>
+							<Card className="w-full">
 								<CardHeader>
-									<p>Distance: {(selectedRoute as RouteWithDistance)?.distance?.toFixed(2) || 'N/A'}km</p>
+									<p className="break-words">
+										Distance: {(selectedRoute as RouteWithDistance)?.distance?.toFixed(2) || 'N/A'}km
+									</p>
 								</CardHeader>
 							</Card>
-							<Card>
+							<Card className="w-full">
 								<CardHeader>
-									<p>Created: {new Date(selectedRoute.created_at).toLocaleString()}</p>
+									<p className="break-words">Created: {new Date(selectedRoute.created_at).toLocaleString()}</p>
 								</CardHeader>
 							</Card>
-							<Card>
+							<Card className="w-full">
 								<CardHeader>
 									<CardTitle>Comments</CardTitle>
 								</CardHeader>
 								<CardContent>
-									<p className="text-sm">{selectedRoute.comments || 'No comments'}</p>
+									<p className="text-sm break-words">{selectedRoute.comments || 'No comments'}</p>
 								</CardContent>
 							</Card>
 							{renderElevationChart()}
@@ -768,7 +779,7 @@ export function AppSidebar({
 									}}
 								>
 									<CardHeader>
-										<CardTitle>{route.name}</CardTitle>
+										<CardTitle className="break-all">{route.name}</CardTitle>
 										{route.geometry && (route.geometry as LineString).coordinates && (
 											<CardDescription>
 												Distance: {calculateRouteDistance((route.geometry as LineString).coordinates).toFixed(2)} km

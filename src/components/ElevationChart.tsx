@@ -26,8 +26,8 @@ export function ElevationChart({ data }: ElevationChartProps) {
 
 	return (
 		<Card className="w-full">
-			<CardHeader className="pb-2">
-				<CardTitle className="text-lg">Elevation Profile</CardTitle>
+			<CardHeader className="pb-1">
+				<CardTitle className="text-base">Elevation Profile</CardTitle>
 			</CardHeader>
 			<CardContent className="p-0">
 				<ChartContainer config={chartConfig}>
@@ -45,7 +45,7 @@ export function ElevationChart({ data }: ElevationChartProps) {
 							type="number"
 							interval="preserveEnd"
 							minTickGap={50}
-							tick={{ fontSize: 12 }}
+							tick={{ fontSize: 11 }}
 						/>
 						<YAxis
 							dataKey="elevation"
@@ -58,7 +58,7 @@ export function ElevationChart({ data }: ElevationChartProps) {
 							allowDataOverflow={false}
 							interval="preserveStartEnd"
 							width={40}
-							tick={{ fontSize: 12 }}
+							tick={{ fontSize: 11 }}
 						/>
 						<Line
 							dataKey="elevation"

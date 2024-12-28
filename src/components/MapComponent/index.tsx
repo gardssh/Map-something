@@ -2,7 +2,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import Map, { Source, Layer, MapLayerTouchEvent, GeolocateControl, NavigationControl } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
-import type { MapRef, MapLayerMouseEvent } from 'react-map-gl';
+import type { MapRef, MapLayerMouseEvent, PointLike } from 'react-map-gl';
 import type { StyleSpecification } from 'mapbox-gl';
 import type { DrawnRoute } from '@/types/route';
 import type { Waypoint } from '@/types/waypoint';
@@ -27,6 +27,7 @@ import { ActivityCards } from '@/components/ActivityCards';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { AddWaypointControl } from './controls/AddWaypointControl';
 import { CrosshairOverlay } from './controls/CrosshairOverlay';
+import { bbox } from '@turf/turf';
 
 export const MapComponent = ({
 	activities,
@@ -96,16 +97,21 @@ export const MapComponent = ({
 	const getVisibleFeatures = useCallback(() => {
 		if (!mapRef.current) return { activities: [], routes: [], waypoints: [] };
 		const map = mapRef.current.getMap();
+		const canvas = map.getCanvas();
+		const bbox: [PointLike, PointLike] = [
+			[0, 0],
+			[canvas.width, canvas.height],
+		];
 
-		const activityFeatures = map.queryRenderedFeatures(undefined, {
+		const activityFeatures = map.queryRenderedFeatures(bbox, {
 			layers: ['foot-sports', 'cycle-sports', 'water-sports', 'winter-sports', 'other-sports'],
 		});
 
-		const routeFeatures = map.queryRenderedFeatures(undefined, {
+		const routeFeatures = map.queryRenderedFeatures(bbox, {
 			layers: ['saved-routes-layer', 'saved-routes-border'],
 		});
 
-		const waypointFeatures = map.queryRenderedFeatures(undefined, {
+		const waypointFeatures = map.queryRenderedFeatures(bbox, {
 			layers: ['waypoints-layer'],
 		});
 
@@ -328,8 +334,7 @@ export const MapComponent = ({
 			if (!mapRef.current) return;
 			const map = mapRef.current.getMap();
 			const point = e.point;
-
-			const features = map.queryRenderedFeatures(point, {
+			const features = map.queryRenderedFeatures([point.x, point.y], {
 				layers: [
 					'foot-sports',
 					'cycle-sports',
@@ -345,9 +350,15 @@ export const MapComponent = ({
 
 			console.log('Debug waypoints:', {
 				waypoints,
-				waypointFeatures: map.queryRenderedFeatures(undefined, {
-					layers: ['waypoints-layer', 'waypoints-layer-touch'],
-				}),
+				waypointFeatures: map.queryRenderedFeatures(
+					[
+						[0, 0],
+						[map.getCanvas().width, map.getCanvas().height],
+					],
+					{
+						layers: ['waypoints-layer', 'waypoints-layer-touch'],
+					}
+				),
 				clickPoint: point,
 				allFeatures: features,
 				waypointSource: map.getSource('waypoints'),
@@ -368,7 +379,7 @@ export const MapComponent = ({
 			if (!properties) return;
 
 			// Handle activity touches
-			if (properties.isActivity || feature.layer.id.endsWith('-touch')) {
+			if (properties.isActivity || feature?.layer?.id.endsWith('-touch')) {
 				const activity = activities.find((a) => a.id === properties.id);
 				if (activity) {
 					setSelectedRouteId(activity.id);
@@ -383,9 +394,9 @@ export const MapComponent = ({
 
 			// Handle route touches
 			if (
-				feature.layer.id === 'saved-routes-layer' ||
-				feature.layer.id === 'saved-routes-border' ||
-				feature.layer.id === 'saved-routes-touch'
+				feature?.layer?.id === 'saved-routes-layer' ||
+				feature?.layer?.id === 'saved-routes-border' ||
+				feature?.layer?.id === 'saved-routes-touch'
 			) {
 				const route = routes?.find((r) => r.id === properties.id);
 				if (route) {
@@ -401,7 +412,7 @@ export const MapComponent = ({
 			}
 
 			// Handle waypoint touches
-			if (feature.layer.id === 'waypoints-layer' || feature.layer.id === 'waypoints-layer-touch') {
+			if (feature?.layer?.id === 'waypoints-layer' || feature?.layer?.id === 'waypoints-layer-touch') {
 				const waypoint = waypoints?.find((w) => w.id === properties.id);
 				if (waypoint) {
 					handleWaypointSelect?.(waypoint);
@@ -498,8 +509,23 @@ export const MapComponent = ({
 				onMouseMove={onHover}
 				onClick={(e) => {
 					if (isDrawing) return;
+					if (!mapRef.current) return;
+					const map = mapRef.current.getMap();
 
-					const features = e.features || [];
+					const point: [number, number] = [e.point.x, e.point.y];
+					const features = map.queryRenderedFeatures(point, {
+						layers: [
+							'foot-sports',
+							'cycle-sports',
+							'water-sports',
+							'winter-sports',
+							'other-sports',
+							'waypoints-layer',
+							'waypoints-layer-touch',
+							'saved-routes-layer',
+							'saved-routes-border',
+						],
+					});
 
 					// Clear all selections first
 					setSelectedRouteId(null);
@@ -528,8 +554,10 @@ export const MapComponent = ({
 					}
 
 					// Handle route clicks
-					if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
+					if (feature?.layer?.id === 'saved-routes-layer' || feature?.layer?.id === 'saved-routes-border') {
+						console.log('Clicked on route with ID:', properties.id);
 						const route = routes?.find((r) => r.id === properties.id);
+						console.log('Found route:', route);
 						if (route) {
 							setSelectedRouteId(route.id);
 							setSelectedRoute(route);
@@ -542,8 +570,10 @@ export const MapComponent = ({
 					}
 
 					// Handle waypoint clicks
-					if (feature.layer.id === 'waypoints-layer' || feature.layer.id === 'waypoints-layer-touch') {
+					if (feature?.layer?.id === 'waypoints-layer' || feature?.layer?.id === 'waypoints-layer-touch') {
+						console.log('Clicked on waypoint with ID:', properties.id);
 						const waypoint = waypoints?.find((w) => w.id === properties.id);
+						console.log('Found waypoint:', waypoint);
 						if (waypoint) {
 							handleWaypointSelect?.(waypoint);
 						}
