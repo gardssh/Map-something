@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useState, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent } from './ui/card';
 import { ElevationChart } from './ElevationChart';
 import type { DbRoute } from '@/types/supabase';
 import type { Activity } from '@/types/activity';
@@ -129,25 +131,27 @@ export function ElevationDetails({ source }: ElevationDetailsProps) {
 
 	return (
 		<>
-			<div className="grid grid-cols-2 gap-4">
-				<div>
-					<p className="text-sm text-muted-foreground">Elevation Gain</p>
-					<p>{stats.totalAscent} m</p>
-				</div>
-				<div>
-					<p className="text-sm text-muted-foreground">Max Elevation</p>
-					<p>{stats.maxElevation} m</p>
-				</div>
-				<div>
-					<p className="text-sm text-muted-foreground">Min Elevation</p>
-					<p>{stats.minElevation} m</p>
-				</div>
-			</div>
+			<Card>
+				<CardContent className="p-4">
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<p className="text-sm text-muted-foreground">Elevation Gain</p>
+							<p>{stats.totalAscent} m</p>
+						</div>
+						<div>
+							<p className="text-sm text-muted-foreground">Max Elevation</p>
+							<p>{stats.maxElevation} m</p>
+						</div>
+						<div>
+							<p className="text-sm text-muted-foreground">Min Elevation</p>
+							<p>{stats.minElevation} m</p>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 
-			<div className="relative bg-background rounded-lg p-4">
-				<div className="h-[160px]">
-					<ElevationChart data={elevationData} />
-				</div>
+			<div className="h-[160px]">
+				<ElevationChart data={elevationData} />
 			</div>
 		</>
 	);

@@ -59,6 +59,7 @@ import { Textarea } from './ui/textarea';
 import type { Activity } from '@/types/activity';
 import { ElevationDetails } from './ElevationDetails';
 import { ActivityList } from './ActivityList';
+import { RouteDetails } from './RouteDetails';
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activities: ActivityWithMap[];
@@ -556,35 +557,32 @@ export function AppSidebar({
 						</div>
 					) : (
 						<>
-							<Card>
-								<CardHeader>
-									<p>Distance: {(selectedRoute as RouteWithDistance)?.distance?.toFixed(2) || 'N/A'}km</p>
-								</CardHeader>
-							</Card>
-							<Card>
-								<CardHeader>
-									<p>Created: {new Date(selectedRoute.created_at).toLocaleString()}</p>
-								</CardHeader>
-							</Card>
-							<Card>
-								<CardHeader>
-									<CardTitle>Comments</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-sm">{selectedRoute.comments || 'No comments'}</p>
-								</CardContent>
-							</Card>
-							{!editingRouteId && <ElevationDetails source={selectedRoute} />}
-						</>
-					)}
-					<Button
-						variant="secondary"
-						className="w-full flex gap-2"
-						onClick={() => {
-							if (!selectedRoute.geometry) return;
+							<RouteDetails
+								route={selectedRoute}
+								editingRouteId={editingRouteId}
+								editingName={editingName}
+								editingComments={editingComments}
+								onEditStart={() => {
+									setEditingRouteId(selectedRoute.id);
+									setEditingName(selectedRoute.name);
+									setEditingComments(selectedRoute.comments || '');
+								}}
+								onEditCancel={() => setEditingRouteId(null)}
+								setEditingName={setEditingName}
+								setEditingComments={setEditingComments}
+								onRouteRename={onRouteRename}
+								onRouteDelete={onRouteDelete}
+								onRouteCommentUpdate={onRouteCommentUpdate}
+								onClose={() => setSelectedRouteId(null)}
+							/>
+							<Button
+								variant="secondary"
+								className="w-full flex gap-2"
+								onClick={() => {
+									if (!selectedRoute.geometry) return;
 
-							// Create GPX content
-							const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+									// Create GPX content
+									const gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Villspor">
     <trk>
         <name>${selectedRoute.name}</name>
@@ -596,21 +594,23 @@ export function AppSidebar({
     </trk>
 </gpx>`;
 
-							// Create and trigger download
-							const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-							const url = window.URL.createObjectURL(blob);
-							const a = document.createElement('a');
-							a.href = url;
-							a.download = `${selectedRoute.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.gpx`;
-							document.body.appendChild(a);
-							a.click();
-							document.body.removeChild(a);
-							window.URL.revokeObjectURL(url);
-						}}
-					>
-						<Download className="h-4 w-4" />
-						Download GPX
-					</Button>
+									// Create and trigger download
+									const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+									const url = window.URL.createObjectURL(blob);
+									const a = document.createElement('a');
+									a.href = url;
+									a.download = `${selectedRoute.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.gpx`;
+									document.body.appendChild(a);
+									a.click();
+									document.body.removeChild(a);
+									window.URL.revokeObjectURL(url);
+								}}
+							>
+								<Download className="h-4 w-4" />
+								Download GPX
+							</Button>
+						</>
+					)}
 				</div>
 			);
 		}
