@@ -63,6 +63,7 @@ import { RouteDetails } from './RouteDetails';
 import { WaypointDetails } from './WaypointDetails';
 import type { ActivityWithMap } from '@/types/activity';
 import { SidebarNavigation, navigationItems } from './SidebarNavigation';
+import { ActivityDetails } from './ActivityDetails';
 
 interface ElevationPoint {
 	distance: number; // distance in km
@@ -513,52 +514,13 @@ export function AppSidebar({
 
 		if (selectedActivity) {
 			return (
-				<div id="slide" className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-					<div className="flex justify-between items-center">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedActivity.name}</h3>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-8 w-8 p-0"
-							onClick={() => {
-								setSelectedRouteId(null);
-								if (onActivitySelect) onActivitySelect(null as any);
-							}}
-						>
-							<X className="h-4 w-4" />
-							<span className="sr-only">Close activity</span>
-						</Button>
-					</div>
-					<div className="flex justify-between gap-2">
-						<Badge variant={'secondary'} className="flex-1 flex items-center justify-center">
-							{selectedActivity.type}
-						</Badge>
-						<Badge variant={'secondary'} className="flex-1 flex items-center justify-center">
-							{selectedActivity.start_date.slice(0, 10)}
-						</Badge>
-					</div>
-					<Card>
-						<CardHeader>
-							<p>Distance: {(selectedActivity.distance / 1000).toFixed(2)} km</p>
-						</CardHeader>
-					</Card>
-					<Card>
-						<CardHeader>
-							<p>Moving time: {formatTime(selectedActivity.moving_time)}</p>
-						</CardHeader>
-					</Card>
-					<Card>
-						<CardHeader>
-							<p>Total elevation gain: {selectedActivity.total_elevation_gain} m</p>
-						</CardHeader>
-					</Card>
-					<Card>
-						<CardHeader>
-							<p>Moving speed: {(selectedActivity.average_speed * 3.6).toFixed(2)} km/t</p>
-						</CardHeader>
-					</Card>
-					{selectedActivity && <ElevationDetails source={selectedActivity} />}
-				</div>
+				<ActivityDetails
+					activity={selectedActivity}
+					onClose={() => {
+						setSelectedRouteId(null);
+						if (onActivitySelect) onActivitySelect(null as any);
+					}}
+				/>
 			);
 		}
 
