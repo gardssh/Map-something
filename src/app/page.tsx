@@ -19,7 +19,7 @@ import * as api from '@/services/api';
 import { ElevationDetails } from '@/components/ElevationDetails';
 
 export default function Home() {
-	const { user, loading, signOut } = useAuth();
+	const { user, loading: authLoading } = useAuth();
 	const { isMobile, isPWA, isOnline } = useResponsiveLayout();
 	const [activities, setActivities] = useState<any[]>([]);
 	const [activitiesLoading, setActivitiesLoading] = useState(true);
@@ -42,7 +42,7 @@ export default function Home() {
 	}, [isOnline]);
 
 	useEffect(() => {
-		if (user) {
+		if (!authLoading && user) {
 			// Load initial data
 			Promise.all([api.fetchActivities(), api.fetchRoutes(), api.fetchWaypoints()])
 				.then(([activities, routes, waypoints]) => {
@@ -55,8 +55,11 @@ export default function Home() {
 					console.error('Error loading data:', error);
 					setActivitiesLoading(false);
 				});
+		} else if (!authLoading && !user) {
+			// Not authenticated
+			window.location.href = '/login';
 		}
-	}, [user]);
+	}, [user, authLoading]);
 
 	useEffect(() => {
 		if (!selectedRoute || !selectedRoute.geometry?.coordinates) return;
@@ -275,12 +278,17 @@ export default function Home() {
 		}
 	};
 
-	if (loading) {
-		return <LoadingSpinner message="Loading authentication..." />;
+	if (authLoading) {
+		return (
+			<div className="flex h-screen w-screen items-center justify-center">
+				<LoadingSpinner />
+				<span className="ml-2">Loading authentication...</span>
+			</div>
+		);
 	}
 
 	if (!user) {
-		return redirect(`/login`);
+		return null; // Will redirect in useEffect
 	}
 
 	if (activitiesLoading) {

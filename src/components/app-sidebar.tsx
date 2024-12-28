@@ -64,6 +64,7 @@ import { WaypointDetails } from './WaypointDetails';
 import type { ActivityWithMap } from '@/types/activity';
 import { SidebarNavigation, navigationItems } from './SidebarNavigation';
 import { ActivityDetails } from './ActivityDetails';
+import { RouteList } from './RouteList';
 
 interface ElevationPoint {
 	distance: number; // distance in km
@@ -372,143 +373,27 @@ export function AppSidebar({
 
 		if (selectedRoute) {
 			return (
-				<div className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-					<div className="flex justify-between items-center">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedRoute.name}</h3>
-						<div className="flex gap-1">
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={() => {
-									setEditingRouteId(selectedRoute.id);
-									setEditingName(selectedRoute.name);
-									setEditingComments(selectedRoute.comments || '');
-								}}
-							>
-								<Edit2 className="h-4 w-4" />
-								<span className="sr-only">Edit route</span>
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={(e) => {
-									e.stopPropagation();
-									onRouteDelete?.(selectedRoute.id);
-								}}
-							>
-								<Trash2 className="h-4 w-4" />
-								<span className="sr-only">Delete route</span>
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={() => {
-									setSelectedRouteId(null);
-									onRouteSelect?.(null);
-								}}
-							>
-								<X className="h-4 w-4" />
-								<span className="sr-only">Close route</span>
-							</Button>
-						</div>
-					</div>
-					{editingRouteId === selectedRoute.id ? (
-						<div className="space-y-4">
-							<div className="flex gap-2">
-								<Input value={editingName} onChange={(e) => setEditingName(e.target.value)} className="h-8" />
-							</div>
-							<Card>
-								<CardHeader>
-									<CardTitle>Comments</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<Textarea
-										placeholder="Add comments..."
-										value={editingComments}
-										onChange={(e) => setEditingComments(e.target.value)}
-										className="min-h-[100px]"
-									/>
-								</CardContent>
-							</Card>
-							<div className="flex gap-2 justify-end">
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => {
-										onRouteRename?.(selectedRoute.id, editingName);
-										onRouteCommentUpdate?.(selectedRoute.id, editingComments);
-										setEditingRouteId(null);
-									}}
-								>
-									<Check className="h-4 w-4 mr-1" />
-									Save
-								</Button>
-								<Button variant="ghost" size="sm" onClick={() => setEditingRouteId(null)}>
-									<X className="h-4 w-4 mr-1" />
-									Cancel
-								</Button>
-							</div>
-						</div>
-					) : (
-						<>
-							<RouteDetails
-								route={selectedRoute}
-								editingRouteId={editingRouteId}
-								editingName={editingName}
-								editingComments={editingComments}
-								onEditStart={() => {
-									setEditingRouteId(selectedRoute.id);
-									setEditingName(selectedRoute.name);
-									setEditingComments(selectedRoute.comments || '');
-								}}
-								onEditCancel={() => setEditingRouteId(null)}
-								setEditingName={setEditingName}
-								setEditingComments={setEditingComments}
-								onRouteRename={onRouteRename}
-								onRouteDelete={onRouteDelete}
-								onRouteCommentUpdate={onRouteCommentUpdate}
-								onClose={() => setSelectedRouteId(null)}
-							/>
-							<Button
-								variant="secondary"
-								className="w-full flex gap-2"
-								onClick={() => {
-									if (!selectedRoute.geometry) return;
-
-									// Create GPX content
-									const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Villspor">
-    <trk>
-        <name>${selectedRoute.name}</name>
-        <trkseg>
-            ${(selectedRoute.geometry.coordinates as [number, number][])
-							.map(([lon, lat]) => `            <trkpt lat="${lat}" lon="${lon}"></trkpt>`)
-							.join('\n')}
-        </trkseg>
-    </trk>
-</gpx>`;
-
-									// Create and trigger download
-									const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-									const url = window.URL.createObjectURL(blob);
-									const a = document.createElement('a');
-									a.href = url;
-									a.download = `${selectedRoute.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.gpx`;
-									document.body.appendChild(a);
-									a.click();
-									document.body.removeChild(a);
-									window.URL.revokeObjectURL(url);
-								}}
-							>
-								<Download className="h-4 w-4" />
-								Download GPX
-							</Button>
-						</>
-					)}
-				</div>
+				<RouteDetails
+					route={selectedRoute}
+					editingRouteId={editingRouteId}
+					editingName={editingName}
+					editingComments={editingComments}
+					onEditStart={() => {
+						setEditingRouteId(selectedRoute.id);
+						setEditingName(selectedRoute.name);
+						setEditingComments(selectedRoute.comments || '');
+					}}
+					onEditCancel={() => setEditingRouteId(null)}
+					setEditingName={setEditingName}
+					setEditingComments={setEditingComments}
+					onRouteRename={onRouteRename}
+					onRouteDelete={onRouteDelete}
+					onRouteCommentUpdate={onRouteCommentUpdate}
+					onClose={() => {
+						setSelectedRouteId(null);
+						onRouteSelect?.(null);
+					}}
+				/>
 			);
 		}
 
@@ -551,56 +436,13 @@ export function AppSidebar({
 				)}
 
 				{activeItem === 'routes' && (
-					<div className="grow gap-2 overflow-y-auto">
-						<div className="flex flex-col gap-4 mb-4">
-							<div className="flex items-center justify-between">
-								<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">Routes</h3>
-							</div>
-							<div className="relative">
-								<Button
-									variant="outline"
-									className="w-full flex items-center justify-center gap-2"
-									disabled={!userId || !onRouteSave}
-								>
-									<Upload className="h-4 w-4" />
-									Upload GPX File
-								</Button>
-								{userId && onRouteSave && (
-									<GpxUpload
-										onRouteSave={onRouteSave}
-										userId={userId}
-										className="absolute inset-0 opacity-0 cursor-pointer"
-									/>
-								)}
-							</div>
-						</div>
-						{routes && routes.length > 0 ? (
-							routes.map((route) => (
-								<Card
-									key={route.id}
-									className="mb-2 hover:bg-accent cursor-pointer transition-colors"
-									onClick={() => {
-										onRouteSelect?.(route);
-										setSelectedRouteId(route.id);
-									}}
-								>
-									<CardHeader>
-										<CardTitle>{route.name}</CardTitle>
-										{route.geometry && (route.geometry as LineString).coordinates && (
-											<CardDescription>
-												Distance: {calculateRouteDistance((route.geometry as LineString).coordinates).toFixed(2)} km
-											</CardDescription>
-										)}
-									</CardHeader>
-									<CardContent>
-										<p>Created: {new Date(route.created_at).toLocaleString()}</p>
-									</CardContent>
-								</Card>
-							))
-						) : (
-							<p className="text-muted-foreground">No routes yet</p>
-						)}
-					</div>
+					<RouteList
+						routes={routes}
+						userId={userId}
+						onRouteSave={onRouteSave}
+						onRouteSelect={onRouteSelect}
+						setSelectedRouteId={setSelectedRouteId}
+					/>
 				)}
 
 				{activeItem === 'waypoints' && (

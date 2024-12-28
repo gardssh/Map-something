@@ -1,25 +1,73 @@
-import type { DbRoute, DbWaypoint } from '@/types/supabase';
-import * as turf from '@turf/turf';
+import { createClient } from '@/lib/supabase';
+import { DbRoute, DbWaypoint } from '@/types/supabase';
+
+const supabase = createClient();
 
 export async function fetchActivities() {
-    const res = await fetch(`/api/activities`);
-    const data = await res.json();
+  try {
+    const response = await fetch('/api/activities');
+    if (!response.ok) {
+      console.error('Activities fetch failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      throw new Error('Failed to fetch activities');
+    }
+    const data = await response.json();
     return data.activities || [];
+  } catch (error) {
+    console.error('Error fetching activities:', error);
+    return [];
+  }
 }
 
 export async function fetchRoutes() {
-    const res = await fetch('/api/routes');
-    const data = await res.json();
-    return data.routes.map((route: DbRoute) => ({
-        ...route,
-        distance: turf.length(turf.lineString(route.geometry.coordinates), { units: `kilometers` }),
-    }));
+  try {
+    const { data, error, status } = await supabase
+      .from('routes')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Routes fetch failed:', {
+        error,
+        status,
+        message: error.message,
+        details: error.details
+      });
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching routes:', error);
+    return [];
+  }
 }
 
 export async function fetchWaypoints() {
-    const res = await fetch('/api/waypoints');
-    const data = await res.json();
-    return data.waypoints || [];
+  try {
+    const { data, error, status } = await supabase
+      .from('waypoints')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Waypoints fetch failed:', {
+        error,
+        status,
+        message: error.message,
+        details: error.details
+      });
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching waypoints:', error);
+    return [];
+  }
 }
 
 export async function handleRouteSave(newRoute: DbRoute) {

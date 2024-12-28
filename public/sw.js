@@ -1,60 +1,52 @@
-const CACHE_NAME = 'villspor-v1';
-const urlsToCache = [
-	'/',
-	'/manifest.json',
-	'/favicon.svg',
-	'https://api.tiles.mapbox.com/mapbox-gl-js/v3.5.2/mapbox-gl.css',
-];
-
+// Service worker for caching and offline functionality
 self.addEventListener('install', (event) => {
-	event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache)));
+	event.waitUntil(
+		caches.open('v1').then((cache) => {
+			return cache.addAll(['/', '/manifest.json', '/favicon.svg']);
+		})
+	);
 });
 
 self.addEventListener('fetch', (event) => {
-	// Skip non-GET requests
-	if (event.request.method !== 'GET') {
-		return;
-	}
-
-	// Skip certain URLs that shouldn't be cached
-	const url = new URL(event.request.url);
-	if (
-		url.pathname.startsWith('/api/') ||
-		url.pathname.includes('chrome-extension') ||
-		url.pathname.includes('geoapify')
-	) {
-		return;
-	}
-
 	event.respondWith(
-		caches.match(event.request).then((cachedResponse) => {
-			if (cachedResponse) {
-				return cachedResponse;
+		caches.match(event.request).then((response) => {
+			// Return cached response if found
+			if (response) {
+				return response;
 			}
 
-			return fetch(event.request)
+			// Clone the request because it can only be used once
+			const fetchRequest = event.request.clone();
+
+			// Make network request and cache the response
+			return fetch(fetchRequest)
 				.then((response) => {
-					// Don't cache if not a valid response
-					if (!response || response.status !== 200 || response.type !== 'basic') {
+					// Don't cache non-success responses or non-GET requests
+					if (!response || response.status !== 200 || response.type !== 'basic' || event.request.method !== 'GET') {
 						return response;
 					}
 
-					// Clone the response for caching
+					// Clone the response because it can only be used once
 					const responseToCache = response.clone();
-					caches
-						.open(CACHE_NAME)
-						.then((cache) => {
+
+					// Only cache same-origin requests
+					if (event.request.url.startsWith(self.location.origin)) {
+						caches.open('v1').then((cache) => {
 							cache.put(event.request, responseToCache);
-						})
-						.catch((err) => {
-							console.warn('Cache put error:', err);
 						});
+					}
 
 					return response;
 				})
-				.catch((error) => {
-					console.warn('Fetch error:', error);
-					return new Response('Network error', { status: 408 });
+				.catch(() => {
+					// Return a fallback response for failed network requests
+					return new Response('Network request failed', {
+						status: 503,
+						statusText: 'Service Unavailable',
+						headers: new Headers({
+							'Content-Type': 'text/plain',
+						}),
+					});
 				});
 		})
 	);

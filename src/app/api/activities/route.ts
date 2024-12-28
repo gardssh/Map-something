@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
 import { switchCoordinates } from '@/components/activities/switchCor';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
     try {
         const supabase = createRouteHandlerClient<Database>({ cookies });
