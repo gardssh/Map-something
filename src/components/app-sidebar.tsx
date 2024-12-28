@@ -60,6 +60,7 @@ import type { Activity } from '@/types/activity';
 import { ElevationDetails } from './ElevationDetails';
 import { ActivityList } from './ActivityList';
 import { RouteDetails } from './RouteDetails';
+import { WaypointDetails } from './WaypointDetails';
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activities: ActivityWithMap[];
@@ -368,108 +369,24 @@ export function AppSidebar({
 	const renderContent = () => {
 		if (selectedWaypoint) {
 			return (
-				<div className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-					<div className="flex justify-between items-center">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedWaypoint.name}</h3>
-						<div className="flex gap-1">
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={() => {
-									setEditingWaypointId(selectedWaypoint.id);
-									setEditingWaypointName(selectedWaypoint.name);
-									setEditingWaypointComments(selectedWaypoint.comments || '');
-								}}
-							>
-								<Edit2 className="h-4 w-4" />
-								<span className="sr-only">Edit waypoint</span>
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={(e) => {
-									e.stopPropagation();
-									onWaypointDelete?.(selectedWaypoint.id);
-								}}
-							>
-								<Trash2 className="h-4 w-4" />
-								<span className="sr-only">Delete waypoint</span>
-							</Button>
-							<Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => handleWaypointSelect?.(null)}>
-								<X className="h-4 w-4" />
-								<span className="sr-only">Close waypoint</span>
-							</Button>
-						</div>
-					</div>
-					{editingWaypointId === selectedWaypoint.id ? (
-						<div className="space-y-4">
-							<div className="flex gap-2">
-								<Input
-									value={editingWaypointName}
-									onChange={(e) => setEditingWaypointName(e.target.value)}
-									className="h-8"
-								/>
-							</div>
-							<Card>
-								<CardHeader>
-									<CardTitle>Comments</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<Textarea
-										placeholder="Add comments..."
-										value={editingWaypointComments}
-										onChange={(e) => setEditingWaypointComments(e.target.value)}
-										className="min-h-[100px]"
-									/>
-								</CardContent>
-							</Card>
-							<div className="flex gap-2 justify-end">
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => {
-										onWaypointRename?.(selectedWaypoint.id, editingWaypointName);
-										onWaypointCommentUpdate?.(selectedWaypoint.id, editingWaypointComments);
-										setEditingWaypointId(null);
-									}}
-								>
-									<Check className="h-4 w-4 mr-1" />
-									Save
-								</Button>
-								<Button variant="ghost" size="sm" onClick={() => setEditingWaypointId(null)}>
-									<X className="h-4 w-4 mr-1" />
-									Cancel
-								</Button>
-							</div>
-						</div>
-					) : (
-						<>
-							<Card>
-								<CardHeader>
-									<p>
-										Coordinates: {selectedWaypoint.coordinates[0].toFixed(6)},{' '}
-										{selectedWaypoint.coordinates[1].toFixed(6)}
-									</p>
-								</CardHeader>
-							</Card>
-							<Card>
-								<CardHeader>
-									<p>Created: {new Date(selectedWaypoint.created_at).toLocaleString()}</p>
-								</CardHeader>
-							</Card>
-							<Card>
-								<CardHeader>
-									<CardTitle>Comments</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-sm">{selectedWaypoint.comments || 'No comments'}</p>
-								</CardContent>
-							</Card>
-						</>
-					)}
-				</div>
+				<WaypointDetails
+					waypoint={selectedWaypoint}
+					editingWaypointId={editingWaypointId}
+					editingWaypointName={editingWaypointName}
+					editingWaypointComments={editingWaypointComments}
+					onEditStart={() => {
+						setEditingWaypointId(selectedWaypoint.id);
+						setEditingWaypointName(selectedWaypoint.name);
+						setEditingWaypointComments(selectedWaypoint.comments || '');
+					}}
+					onEditCancel={() => setEditingWaypointId(null)}
+					onWaypointRename={onWaypointRename}
+					onWaypointDelete={onWaypointDelete}
+					onWaypointCommentUpdate={onWaypointCommentUpdate}
+					onClose={() => handleWaypointSelect?.(null)}
+					setEditingWaypointName={setEditingWaypointName}
+					setEditingWaypointComments={setEditingWaypointComments}
+				/>
 			);
 		}
 
