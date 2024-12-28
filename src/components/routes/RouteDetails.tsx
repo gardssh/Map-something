@@ -32,6 +32,12 @@ export const RouteDetails = ({ route, onDelete, onEdit }: RouteDetailsProps) => 
 		minElevation: 0,
 	});
 
+	// Update local state when route prop changes
+	useEffect(() => {
+		setEditName(route.name);
+		setEditComment(route.comments || '');
+	}, [route]);
+
 	useEffect(() => {
 		const fetchElevationData = async () => {
 			if (!route.geometry?.coordinates) {

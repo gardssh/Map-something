@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import type { DbWaypoint } from '@/types/supabase';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface WaypointDetailsProps {
 	waypoint: DbWaypoint;
@@ -17,6 +17,12 @@ export const WaypointDetails = ({ waypoint, onDelete, onEdit }: WaypointDetailsP
 	const [isEditing, setIsEditing] = useState(false);
 	const [editName, setEditName] = useState(waypoint.name);
 	const [editComment, setEditComment] = useState(waypoint.comments || '');
+
+	// Update local state when waypoint prop changes
+	useEffect(() => {
+		setEditName(waypoint.name);
+		setEditComment(waypoint.comments || '');
+	}, [waypoint]);
 
 	const handleSave = () => {
 		if (!onEdit) return;

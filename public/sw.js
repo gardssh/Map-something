@@ -11,6 +11,11 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+	// Only cache GET requests
+	if (event.request.method !== 'GET') {
+		return event.respondWith(fetch(event.request));
+	}
+
 	event.respondWith(
 		fetch(event.request)
 			.then((response) => {
