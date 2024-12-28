@@ -16,6 +16,7 @@ import { AppSidebarAndMap } from '@/components/AppSidebarAndMap';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { MobileView } from '@/components/MobileView';
 import * as api from '@/services/api';
+import { ElevationDetails } from '@/components/ElevationDetails';
 
 export default function Home() {
 	const { user, loading, signOut } = useAuth();

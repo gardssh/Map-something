@@ -11,40 +11,51 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-	// Only cache GET requests
+	// Skip non-GET requests
 	if (event.request.method !== 'GET') {
-		return event.respondWith(fetch(event.request));
+		return;
+	}
+
+	// Skip certain URLs that shouldn't be cached
+	const url = new URL(event.request.url);
+	if (
+		url.pathname.startsWith('/api/') ||
+		url.pathname.includes('chrome-extension') ||
+		url.pathname.includes('geoapify')
+	) {
+		return;
 	}
 
 	event.respondWith(
-		fetch(event.request)
-			.then((response) => {
-				// Check if we received a valid response
-				if (!response || response.status !== 200) {
-					return response;
-				}
+		caches.match(event.request).then((cachedResponse) => {
+			if (cachedResponse) {
+				return cachedResponse;
+			}
 
-				// Clone the response
-				const responseToCache = response.clone();
+			return fetch(event.request)
+				.then((response) => {
+					// Don't cache if not a valid response
+					if (!response || response.status !== 200 || response.type !== 'basic') {
+						return response;
+					}
 
-				// Add to cache
-				caches.open(CACHE_NAME).then((cache) => {
-					cache.put(event.request, responseToCache);
-				});
-
-				return response;
-			})
-			.catch(() => {
-				// If fetch fails, try to get from cache
-				return caches.match(event.request).then((response) => {
-					return (
-						response ||
-						new Response('Network error happened', {
-							status: 408,
-							headers: { 'Content-Type': 'text/plain' },
+					// Clone the response for caching
+					const responseToCache = response.clone();
+					caches
+						.open(CACHE_NAME)
+						.then((cache) => {
+							cache.put(event.request, responseToCache);
 						})
-					);
+						.catch((err) => {
+							console.warn('Cache put error:', err);
+						});
+
+					return response;
+				})
+				.catch((error) => {
+					console.warn('Fetch error:', error);
+					return new Response('Network error', { status: 408 });
 				});
-			})
+		})
 	);
 });

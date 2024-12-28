@@ -33,7 +33,7 @@ export interface Activity {
   selected?: boolean;
   visible?: boolean;
   coordinates?: number[] | null;
-  bounds?: number[] | null;
+  bounds?: number[][] | null;
   elevation_data?: any;
   feature?: Feature<LineString, GeoJsonProperties> | null;
   sourceId?: string;

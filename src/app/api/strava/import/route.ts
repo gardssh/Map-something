@@ -85,7 +85,8 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
     // Ensure arrays are properly formatted
     const start_latlng = Array.isArray(activity.start_latlng) ? activity.start_latlng.map(Number) : [];
     const end_latlng = Array.isArray(activity.end_latlng) ? activity.end_latlng.map(Number) : [];
-    const bounds = geoJsonFeature ? turf.bbox(geoJsonFeature).map(Number) : [];
+    const bbox = geoJsonFeature ? turf.bbox(geoJsonFeature).map(Number) : [];
+    const bounds = bbox.length === 4 ? [[bbox[0], bbox[1]], [bbox[2], bbox[3]]] : [];
 
     return {
         id: activity.id,

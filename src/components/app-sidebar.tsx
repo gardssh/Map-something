@@ -57,6 +57,8 @@ import { GpxUpload } from './MapComponent/controls/GpxUpload';
 import type { DrawnRoute } from '@/types/route';
 import { Textarea } from './ui/textarea';
 import type { Activity } from '@/types/activity';
+import { ElevationDetails } from './ElevationDetails';
+import { ActivityList } from './ActivityList';
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activities: ActivityWithMap[];
@@ -64,7 +66,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	selectedRouteId: string | number | null;
 	selectedActivity: ActivityWithMap | null;
 	map: mapboxgl.Map | null;
-	onActivitySelect?: (activity: ActivityWithMap) => void;
+	onActivitySelect?: (activity: ActivityWithMap | null) => void;
 	selectedRoute: DbRoute | null;
 	selectedWaypoint: DbWaypoint | null;
 	routes?: DbRoute[];
@@ -572,7 +574,7 @@ export function AppSidebar({
 									<p className="text-sm">{selectedRoute.comments || 'No comments'}</p>
 								</CardContent>
 							</Card>
-							{renderElevationChart()}
+							{!editingRouteId && <ElevationDetails source={selectedRoute} />}
 						</>
 					)}
 					<Button
@@ -659,7 +661,7 @@ export function AppSidebar({
 							<p>Moving speed: {(selectedActivity.average_speed * 3.6).toFixed(2)} km/t</p>
 						</CardHeader>
 					</Card>
-					{renderElevationChart()}
+					{selectedActivity && <ElevationDetails source={selectedActivity} />}
 				</div>
 			);
 		}
@@ -667,70 +669,27 @@ export function AppSidebar({
 		return (
 			<div className="p-4 flex flex-col gap-4 relative grow overflow-y-auto">
 				{activeItem === 'nearby' && (
-					<div className="grow gap-2 overflow-y-auto">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Nearby</h3>
-						{visibleActivities.map((activity: any) => (
-							<div key={activity.id}>
-								<Card
-									className={'mb-2 hover:bg-accent cursor-pointer transition-colors'}
-									onClick={() => onActivitySelect?.(activity)}
-								>
-									<CardHeader>
-										<CardTitle>{activity.name}</CardTitle>
-										<CardDescription>{activity.sport_type}</CardDescription>
-									</CardHeader>
-									<CardContent>
-										<p>Time: {formatTime(activity.moving_time)}</p>
-									</CardContent>
-								</Card>
-								{activity.id === selectedRouteId && <div ref={scrollRef} />}
-							</div>
-						))}
-					</div>
+					<ActivityList
+						activities={activities}
+						visibleActivitiesId={visibleActivitiesId}
+						selectedRouteId={selectedRouteId}
+						onActivitySelect={onActivitySelect}
+						selectedCategories={selectedCategories}
+						setSelectedCategories={setSelectedCategories}
+						mode="nearby"
+					/>
 				)}
 
 				{activeItem === 'activities' && (
-					<div className="grow gap-2 overflow-y-auto">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">All Activities</h3>
-						<div className="flex flex-wrap gap-2 mb-4">
-							{ACTIVITY_CATEGORIES.map((category) => (
-								<Badge
-									key={category}
-									variant="outline"
-									className={cn(
-										'cursor-pointer hover:bg-primary/20 transition-colors',
-										selectedCategories.includes(category)
-											? 'bg-primary text-primary-foreground hover:bg-primary/90'
-											: 'bg-background'
-									)}
-									onClick={() => toggleCategory(category)}
-								>
-									{category}
-								</Badge>
-							))}
-						</div>
-						{activities
-							.filter((activity) =>
-								selectedCategories.includes(categorizeActivity(activity.sport_type) as ActivityCategory)
-							)
-							.map((activity: any) => (
-								<div key={activity.id}>
-									<Card
-										className={'mb-2 hover:bg-accent cursor-pointer transition-colors'}
-										onClick={() => onActivitySelect?.(activity)}
-									>
-										<CardHeader>
-											<CardTitle>{activity.name}</CardTitle>
-											<CardDescription>{activity.sport_type}</CardDescription>
-										</CardHeader>
-										<CardContent>
-											<p>Time: {formatTime(activity.moving_time)}</p>
-										</CardContent>
-									</Card>
-									{activity.id === selectedRouteId && <div ref={scrollRef} />}
-								</div>
-							))}
-					</div>
+					<ActivityList
+						activities={activities}
+						visibleActivitiesId={visibleActivitiesId}
+						selectedRouteId={selectedRouteId}
+						onActivitySelect={onActivitySelect}
+						selectedCategories={selectedCategories}
+						setSelectedCategories={setSelectedCategories}
+						mode="all"
+					/>
 				)}
 
 				{activeItem === 'routes' && (
