@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import type { Waypoint } from '@/types/waypoint';
 import type { Activity, HoverInfo } from '@/types/activity';
 import { categorizeActivity } from '@/lib/utils';
+import { useCallback } from 'react';
 
 interface MapUIProps {
 	activities: Activity[];
@@ -33,6 +34,17 @@ export const MapUI = ({
 	setNewWaypointName,
 	handleWaypointSave,
 }: MapUIProps) => {
+	const handleSave = useCallback(async () => {
+		if (!newWaypointName.trim()) return;
+
+		try {
+			await handleWaypointSave();
+			setShowWaypointDialog(false);
+		} catch (error) {
+			console.error('Error saving waypoint:', error);
+		}
+	}, [handleWaypointSave, newWaypointName, setShowWaypointDialog]);
+
 	return (
 		<>
 			{activities.length > 0 &&
@@ -71,13 +83,21 @@ export const MapUI = ({
 							placeholder="Waypoint name"
 							value={newWaypointName}
 							onChange={(e) => setNewWaypointName(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									handleSave();
+								}
+							}}
 						/>
 					</div>
 					<DialogFooter>
 						<Button variant="ghost" onClick={() => setShowWaypointDialog(false)}>
 							Cancel
 						</Button>
-						<Button onClick={handleWaypointSave}>Save</Button>
+						<Button onClick={handleSave} disabled={!newWaypointName.trim()} className="touch-manipulation">
+							Save
+						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>

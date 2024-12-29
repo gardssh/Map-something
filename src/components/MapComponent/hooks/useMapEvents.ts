@@ -9,6 +9,7 @@ import { handleBounds } from '../utils/mapUtils';
 import type { MapRef } from 'react-map-gl';
 import { formatTime } from '@/lib/timeFormat';
 import type { Waypoint } from '@/types/waypoint';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 interface UseMapEventsProps {
 	activities: Activity[];
@@ -39,13 +40,15 @@ export const useMapEvents = ({
 	handleWaypointSelect,
 	onActivitySelect,
 }: UseMapEventsProps) => {
+	const { isMobile } = useResponsiveLayout();
+
 	const onHover = useCallback(
 		(event: MapLayerMouseEvent) => {
 			const map = mapRef.current?.getMap();
 			if (!map) return;
 
-			// Don't show hover info when drawing
-			if (isDrawing) {
+			// Don't show hover info when drawing or on mobile
+			if (isDrawing || isMobile) {
 				setHoverInfo(null);
 				map.getCanvas().style.cursor = '';
 				return;

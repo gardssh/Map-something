@@ -14,8 +14,8 @@ export function MobileNavBar({ activeItem, onItemSelect }: MobileNavBarProps) {
 				}`}
 				onClick={() => onItemSelect('nearby')}
 			>
-				<Navigation className="h-5 w-5" />
-				<span className="text-xs">Nearby</span>
+				<Navigation className="h-6 w-6" />
+				<span className="text-[11px]">Nearby</span>
 			</button>
 
 			<button
@@ -24,8 +24,8 @@ export function MobileNavBar({ activeItem, onItemSelect }: MobileNavBarProps) {
 				}`}
 				onClick={() => onItemSelect('routes')}
 			>
-				<Route className="h-5 w-5" />
-				<span className="text-xs">Routes</span>
+				<Route className="h-6 w-6" />
+				<span className="text-[11px]">Routes</span>
 			</button>
 
 			<button
@@ -34,8 +34,8 @@ export function MobileNavBar({ activeItem, onItemSelect }: MobileNavBarProps) {
 				}`}
 				onClick={() => onItemSelect('waypoints')}
 			>
-				<MapPin className="h-5 w-5" />
-				<span className="text-xs">Waypoints</span>
+				<MapPin className="h-6 w-6" />
+				<span className="text-[11px]">Waypoints</span>
 			</button>
 
 			<button
@@ -44,8 +44,8 @@ export function MobileNavBar({ activeItem, onItemSelect }: MobileNavBarProps) {
 				}`}
 				onClick={() => onItemSelect('profile')}
 			>
-				<User className="h-5 w-5" />
-				<span className="text-xs">Profile</span>
+				<User className="h-6 w-6" />
+				<span className="text-[11px]">Profile</span>
 			</button>
 		</div>
 	);
