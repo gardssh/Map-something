@@ -1,44 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapComponent } from '@/components/MapComponent';
 import { useAuth } from '@/contexts/AuthContext';
-import AuthComponent from '@/components/Auth/AuthComponent';
-import { Button } from '@/components/ui/button';
 import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
 import type { DbRoute, DbWaypoint } from '@/types/supabase';
 import HelpButton from '@/components/HelpButton';
 import * as turf from '@turf/turf';
-import { AppSidebar } from '@/components/app-sidebar';
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { Separator } from '@/components/ui/separator';
-import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { redirect } from 'next/navigation';
 import { MobileNavBar } from '@/components/MobileNavBar';
-import { cn } from '@/lib/utils';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
-import { MobileProfile } from '@/components/MobileProfile';
-import { MobileDrawer } from '@/components/MobileDrawer';
-import { formatTime } from '@/lib/timeFormat';
-import { Download } from 'lucide-react';
-import { RouteDetails } from '@/components/routes/RouteDetails';
-import { Edit2 } from 'lucide-react';
-import { EditDetailsForm } from '@/components/EditDetailsForm';
-import { ActivityDetails } from '@/components/activities/ActivityDetails';
-import { WaypointDetails } from '@/components/waypoints/WaypointDetails';
-import { ElevationChart } from '@/components/ElevationChart';
+import { AppSidebarAndMap } from '@/components/AppSidebarAndMap';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { MobileView } from '@/components/MobileView';
+import * as api from '@/services/api';
+import { ElevationDetails } from '@/components/ElevationDetails';
 
 export default function Home() {
-	const { user, loading, signOut } = useAuth();
+	const { user, loading: authLoading } = useAuth();
 	const { isMobile, isPWA, isOnline } = useResponsiveLayout();
 	const [activities, setActivities] = useState<any[]>([]);
 	const [activitiesLoading, setActivitiesLoading] = useState(true);
@@ -49,57 +30,36 @@ export default function Home() {
 	const [selectedWaypoint, setSelectedWaypoint] = useState<DbWaypoint | null>(null);
 	const [routes, setRoutes] = useState<DbRoute[]>([]);
 	const [waypoints, setWaypoints] = useState<DbWaypoint[]>([]);
-	const [isOpen, setIsOpen] = useState(false);
 	const [activeItem, setActiveItem] = useState(`nearby`);
 	const [selectedActivity, setSelectedActivity] = useState<any>(null);
 	const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
-	const [isEditingRoute, setIsEditingRoute] = useState(false);
-	const [isEditingWaypoint, setIsEditingWaypoint] = useState(false);
 	const [elevationData, setElevationData] = useState<{ distance: number; elevation: number }[]>([]);
 
 	useEffect(() => {
 		if (!isOnline) {
-			// Handle offline state - could show a notification or load cached data
 			console.log(`App is offline, using cached data`);
 		}
 	}, [isOnline]);
 
 	useEffect(() => {
-		if (user) {
-			// Load activities
-			fetch(`/api/activities`)
-				.then((res) => res.json())
-				.then((data) => {
-					setActivities(data.activities || []);
+		if (!authLoading && user) {
+			// Load initial data
+			Promise.all([api.fetchActivities(), api.fetchRoutes(), api.fetchWaypoints()])
+				.then(([activities, routes, waypoints]) => {
+					setActivities(activities);
+					setRoutes(routes);
+					setWaypoints(waypoints);
 					setActivitiesLoading(false);
 				})
 				.catch((error) => {
-					console.error(`Error loading activities:`, error);
+					console.error('Error loading data:', error);
 					setActivitiesLoading(false);
 				});
-
-			// Load routes
-			fetch(`/api/routes`)
-				.then((res) => res.json())
-				.then((data) => {
-					setRoutes(
-						data.routes.map((route: DbRoute) => ({
-							...route,
-							distance: turf.length(turf.lineString(route.geometry.coordinates), { units: `kilometers` }),
-						}))
-					);
-				})
-				.catch((error) => console.error(`Error loading routes:`, error));
-
-			// Load waypoints
-			fetch(`/api/waypoints`)
-				.then((res) => res.json())
-				.then((data) => {
-					setWaypoints(data.waypoints || []);
-				})
-				.catch((error) => console.error(`Error loading waypoints:`, error));
+		} else if (!authLoading && !user) {
+			// Not authenticated
+			window.location.href = '/login';
 		}
-	}, [user]);
+	}, [user, authLoading]);
 
 	useEffect(() => {
 		if (!selectedRoute || !selectedRoute.geometry?.coordinates) return;
@@ -115,17 +75,13 @@ export default function Home() {
 				const url = `https://api.geoapify.com/v1/routing?waypoints=${waypoints}&mode=hike&details=elevation&apiKey=${process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}`;
 
 				const response = await fetch(url);
-				if (!response.ok) {
-					throw new Error(`Geoapify API error: ${response.status}`);
-				}
+				if (!response.ok) throw new Error(`Geoapify API error: ${response.status}`);
 
 				const data = await response.json();
 				const points: { distance: number; elevation: number }[] = [];
 				let cumulativeDistance = 0;
 
-				if (!data.features?.[0]?.properties?.legs) {
-					throw new Error('Invalid response format');
-				}
+				if (!data.features?.[0]?.properties?.legs) throw new Error('Invalid response format');
 
 				data.features[0].properties.legs.forEach((leg: any) => {
 					leg.elevation_range.forEach(([distance, elevation]: [number, number]) => {
@@ -146,9 +102,6 @@ export default function Home() {
 
 		fetchElevationData();
 	}, [selectedRoute]);
-
-	const filteredActivities = activities;
-	const currentActivity = activities.find((activity) => activity.id === selectedRouteId) || null;
 
 	const handleActivitySelect = (activity: any | null) => {
 		if (!activity) {
@@ -191,26 +144,8 @@ export default function Home() {
 
 	const handleRouteSave = async (newRoute: DbRoute) => {
 		try {
-			const response = await fetch(`/api/routes`, {
-				method: `POST`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify(newRoute),
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || `Failed to save route`);
-			}
-
-			// Fetch updated routes
-			const getResponse = await fetch('/api/routes');
-			const data = await getResponse.json();
-			setRoutes(
-				data.routes.map((route: DbRoute) => ({
-					...route,
-					distance: turf.length(turf.lineString(route.geometry.coordinates), { units: `kilometers` }),
-				}))
-			);
+			const updatedRoutes = await api.handleRouteSave(newRoute);
+			setRoutes(updatedRoutes);
 		} catch (error) {
 			console.error(`Error saving route:`, error);
 		}
@@ -226,9 +161,7 @@ export default function Home() {
 		if (route && mapInstance && `coordinates` in route.geometry) {
 			const coordinates = route.geometry.coordinates as [number, number][];
 			const bounds = coordinates.reduce(
-				(bounds, coord) => {
-					return bounds.extend(coord as [number, number]);
-				},
+				(bounds, coord) => bounds.extend(coord as [number, number]),
 				new LngLatBounds(coordinates[0], coordinates[0])
 			);
 
@@ -247,16 +180,7 @@ export default function Home() {
 
 	const handleRouteDelete = async (routeId: string) => {
 		try {
-			const response = await fetch(`/api/routes`, {
-				method: `DELETE`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ routeId }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to delete route`);
-			}
-
+			await api.handleRouteDelete(routeId);
 			setRoutes(routes.filter((route) => route.id !== routeId));
 			if (selectedRoute?.id === routeId) {
 				setSelectedRoute(null);
@@ -269,17 +193,7 @@ export default function Home() {
 
 	const handleRouteRename = async (routeId: string, newName: string) => {
 		try {
-			const response = await fetch(`/api/routes`, {
-				method: `PATCH`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ routeId, newName }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to rename route`);
-			}
-
-			// Update both the routes list and the selected route
+			await api.handleRouteRename(routeId, newName);
 			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, name: newName } : route)));
 			setSelectedRoute(
 				selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, name: newName } : selectedRoute
@@ -291,25 +205,8 @@ export default function Home() {
 
 	const handleWaypointSave = async (newWaypoint: DbWaypoint) => {
 		try {
-			const response = await fetch(`/api/waypoints`, {
-				method: `POST`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ waypoints: [newWaypoint] }),
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || `Failed to save waypoint`);
-			}
-
-			// Fetch updated waypoints
-			const getResponse = await fetch('/api/waypoints');
-			if (!getResponse.ok) {
-				throw new Error(`Failed to fetch updated waypoints`);
-			}
-
-			const data = await getResponse.json();
-			setWaypoints(data.waypoints || []);
+			const updatedWaypoints = await api.handleWaypointSave(newWaypoint);
+			setWaypoints(updatedWaypoints);
 		} catch (error) {
 			console.error(`Error saving waypoint:`, error);
 			throw error;
@@ -318,16 +215,7 @@ export default function Home() {
 
 	const handleWaypointDelete = async (waypointId: string) => {
 		try {
-			const response = await fetch(`/api/waypoints`, {
-				method: `DELETE`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ waypointId }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to delete waypoint`);
-			}
-
+			await api.handleWaypointDelete(waypointId);
 			setWaypoints(waypoints.filter((waypoint) => waypoint.id !== waypointId));
 			if (selectedWaypoint?.id === waypointId) {
 				setSelectedWaypoint(null);
@@ -354,17 +242,7 @@ export default function Home() {
 
 	const handleWaypointRename = async (waypointId: string, newName: string) => {
 		try {
-			const response = await fetch(`/api/waypoints`, {
-				method: `PATCH`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ waypointId, newName }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to rename waypoint`);
-			}
-
-			// Update both the waypoints list and the selected waypoint
+			await api.handleWaypointRename(waypointId, newName);
 			setWaypoints(
 				waypoints.map((waypoint) => (waypoint.id === waypointId ? { ...waypoint, name: newName } : waypoint))
 			);
@@ -380,17 +258,7 @@ export default function Home() {
 
 	const handleWaypointCommentUpdate = async (waypointId: string, comments: string) => {
 		try {
-			const response = await fetch(`/api/waypoints`, {
-				method: `PATCH`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ waypointId, comments }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to update waypoint comments`);
-			}
-
-			// Update both the waypoints list and the selected waypoint
+			await api.handleWaypointCommentUpdate(waypointId, comments);
 			setWaypoints(waypoints.map((waypoint) => (waypoint.id === waypointId ? { ...waypoint, comments } : waypoint)));
 			setSelectedWaypoint(
 				selectedWaypoint && selectedWaypoint.id === waypointId ? { ...selectedWaypoint, comments } : selectedWaypoint
@@ -402,17 +270,7 @@ export default function Home() {
 
 	const handleRouteCommentUpdate = async (routeId: string, comments: string) => {
 		try {
-			const response = await fetch(`/api/routes`, {
-				method: `PATCH`,
-				headers: { 'Content-Type': `application/json` },
-				body: JSON.stringify({ routeId, comments }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Failed to update route comments`);
-			}
-
-			// Update both the routes list and the selected route
+			await api.handleRouteCommentUpdate(routeId, comments);
 			setRoutes(routes.map((route) => (route.id === routeId ? { ...route, comments } : route)));
 			setSelectedRoute(selectedRoute && selectedRoute.id === routeId ? { ...selectedRoute, comments } : selectedRoute);
 		} catch (error) {
@@ -420,30 +278,21 @@ export default function Home() {
 		}
 	};
 
-	if (loading) {
+	if (authLoading) {
 		return (
-			<div className="flex items-center justify-center h-screen">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-					<p>Loading authentication...</p>
-				</div>
+			<div className="flex h-screen w-screen items-center justify-center">
+				<LoadingSpinner />
+				<span className="ml-2">Loading authentication...</span>
 			</div>
 		);
 	}
 
 	if (!user) {
-		return redirect(`/login`);
+		return null; // Will redirect in useEffect
 	}
 
 	if (activitiesLoading) {
-		return (
-			<div className="flex items-center justify-center h-screen">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-					<p>Loading activities...</p>
-				</div>
-			</div>
-		);
+		return <LoadingSpinner message="Loading activities..." />;
 	}
 
 	return (
@@ -486,382 +335,46 @@ export default function Home() {
 						setShowDetailsDrawer={setShowDetailsDrawer}
 					/>
 				) : (
-					<div className="h-[calc(100vh-4rem)] w-full flex flex-col">
-						{!isOnline && (
-							<div className="bg-yellow-500 text-white px-4 py-2 text-sm">
-								You&apos;re offline. Some features may be limited.
-							</div>
-						)}
-						<div className="flex-1 relative">
-							{activeItem === `profile` ? (
-								<MobileProfile />
-							) : (
-								<>
-									<MapComponent
-										activities={activities}
-										setVisibleActivitiesId={setVisibleActivitiesId}
-										selectedRouteId={selectedRouteId}
-										setSelectedRouteId={setSelectedRouteId}
-										onMapLoad={(map) => setMapInstance(map)}
-										onRouteSave={handleRouteSave}
-										onRouteSelect={handleRouteSelect}
-										onActivitySelect={handleActivitySelect}
-										routes={routes}
-										waypoints={waypoints}
-										onWaypointSave={handleWaypointSave}
-										handleWaypointSelect={handleWaypointSelect}
-										selectedWaypoint={selectedWaypoint}
-										setActiveItem={setActiveItem}
-										setShowDetailsDrawer={setShowDetailsDrawer}
-									/>
-									<MobileDrawer
-										isOpen={[`activities`, `routes`, `waypoints`].includes(activeItem)}
-										onClose={() => setActiveItem(`nearby`)}
-										title={activeItem.charAt(0).toUpperCase() + activeItem.slice(1)}
-										peekContent={
-											activeItem === 'activities' && activities.length > 0 ? (
-												<div className="space-y-4 overflow-auto max-h-[200px]">
-													{activities.slice(0, 3).map((activity) => (
-														<div
-															key={activity.id}
-															className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
-															onClick={() => handleActivitySelect(activity)}
-														>
-															<h3 className="font-medium">{activity.name}</h3>
-															<div className="grid grid-cols-2 gap-4 mt-2">
-																<div>
-																	<p className="text-sm text-muted-foreground">Type</p>
-																	<p>{activity.sport_type}</p>
-																</div>
-																<div>
-																	<p className="text-sm text-muted-foreground">Distance</p>
-																	<p>{((activity.distance || 0) / 1000).toFixed(2)} km</p>
-																</div>
-															</div>
-														</div>
-													))}
-												</div>
-											) : activeItem === 'routes' && routes.length > 0 ? (
-												<div className="space-y-4 overflow-auto max-h-[200px]">
-													{routes.slice(0, 3).map((route) => (
-														<div
-															key={route.id}
-															className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
-															onClick={() => {
-																handleRouteSelect(route);
-																setSelectedRoute(route);
-																setSelectedRouteId(route.id);
-															}}
-														>
-															<h3 className="font-medium">{route.name}</h3>
-															<div className="mt-2">
-																<p className="text-sm text-muted-foreground">Distance</p>
-																<p>{route.distance?.toFixed(1)} km</p>
-															</div>
-															{route.comments && <p className="text-sm text-muted-foreground mt-2">{route.comments}</p>}
-														</div>
-													))}
-												</div>
-											) : activeItem === 'waypoints' && waypoints.length > 0 ? (
-												<div className="space-y-4 overflow-auto max-h-[200px]">
-													{waypoints.slice(0, 3).map((waypoint) => (
-														<div
-															key={waypoint.id}
-															className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
-															onClick={() => handleWaypointSelect(waypoint)}
-														>
-															<h3 className="font-medium">{waypoint.name}</h3>
-															{waypoint.comments && (
-																<p className="text-sm text-muted-foreground mt-2">{waypoint.comments}</p>
-															)}
-														</div>
-													))}
-												</div>
-											) : null
-										}
-									>
-										{activeItem === `activities` && (
-											<div className="space-y-4">
-												{activities.map((activity) => (
-													<div
-														key={activity.id}
-														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
-														onClick={() => handleActivitySelect(activity)}
-													>
-														<h3 className="font-medium">{activity.name}</h3>
-														<p className="text-sm text-muted-foreground">
-															{new Date(activity.start_date).toLocaleDateString()}
-														</p>
-													</div>
-												))}
-											</div>
-										)}
-										{activeItem === `routes` && (
-											<div className="space-y-4">
-												{routes.map((route) => (
-													<div
-														key={route.id}
-														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
-														onClick={() => {
-															handleRouteSelect(route);
-															setSelectedRoute(route);
-															setSelectedRouteId(route.id);
-															setShowDetailsDrawer(true);
-														}}
-													>
-														<div className="flex justify-between items-start">
-															<div>
-																<h3 className="font-medium">{route.name}</h3>
-																<p className="text-sm text-muted-foreground">
-																	Distance: {route.distance?.toFixed(1)} km
-																</p>
-																{route.comments && (
-																	<p className="text-sm text-muted-foreground mt-2">{route.comments}</p>
-																)}
-															</div>
-														</div>
-													</div>
-												))}
-											</div>
-										)}
-										{activeItem === `waypoints` && (
-											<div className="space-y-4">
-												{waypoints.map((waypoint) => (
-													<div
-														key={waypoint.id}
-														className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
-														onClick={() => {
-															handleWaypointSelect(waypoint);
-															setShowDetailsDrawer(true);
-														}}
-													>
-														<div className="flex justify-between items-start">
-															<div>
-																<h3 className="font-medium">{waypoint.name}</h3>
-																{waypoint.comments && (
-																	<p className="text-sm text-muted-foreground">{waypoint.comments}</p>
-																)}
-															</div>
-														</div>
-													</div>
-												))}
-											</div>
-										)}
-									</MobileDrawer>
-									<MobileDrawer
-										isOpen={showDetailsDrawer && (!!selectedActivity || !!selectedRoute || !!selectedWaypoint)}
-										onClose={() => {
-											setShowDetailsDrawer(false);
-											setSelectedActivity(null);
-											setSelectedRoute(null);
-											setSelectedWaypoint(null);
-											handleWaypointSelect?.(null);
-											setSelectedRouteId(null);
-										}}
-										title={
-											selectedActivity
-												? 'Activity Details'
-												: selectedRoute
-													? 'Route Details'
-													: selectedWaypoint
-														? 'Waypoint Details'
-														: ''
-										}
-										peekContent={
-											selectedRoute ? (
-												<div className="space-y-4">
-													<div className="p-4 border rounded-lg">
-														<h3 className="font-medium">{selectedRoute.name}</h3>
-														<div className="grid grid-cols-2 gap-4 mt-2">
-															<div>
-																<p className="text-sm text-muted-foreground">Distance</p>
-																<p>{selectedRoute.distance?.toFixed(1)} km</p>
-															</div>
-															{selectedRoute.comments && (
-																<div>
-																	<p className="text-sm text-muted-foreground">Comments</p>
-																	<p className="truncate">{selectedRoute.comments}</p>
-																</div>
-															)}
-														</div>
-														<div className="mt-4 h-[100px]">
-															<ElevationChart data={elevationData} />
-														</div>
-													</div>
-												</div>
-											) : selectedActivity ? (
-												<div className="space-y-4 overflow-auto max-h-[200px]">
-													<div className="p-4 border rounded-lg">
-														<h3 className="font-medium">{selectedActivity.name}</h3>
-														<div className="grid grid-cols-2 gap-4 mt-2">
-															<div>
-																<p className="text-sm text-muted-foreground">Type</p>
-																<p>{selectedActivity.sport_type}</p>
-															</div>
-															<div>
-																<p className="text-sm text-muted-foreground">Distance</p>
-																<p>{((selectedActivity.distance || 0) / 1000).toFixed(2)} km</p>
-															</div>
-														</div>
-													</div>
-												</div>
-											) : selectedWaypoint ? (
-												<div className="space-y-4">
-													<div className="p-4 border rounded-lg">
-														<h3 className="font-medium">{selectedWaypoint.name}</h3>
-														{selectedWaypoint.comments && (
-															<p className="text-sm text-muted-foreground mt-2">{selectedWaypoint.comments}</p>
-														)}
-														<p className="text-sm text-muted-foreground mt-2">
-															{selectedWaypoint.coordinates[0].toFixed(6)}, {selectedWaypoint.coordinates[1].toFixed(6)}
-														</p>
-													</div>
-												</div>
-											) : null
-										}
-									>
-										{selectedActivity && <ActivityDetails activity={selectedActivity} />}
-										{selectedRoute && (
-											<RouteDetails
-												route={selectedRoute}
-												onDelete={handleRouteDelete}
-												onEdit={(routeId, newName, newComment) => {
-													handleRouteRename(routeId, newName);
-													handleRouteCommentUpdate(routeId, newComment);
-												}}
-											/>
-										)}
-										{selectedWaypoint && (
-											<WaypointDetails
-												waypoint={selectedWaypoint}
-												onDelete={handleWaypointDelete}
-												onEdit={(waypointId, newName, newComment) => {
-													handleWaypointRename(waypointId, newName);
-													handleWaypointCommentUpdate(waypointId, newComment);
-												}}
-											/>
-										)}
-									</MobileDrawer>
-								</>
-							)}
-						</div>
+					<>
+						<MobileView
+							isOnline={isOnline}
+							activeItem={activeItem}
+							activities={activities}
+							visibleActivitiesId={visibleActivitiesId}
+							selectedRouteId={selectedRouteId}
+							mapInstance={mapInstance}
+							setMapInstance={setMapInstance}
+							handleActivitySelect={handleActivitySelect}
+							selectedRoute={selectedRoute}
+							selectedWaypoint={selectedWaypoint}
+							routes={routes}
+							handleRouteSelect={handleRouteSelect}
+							handleRouteDelete={handleRouteDelete}
+							handleRouteRename={handleRouteRename}
+							waypoints={waypoints}
+							handleWaypointDelete={handleWaypointDelete}
+							handleWaypointRename={handleWaypointRename}
+							setVisibleActivitiesId={setVisibleActivitiesId}
+							handleRouteSave={handleRouteSave}
+							handleWaypointSave={handleWaypointSave}
+							setSelectedRouteId={setSelectedRouteId}
+							handleWaypointSelect={handleWaypointSelect}
+							onWaypointCommentUpdate={handleWaypointCommentUpdate}
+							onRouteCommentUpdate={handleRouteCommentUpdate}
+							setActiveItem={setActiveItem}
+							showDetailsDrawer={showDetailsDrawer}
+							setShowDetailsDrawer={setShowDetailsDrawer}
+							selectedActivity={selectedActivity}
+							setSelectedActivity={setSelectedActivity}
+							setSelectedRoute={setSelectedRoute}
+							setSelectedWaypoint={setSelectedWaypoint}
+						/>
 						<MobileNavBar activeItem={activeItem} onItemSelect={setActiveItem} />
-					</div>
+					</>
 				)}
 				<HelpButton activeItem={activeItem} />
 				{isMobile && !isPWA && <PWAInstallPrompt />}
 			</SidebarProvider>
 		</main>
-	);
-}
-
-// Create a new component for the sidebar and map content
-function AppSidebarAndMap({
-	activities,
-	visibleActivitiesId,
-	selectedRouteId,
-	currentActivity,
-	mapInstance,
-	setMapInstance,
-	handleActivitySelect,
-	selectedRoute,
-	selectedWaypoint,
-	routes,
-	handleRouteSelect,
-	handleRouteDelete,
-	handleRouteRename,
-	waypoints,
-	handleWaypointDelete,
-	handleWaypointRename,
-	setVisibleActivitiesId,
-	handleRouteSave,
-	handleWaypointSave,
-	setSelectedRouteId,
-	handleWaypointSelect,
-	onWaypointCommentUpdate,
-	onRouteCommentUpdate,
-	activeItem,
-	setActiveItem,
-	setShowDetailsDrawer,
-}: {
-	activities: any[];
-	visibleActivitiesId: number[];
-	selectedRouteId: string | number | null;
-	currentActivity: any;
-	mapInstance: mapboxgl.Map | null;
-	setMapInstance: (map: mapboxgl.Map) => void;
-	handleActivitySelect: (activity: any | null) => void;
-	selectedRoute: DbRoute | null;
-	selectedWaypoint: DbWaypoint | null;
-	routes: DbRoute[];
-	handleRouteSelect: (route: DbRoute | null) => void;
-	handleRouteDelete: (routeId: string) => void;
-	handleRouteRename: (routeId: string, newName: string) => void;
-	waypoints: DbWaypoint[];
-	handleWaypointDelete: (waypointId: string) => void;
-	handleWaypointRename: (waypointId: string, newName: string) => void;
-	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
-	handleRouteSave: (route: DbRoute) => void;
-	handleWaypointSave: (waypoint: DbWaypoint) => void;
-	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
-	handleWaypointSelect: (waypoint: DbWaypoint | null) => void;
-	onWaypointCommentUpdate: (waypointId: string, comments: string) => void;
-	onRouteCommentUpdate: (routeId: string, comments: string) => void;
-	activeItem: string;
-	setActiveItem: (item: string) => void;
-	setShowDetailsDrawer: (show: boolean) => void;
-}) {
-	const { open: isSidebarOpen } = useSidebar();
-	const { user } = useAuth();
-
-	return (
-		<>
-			<AppSidebar
-				activities={activities}
-				visibleActivitiesId={visibleActivitiesId}
-				selectedRouteId={selectedRouteId}
-				selectedActivity={currentActivity}
-				map={mapInstance}
-				onActivitySelect={handleActivitySelect}
-				selectedRoute={selectedRoute}
-				selectedWaypoint={selectedWaypoint}
-				routes={routes}
-				onRouteSelect={handleRouteSelect}
-				onRouteDelete={handleRouteDelete}
-				onRouteRename={handleRouteRename}
-				waypoints={waypoints}
-				onWaypointDelete={handleWaypointDelete}
-				onWaypointRename={handleWaypointRename}
-				setSelectedRouteId={setSelectedRouteId}
-				handleWaypointSelect={handleWaypointSelect}
-				onRouteSave={handleRouteSave}
-				userId={user?.id || ``}
-				onWaypointCommentUpdate={onWaypointCommentUpdate}
-				onRouteCommentUpdate={onRouteCommentUpdate}
-				activeItem={activeItem}
-				setActiveItem={setActiveItem}
-			/>
-			<SidebarInset className="flex flex-col h-screen w-full">
-				<div className="flex-1 relative w-full pb-16 md:pb-0">
-					<MapComponent
-						activities={activities}
-						setVisibleActivitiesId={setVisibleActivitiesId}
-						selectedRouteId={selectedRouteId}
-						setSelectedRouteId={setSelectedRouteId}
-						onMapLoad={(map) => setMapInstance(map)}
-						onRouteSave={handleRouteSave}
-						onRouteSelect={handleRouteSelect}
-						onActivitySelect={handleActivitySelect}
-						routes={routes}
-						waypoints={waypoints}
-						onWaypointSave={handleWaypointSave}
-						handleWaypointSelect={handleWaypointSelect}
-						selectedWaypoint={selectedWaypoint}
-						setActiveItem={setActiveItem}
-						setShowDetailsDrawer={setShowDetailsDrawer}
-					/>
-				</div>
-			</SidebarInset>
-		</>
 	);
 }

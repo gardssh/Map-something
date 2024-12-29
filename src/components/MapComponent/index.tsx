@@ -97,17 +97,35 @@ export const MapComponent = ({
 		if (!mapRef.current) return { activities: [], routes: [], waypoints: [] };
 		const map = mapRef.current.getMap();
 
-		const activityFeatures = map.queryRenderedFeatures(undefined, {
-			layers: ['foot-sports', 'cycle-sports', 'water-sports', 'winter-sports', 'other-sports'],
-		});
+		const activityFeatures = map.queryRenderedFeatures(
+			[
+				[0, 0],
+				[map.getCanvas().width, map.getCanvas().height],
+			],
+			{
+				layers: ['foot-sports', 'cycle-sports', 'water-sports', 'winter-sports', 'other-sports'],
+			}
+		);
 
-		const routeFeatures = map.queryRenderedFeatures(undefined, {
-			layers: ['saved-routes-layer', 'saved-routes-border'],
-		});
+		const routeFeatures = map.queryRenderedFeatures(
+			[
+				[0, 0],
+				[map.getCanvas().width, map.getCanvas().height],
+			],
+			{
+				layers: ['saved-routes-layer', 'saved-routes-border'],
+			}
+		);
 
-		const waypointFeatures = map.queryRenderedFeatures(undefined, {
-			layers: ['waypoints-layer'],
-		});
+		const waypointFeatures = map.queryRenderedFeatures(
+			[
+				[0, 0],
+				[map.getCanvas().width, map.getCanvas().height],
+			],
+			{
+				layers: ['waypoints-layer'],
+			}
+		);
 
 		return {
 			activities: activityFeatures,
@@ -345,9 +363,15 @@ export const MapComponent = ({
 
 			console.log('Debug waypoints:', {
 				waypoints,
-				waypointFeatures: map.queryRenderedFeatures(undefined, {
-					layers: ['waypoints-layer', 'waypoints-layer-touch'],
-				}),
+				waypointFeatures: map.queryRenderedFeatures(
+					[
+						[0, 0],
+						[map.getCanvas().width, map.getCanvas().height],
+					],
+					{
+						layers: ['waypoints-layer', 'waypoints-layer-touch'],
+					}
+				),
 				clickPoint: point,
 				allFeatures: features,
 				waypointSource: map.getSource('waypoints'),
@@ -368,7 +392,7 @@ export const MapComponent = ({
 			if (!properties) return;
 
 			// Handle activity touches
-			if (properties.isActivity || feature.layer.id.endsWith('-touch')) {
+			if (properties.isActivity || (feature.layer && feature.layer.id.endsWith('-touch'))) {
 				const activity = activities.find((a) => a.id === properties.id);
 				if (activity) {
 					setSelectedRouteId(activity.id);
@@ -383,9 +407,10 @@ export const MapComponent = ({
 
 			// Handle route touches
 			if (
-				feature.layer.id === 'saved-routes-layer' ||
-				feature.layer.id === 'saved-routes-border' ||
-				feature.layer.id === 'saved-routes-touch'
+				feature.layer &&
+				(feature.layer.id === 'saved-routes-layer' ||
+					feature.layer.id === 'saved-routes-border' ||
+					feature.layer.id === 'saved-routes-touch')
 			) {
 				const route = routes?.find((r) => r.id === properties.id);
 				if (route) {
@@ -401,7 +426,7 @@ export const MapComponent = ({
 			}
 
 			// Handle waypoint touches
-			if (feature.layer.id === 'waypoints-layer' || feature.layer.id === 'waypoints-layer-touch') {
+			if (feature.layer && (feature.layer.id === 'waypoints-layer' || feature.layer.id === 'waypoints-layer-touch')) {
 				const waypoint = waypoints?.find((w) => w.id === properties.id);
 				if (waypoint) {
 					handleWaypointSelect?.(waypoint);
@@ -528,7 +553,10 @@ export const MapComponent = ({
 					}
 
 					// Handle route clicks
-					if (feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border') {
+					if (
+						feature.layer &&
+						(feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border')
+					) {
 						const route = routes?.find((r) => r.id === properties.id);
 						if (route) {
 							setSelectedRouteId(route.id);
@@ -542,7 +570,10 @@ export const MapComponent = ({
 					}
 
 					// Handle waypoint clicks
-					if (feature.layer.id === 'waypoints-layer' || feature.layer.id === 'waypoints-layer-touch') {
+					if (
+						feature.layer &&
+						(feature.layer.id === 'waypoints-layer' || feature.layer.id === 'waypoints-layer-touch')
+					) {
 						const waypoint = waypoints?.find((w) => w.id === properties.id);
 						if (waypoint) {
 							handleWaypointSelect?.(waypoint);

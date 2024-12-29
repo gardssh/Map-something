@@ -4,16 +4,18 @@ import { useEffect } from 'react';
 
 export function PWAInstall() {
 	useEffect(() => {
-		if ('serviceWorker' in navigator) {
-			navigator.serviceWorker
-				.register('/sw.js')
-				.then((registration) => {
+		const registerServiceWorker = async () => {
+			if ('serviceWorker' in navigator) {
+				try {
+					const registration = await navigator.serviceWorker.register('/sw.js');
 					console.log('Service Worker registered with scope:', registration.scope);
-				})
-				.catch((error) => {
+				} catch (error) {
 					console.error('Service Worker registration failed:', error);
-				});
-		}
+				}
+			}
+		};
+
+		registerServiceWorker();
 	}, []);
 
 	return null;

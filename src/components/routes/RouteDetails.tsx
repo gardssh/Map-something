@@ -32,6 +32,12 @@ export const RouteDetails = ({ route, onDelete, onEdit }: RouteDetailsProps) => 
 		minElevation: 0,
 	});
 
+	// Update local state when route prop changes
+	useEffect(() => {
+		setEditName(route.name);
+		setEditComment(route.comments || '');
+	}, [route]);
+
 	useEffect(() => {
 		const fetchElevationData = async () => {
 			if (!route.geometry?.coordinates) {
@@ -105,6 +111,8 @@ export const RouteDetails = ({ route, onDelete, onEdit }: RouteDetailsProps) => 
 		if (!onEdit) return;
 		if (editName.trim() === '') return;
 		onEdit(route.id as string, editName, editComment);
+		route.name = editName;
+		route.comments = editComment;
 		setIsEditing(false);
 	};
 
@@ -220,10 +228,8 @@ export const RouteDetails = ({ route, onDelete, onEdit }: RouteDetailsProps) => 
 					</div>
 				</div>
 
-				<div className="relative bg-background rounded-lg p-4">
-					<div className="h-[160px]">
-						<ElevationChart data={elevationData} />
-					</div>
+				<div className="h-[160px]">
+					<ElevationChart data={elevationData} />
 				</div>
 			</div>
 

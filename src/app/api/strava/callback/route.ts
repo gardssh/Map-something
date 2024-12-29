@@ -33,4 +33,6 @@ export async function GET(req: NextRequest) {
     console.error('Error handling Strava callback:', error);
     return NextResponse.redirect(new URL('/settings?error=server_error', req.url));
   }
-} 
+}
+
+export const dynamic = 'force-dynamic'; 

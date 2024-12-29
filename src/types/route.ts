@@ -16,6 +16,6 @@ export type DrawnRoute = {
     source: 'draw' | 'gpx_upload';
 };
 
-export type RouteWithDistance = DbRoute & {
-  distance: number;
+export interface RouteWithDistance extends DbRoute {
+    distance: number;
 } 

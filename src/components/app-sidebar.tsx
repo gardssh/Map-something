@@ -57,6 +57,37 @@ import { GpxUpload } from './MapComponent/controls/GpxUpload';
 import type { DrawnRoute } from '@/types/route';
 import { Textarea } from './ui/textarea';
 import type { Activity } from '@/types/activity';
+import { ElevationDetails } from './ElevationDetails';
+import { ActivityList } from './ActivityList';
+import { RouteDetails } from './routes/RouteDetails';
+import { WaypointDetails } from './WaypointDetails';
+import type { ActivityWithMap } from '@/types/activity';
+import { SidebarNavigation, navigationItems } from './SidebarNavigation';
+import { ActivityDetails } from './ActivityDetails';
+import { RouteList } from './RouteList';
+
+interface ElevationPoint {
+	distance: number; // distance in km
+	elevation: number; // elevation in meters
+}
+
+interface RouteData {
+	features: Array<{
+		properties: {
+			legs: Array<{
+				distance: number;
+				elevation_range: Array<[number, number]>;
+			}>;
+		};
+	}>;
+}
+
+const calculateRouteDistance = (coordinates: Position[]) => {
+	const validCoords = coordinates.filter(
+		(coord): coord is [number, number] => Array.isArray(coord) && coord.length === 2
+	);
+	return turf.length(turf.lineString(validCoords), { units: 'kilometers' });
+};
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activities: ActivityWithMap[];
@@ -64,7 +95,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	selectedRouteId: string | number | null;
 	selectedActivity: ActivityWithMap | null;
 	map: mapboxgl.Map | null;
-	onActivitySelect?: (activity: ActivityWithMap) => void;
+	onActivitySelect?: (activity: ActivityWithMap | null) => void;
 	selectedRoute: DbRoute | null;
 	selectedWaypoint: DbWaypoint | null;
 	routes?: DbRoute[];
@@ -83,44 +114,6 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activeItem?: string;
 	setActiveItem?: (item: string) => void;
 }
-
-const navigationItems = [
-	{ id: 'nearby', icon: Navigation, label: 'Nearby' },
-	{ id: 'activities', icon: Medal, label: 'Activities' },
-	{ id: 'routes', icon: Route, label: 'Routes' },
-	{ id: 'waypoints', icon: MapPin, label: 'Waypoints' },
-] as const;
-
-interface ElevationPoint {
-	distance: number; // distance in km
-	elevation: number; // elevation in meters
-}
-
-interface RouteData {
-	features: Array<{
-		properties: {
-			legs: Array<{
-				distance: number;
-				elevation_range: Array<[number, number]>;
-			}>;
-		};
-	}>;
-}
-
-interface ActivityMap {
-	summary_polyline: string;
-}
-
-interface ActivityWithMap extends DbStravaActivity {
-	map: ActivityMap;
-}
-
-const calculateRouteDistance = (coordinates: Position[]) => {
-	const validCoords = coordinates.filter(
-		(coord): coord is [number, number] => Array.isArray(coord) && coord.length === 2
-	);
-	return turf.length(turf.lineString(validCoords), { units: 'kilometers' });
-};
 
 export function AppSidebar({
 	activities = [],
@@ -278,8 +271,6 @@ export function AppSidebar({
 		avatar: user?.user_metadata?.avatar_url || '',
 	};
 
-	const visibleActivities = activities.filter((activity) => visibleActivitiesId.includes(Number(activity.id)));
-
 	const chartConfig = {
 		elevation: {
 			label: 'Elevation (m)',
@@ -356,434 +347,89 @@ export function AppSidebar({
 		);
 	};
 
-	const toggleCategory = (category: ActivityCategory) => {
-		setSelectedCategories((prev) =>
-			prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
-		);
-	};
-
 	const renderContent = () => {
 		if (selectedWaypoint) {
 			return (
-				<div className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-					<div className="flex justify-between items-center">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedWaypoint.name}</h3>
-						<div className="flex gap-1">
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={() => {
-									setEditingWaypointId(selectedWaypoint.id);
-									setEditingWaypointName(selectedWaypoint.name);
-									setEditingWaypointComments(selectedWaypoint.comments || '');
-								}}
-							>
-								<Edit2 className="h-4 w-4" />
-								<span className="sr-only">Edit waypoint</span>
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={(e) => {
-									e.stopPropagation();
-									onWaypointDelete?.(selectedWaypoint.id);
-								}}
-							>
-								<Trash2 className="h-4 w-4" />
-								<span className="sr-only">Delete waypoint</span>
-							</Button>
-							<Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => handleWaypointSelect?.(null)}>
-								<X className="h-4 w-4" />
-								<span className="sr-only">Close waypoint</span>
-							</Button>
-						</div>
-					</div>
-					{editingWaypointId === selectedWaypoint.id ? (
-						<div className="space-y-4">
-							<div className="flex gap-2">
-								<Input
-									value={editingWaypointName}
-									onChange={(e) => setEditingWaypointName(e.target.value)}
-									className="h-8"
-								/>
-							</div>
-							<Card>
-								<CardHeader>
-									<CardTitle>Comments</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<Textarea
-										placeholder="Add comments..."
-										value={editingWaypointComments}
-										onChange={(e) => setEditingWaypointComments(e.target.value)}
-										className="min-h-[100px]"
-									/>
-								</CardContent>
-							</Card>
-							<div className="flex gap-2 justify-end">
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => {
-										onWaypointRename?.(selectedWaypoint.id, editingWaypointName);
-										onWaypointCommentUpdate?.(selectedWaypoint.id, editingWaypointComments);
-										setEditingWaypointId(null);
-									}}
-								>
-									<Check className="h-4 w-4 mr-1" />
-									Save
-								</Button>
-								<Button variant="ghost" size="sm" onClick={() => setEditingWaypointId(null)}>
-									<X className="h-4 w-4 mr-1" />
-									Cancel
-								</Button>
-							</div>
-						</div>
-					) : (
-						<>
-							<Card>
-								<CardHeader>
-									<p>
-										Coordinates: {selectedWaypoint.coordinates[0].toFixed(6)},{' '}
-										{selectedWaypoint.coordinates[1].toFixed(6)}
-									</p>
-								</CardHeader>
-							</Card>
-							<Card>
-								<CardHeader>
-									<p>Created: {new Date(selectedWaypoint.created_at).toLocaleString()}</p>
-								</CardHeader>
-							</Card>
-							<Card>
-								<CardHeader>
-									<CardTitle>Comments</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-sm">{selectedWaypoint.comments || 'No comments'}</p>
-								</CardContent>
-							</Card>
-						</>
-					)}
-				</div>
+				<WaypointDetails
+					waypoint={selectedWaypoint}
+					editingWaypointId={editingWaypointId}
+					editingWaypointName={editingWaypointName}
+					editingWaypointComments={editingWaypointComments}
+					onEditStart={() => {
+						setEditingWaypointId(selectedWaypoint.id);
+						setEditingWaypointName(selectedWaypoint.name);
+						setEditingWaypointComments(selectedWaypoint.comments || '');
+					}}
+					onEditCancel={() => setEditingWaypointId(null)}
+					onWaypointRename={onWaypointRename}
+					onWaypointDelete={onWaypointDelete}
+					onWaypointCommentUpdate={onWaypointCommentUpdate}
+					onClose={() => handleWaypointSelect?.(null)}
+					setEditingWaypointName={setEditingWaypointName}
+					setEditingWaypointComments={setEditingWaypointComments}
+				/>
 			);
 		}
 
 		if (selectedRoute) {
 			return (
-				<div className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-					<div className="flex justify-between items-center">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedRoute.name}</h3>
-						<div className="flex gap-1">
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={() => {
-									setEditingRouteId(selectedRoute.id);
-									setEditingName(selectedRoute.name);
-									setEditingComments(selectedRoute.comments || '');
-								}}
-							>
-								<Edit2 className="h-4 w-4" />
-								<span className="sr-only">Edit route</span>
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={(e) => {
-									e.stopPropagation();
-									onRouteDelete?.(selectedRoute.id);
-								}}
-							>
-								<Trash2 className="h-4 w-4" />
-								<span className="sr-only">Delete route</span>
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 p-0"
-								onClick={() => {
-									setSelectedRouteId(null);
-									onRouteSelect?.(null);
-								}}
-							>
-								<X className="h-4 w-4" />
-								<span className="sr-only">Close route</span>
-							</Button>
-						</div>
-					</div>
-					{editingRouteId === selectedRoute.id ? (
-						<div className="space-y-4">
-							<div className="flex gap-2">
-								<Input value={editingName} onChange={(e) => setEditingName(e.target.value)} className="h-8" />
-							</div>
-							<Card>
-								<CardHeader>
-									<CardTitle>Comments</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<Textarea
-										placeholder="Add comments..."
-										value={editingComments}
-										onChange={(e) => setEditingComments(e.target.value)}
-										className="min-h-[100px]"
-									/>
-								</CardContent>
-							</Card>
-							<div className="flex gap-2 justify-end">
-								<Button
-									variant="ghost"
-									size="sm"
-									onClick={() => {
-										onRouteRename?.(selectedRoute.id, editingName);
-										onRouteCommentUpdate?.(selectedRoute.id, editingComments);
-										setEditingRouteId(null);
-									}}
-								>
-									<Check className="h-4 w-4 mr-1" />
-									Save
-								</Button>
-								<Button variant="ghost" size="sm" onClick={() => setEditingRouteId(null)}>
-									<X className="h-4 w-4 mr-1" />
-									Cancel
-								</Button>
-							</div>
-						</div>
-					) : (
-						<>
-							<Card>
-								<CardHeader>
-									<p>Distance: {(selectedRoute as RouteWithDistance)?.distance?.toFixed(2) || 'N/A'}km</p>
-								</CardHeader>
-							</Card>
-							<Card>
-								<CardHeader>
-									<p>Created: {new Date(selectedRoute.created_at).toLocaleString()}</p>
-								</CardHeader>
-							</Card>
-							<Card>
-								<CardHeader>
-									<CardTitle>Comments</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-sm">{selectedRoute.comments || 'No comments'}</p>
-								</CardContent>
-							</Card>
-							{renderElevationChart()}
-						</>
-					)}
-					<Button
-						variant="secondary"
-						className="w-full flex gap-2"
-						onClick={() => {
-							if (!selectedRoute.geometry) return;
-
-							// Create GPX content
-							const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Villspor">
-    <trk>
-        <name>${selectedRoute.name}</name>
-        <trkseg>
-            ${(selectedRoute.geometry.coordinates as [number, number][])
-							.map(([lon, lat]) => `            <trkpt lat="${lat}" lon="${lon}"></trkpt>`)
-							.join('\n')}
-        </trkseg>
-    </trk>
-</gpx>`;
-
-							// Create and trigger download
-							const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-							const url = window.URL.createObjectURL(blob);
-							const a = document.createElement('a');
-							a.href = url;
-							a.download = `${selectedRoute.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.gpx`;
-							document.body.appendChild(a);
-							a.click();
-							document.body.removeChild(a);
-							window.URL.revokeObjectURL(url);
-						}}
-					>
-						<Download className="h-4 w-4" />
-						Download GPX
-					</Button>
-				</div>
+				<RouteDetails
+					route={selectedRoute}
+					onDelete={onRouteDelete}
+					onEdit={(routeId, newName, newComment) => {
+						onRouteRename?.(routeId, newName);
+						onRouteCommentUpdate?.(routeId, newComment);
+					}}
+				/>
 			);
 		}
 
 		if (selectedActivity) {
 			return (
-				<div id="slide" className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-					<div className="flex justify-between items-center">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{selectedActivity.name}</h3>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-8 w-8 p-0"
-							onClick={() => {
-								setSelectedRouteId(null);
-								if (onActivitySelect) onActivitySelect(null as any);
-							}}
-						>
-							<X className="h-4 w-4" />
-							<span className="sr-only">Close activity</span>
-						</Button>
-					</div>
-					<div className="flex justify-between gap-2">
-						<Badge variant={'secondary'} className="flex-1 flex items-center justify-center">
-							{selectedActivity.type}
-						</Badge>
-						<Badge variant={'secondary'} className="flex-1 flex items-center justify-center">
-							{selectedActivity.start_date.slice(0, 10)}
-						</Badge>
-					</div>
-					<Card>
-						<CardHeader>
-							<p>Distance: {(selectedActivity.distance / 1000).toFixed(2)} km</p>
-						</CardHeader>
-					</Card>
-					<Card>
-						<CardHeader>
-							<p>Moving time: {formatTime(selectedActivity.moving_time)}</p>
-						</CardHeader>
-					</Card>
-					<Card>
-						<CardHeader>
-							<p>Total elevation gain: {selectedActivity.total_elevation_gain} m</p>
-						</CardHeader>
-					</Card>
-					<Card>
-						<CardHeader>
-							<p>Moving speed: {(selectedActivity.average_speed * 3.6).toFixed(2)} km/t</p>
-						</CardHeader>
-					</Card>
-					{renderElevationChart()}
-				</div>
+				<ActivityDetails
+					activity={selectedActivity}
+					onClose={() => {
+						setSelectedRouteId(null);
+						if (onActivitySelect) onActivitySelect(null as any);
+					}}
+				/>
 			);
 		}
 
 		return (
 			<div className="p-4 flex flex-col gap-4 relative grow overflow-y-auto">
 				{activeItem === 'nearby' && (
-					<div className="grow gap-2 overflow-y-auto">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Nearby</h3>
-						{visibleActivities.map((activity: any) => (
-							<div key={activity.id}>
-								<Card
-									className={'mb-2 hover:bg-accent cursor-pointer transition-colors'}
-									onClick={() => onActivitySelect?.(activity)}
-								>
-									<CardHeader>
-										<CardTitle>{activity.name}</CardTitle>
-										<CardDescription>{activity.sport_type}</CardDescription>
-									</CardHeader>
-									<CardContent>
-										<p>Time: {formatTime(activity.moving_time)}</p>
-									</CardContent>
-								</Card>
-								{activity.id === selectedRouteId && <div ref={scrollRef} />}
-							</div>
-						))}
-					</div>
+					<ActivityList
+						activities={activities}
+						visibleActivitiesId={visibleActivitiesId}
+						selectedRouteId={selectedRouteId}
+						onActivitySelect={onActivitySelect}
+						selectedCategories={selectedCategories}
+						setSelectedCategories={setSelectedCategories}
+						mode="nearby"
+					/>
 				)}
 
 				{activeItem === 'activities' && (
-					<div className="grow gap-2 overflow-y-auto">
-						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">All Activities</h3>
-						<div className="flex flex-wrap gap-2 mb-4">
-							{ACTIVITY_CATEGORIES.map((category) => (
-								<Badge
-									key={category}
-									variant="outline"
-									className={cn(
-										'cursor-pointer hover:bg-primary/20 transition-colors',
-										selectedCategories.includes(category)
-											? 'bg-primary text-primary-foreground hover:bg-primary/90'
-											: 'bg-background'
-									)}
-									onClick={() => toggleCategory(category)}
-								>
-									{category}
-								</Badge>
-							))}
-						</div>
-						{activities
-							.filter((activity) =>
-								selectedCategories.includes(categorizeActivity(activity.sport_type) as ActivityCategory)
-							)
-							.map((activity: any) => (
-								<div key={activity.id}>
-									<Card
-										className={'mb-2 hover:bg-accent cursor-pointer transition-colors'}
-										onClick={() => onActivitySelect?.(activity)}
-									>
-										<CardHeader>
-											<CardTitle>{activity.name}</CardTitle>
-											<CardDescription>{activity.sport_type}</CardDescription>
-										</CardHeader>
-										<CardContent>
-											<p>Time: {formatTime(activity.moving_time)}</p>
-										</CardContent>
-									</Card>
-									{activity.id === selectedRouteId && <div ref={scrollRef} />}
-								</div>
-							))}
-					</div>
+					<ActivityList
+						activities={activities}
+						visibleActivitiesId={visibleActivitiesId}
+						selectedRouteId={selectedRouteId}
+						onActivitySelect={onActivitySelect}
+						selectedCategories={selectedCategories}
+						setSelectedCategories={setSelectedCategories}
+						mode="all"
+					/>
 				)}
 
 				{activeItem === 'routes' && (
-					<div className="grow gap-2 overflow-y-auto">
-						<div className="flex flex-col gap-4 mb-4">
-							<div className="flex items-center justify-between">
-								<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">Routes</h3>
-							</div>
-							<div className="relative">
-								<Button
-									variant="outline"
-									className="w-full flex items-center justify-center gap-2"
-									disabled={!userId || !onRouteSave}
-								>
-									<Upload className="h-4 w-4" />
-									Upload GPX File
-								</Button>
-								{userId && onRouteSave && (
-									<GpxUpload
-										onRouteSave={onRouteSave}
-										userId={userId}
-										className="absolute inset-0 opacity-0 cursor-pointer"
-									/>
-								)}
-							</div>
-						</div>
-						{routes && routes.length > 0 ? (
-							routes.map((route) => (
-								<Card
-									key={route.id}
-									className="mb-2 hover:bg-accent cursor-pointer transition-colors"
-									onClick={() => {
-										onRouteSelect?.(route);
-										setSelectedRouteId(route.id);
-									}}
-								>
-									<CardHeader>
-										<CardTitle>{route.name}</CardTitle>
-										{route.geometry && (route.geometry as LineString).coordinates && (
-											<CardDescription>
-												Distance: {calculateRouteDistance((route.geometry as LineString).coordinates).toFixed(2)} km
-											</CardDescription>
-										)}
-									</CardHeader>
-									<CardContent>
-										<p>Created: {new Date(route.created_at).toLocaleString()}</p>
-									</CardContent>
-								</Card>
-							))
-						) : (
-							<p className="text-muted-foreground">No routes yet</p>
-						)}
-					</div>
+					<RouteList
+						routes={routes}
+						userId={userId}
+						onRouteSave={onRouteSave}
+						onRouteSelect={onRouteSelect}
+						setSelectedRouteId={setSelectedRouteId}
+					/>
 				)}
 
 				{activeItem === 'waypoints' && (
@@ -814,63 +460,25 @@ export function AppSidebar({
 		);
 	};
 
+	const handleNavigate = (itemId: string) => {
+		setActiveItem(itemId);
+		setOpen(true);
+		setSelectedRouteId(null);
+		onRouteSelect?.(null);
+		if (onActivitySelect) onActivitySelect(null as any);
+		handleWaypointSelect?.(null);
+	};
+
 	return (
 		<Sidebar collapsible="icon" className="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row" {...props}>
-			{/* First sidebar - Navigation */}
-			<Sidebar collapsible="none" className="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r">
-				<SidebarHeader>
-					<SidebarMenu>
-						<SidebarMenuItem>
-							<SidebarMenuButton isActive={open} className="px-2.5 md:px-2" onClick={() => setOpen(!open)}>
-								{open ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
-								<span>Toggle Sidebar</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-					</SidebarMenu>
-					<div className="mx-2 my-2 h-[1px] bg-border" />
-				</SidebarHeader>
-				<SidebarContent>
-					<SidebarGroup>
-						<SidebarGroupContent className="px-1.5 md:px-0">
-							<SidebarMenu>
-								{navigationItems.map((item) => (
-									<SidebarMenuItem key={item.id}>
-										<SidebarMenuButton
-											tooltip={{
-												children: item.label,
-												hidden: false,
-											}}
-											onClick={() => {
-												setActiveItem(item.id);
-												setOpen(true);
-												setSelectedRouteId(null);
-												onRouteSelect?.(null);
-												if (onActivitySelect) onActivitySelect(null as any);
-												handleWaypointSelect?.(null);
-											}}
-											isActive={activeItem === item.id}
-											className="px-2.5 md:px-2"
-										>
-											<item.icon className="h-4 w-4" />
-											<span>{item.label}</span>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								))}
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
-				</SidebarContent>
-				<SidebarFooter>
-					<NavUser />
-				</SidebarFooter>
-			</Sidebar>
+			<SidebarNavigation activeItem={activeItem} open={open} setOpen={setOpen} onNavigate={handleNavigate} />
 
 			{/* Second sidebar - Content */}
 			<Sidebar collapsible="none" className="hidden flex-1 md:flex">
 				<SidebarHeader className="gap-3.5 border-b p-4">
 					<div className="flex w-full items-center justify-between">
 						<div className="text-base font-medium text-foreground">
-							{navigationItems.find((item) => item.id === activeItem)?.label}
+							{navigationItems.find((item: { id: string; label: string }) => item.id === activeItem)?.label}
 						</div>
 					</div>
 				</SidebarHeader>
