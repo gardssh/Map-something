@@ -115,6 +115,7 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 			
 			const norgeTopoStyle: StyleSpecification = {
 				version: 8,
+				glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
 				sources: {
 					'norge-topo': {
 						type: 'raster',
