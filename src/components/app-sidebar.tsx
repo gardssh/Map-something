@@ -59,7 +59,7 @@ import { Textarea } from './ui/textarea';
 import type { Activity } from '@/types/activity';
 import { ElevationDetails } from './ElevationDetails';
 import { ActivityList } from './ActivityList';
-import { RouteDetails } from './RouteDetails';
+import { RouteDetails } from './routes/RouteDetails';
 import { WaypointDetails } from './WaypointDetails';
 import type { ActivityWithMap } from '@/types/activity';
 import { SidebarNavigation, navigationItems } from './SidebarNavigation';
@@ -375,23 +375,10 @@ export function AppSidebar({
 			return (
 				<RouteDetails
 					route={selectedRoute}
-					editingRouteId={editingRouteId}
-					editingName={editingName}
-					editingComments={editingComments}
-					onEditStart={() => {
-						setEditingRouteId(selectedRoute.id);
-						setEditingName(selectedRoute.name);
-						setEditingComments(selectedRoute.comments || '');
-					}}
-					onEditCancel={() => setEditingRouteId(null)}
-					setEditingName={setEditingName}
-					setEditingComments={setEditingComments}
-					onRouteRename={onRouteRename}
-					onRouteDelete={onRouteDelete}
-					onRouteCommentUpdate={onRouteCommentUpdate}
-					onClose={() => {
-						setSelectedRouteId(null);
-						onRouteSelect?.(null);
+					onDelete={onRouteDelete}
+					onEdit={(routeId, newName, newComment) => {
+						onRouteRename?.(routeId, newName);
+						onRouteCommentUpdate?.(routeId, newComment);
 					}}
 				/>
 			);
