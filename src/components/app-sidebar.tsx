@@ -65,6 +65,7 @@ import type { ActivityWithMap } from '@/types/activity';
 import { SidebarNavigation, navigationItems } from './SidebarNavigation';
 import { ActivityDetails } from './ActivityDetails';
 import { RouteList } from './RouteList';
+import TestAvalanche from '@/app/test-avalanche/page';
 
 interface ElevationPoint {
 	distance: number; // distance in km
@@ -454,6 +455,24 @@ export function AppSidebar({
 						) : (
 							<p className="text-muted-foreground">No waypoints yet</p>
 						)}
+					</div>
+				)}
+
+				{activeItem === 'avalanche' && (
+					<div className="grow gap-2 overflow-y-auto">
+						<div className="p-4 space-y-6">
+							<div>
+								<h3 className="text-lg font-semibold mb-2">About Avalanche Warnings</h3>
+								<p className="text-sm text-muted-foreground">
+									The avalanche warnings are provided by the Norwegian Avalanche Warning Service (NVE). The danger
+									levels range from 1 (Low) to 5 (Extreme), and the forecast includes detailed information about
+									avalanche problems, affected areas, and recommendations.
+								</p>
+							</div>
+							<div className="space-y-4">
+								<TestAvalanche />
+							</div>
+						</div>
 					</div>
 				)}
 			</div>
