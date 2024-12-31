@@ -187,7 +187,7 @@ function getProblemImagePath(problemTypeId: number | undefined): string {
 		5: 'Wet-Snow', // Våt snø (løssnøskred)
 		7: 'New-Snow', // Nysnø (flakskred)
 		10: 'Wind-Slab', // Fokksnø (flakskred)
-		30: 'Persistent-Weak-Layers', // Vedvarende svakt lag
+		30: 'Persistent-Weak-Layer', // Vedvarende svakt lag
 		45: 'Wet-Snow', // Våt snø (flakskred)
 		50: 'Gliding-Snow', // Glideskred
 	};
