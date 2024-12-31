@@ -6,6 +6,8 @@ import { RouteDetails } from '@/components/routes/RouteDetails';
 import { WaypointDetails } from '@/components/waypoints/WaypointDetails';
 import type { Activity } from '@/types/activity';
 import type { DbRoute, DbWaypoint } from '@/types/supabase';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 interface MobileViewProps {
 	isOnline: boolean;
@@ -41,6 +43,108 @@ interface MobileViewProps {
 	setSelectedWaypoint: React.Dispatch<React.SetStateAction<DbWaypoint | null>>;
 }
 
+interface AvalancheProblem {
+	AvalancheType: string;
+	AvalancheProblemId: number;
+	ValidExpositions: string[] | string;
+	ValidHeights: string[] | string;
+	ExposedHeight: string;
+	ExposedHeightFill: number;
+	Probability: string;
+	ProbabilityId: number;
+	Destructive_size: string;
+	DestructiveSizeId: number;
+	AvalancheExtTID: number;
+	AvalancheExtName: string;
+	AvalCauseId: number;
+	AvalCauseName: string;
+	Comment?: string;
+	AvalTriggerSimpleName?: string;
+	AvalPropagationName?: string;
+	AvalReleaseHeightName?: string;
+	AvalancheProbabilityName?: string;
+	DestructiveSizeName?: string;
+	ExposedHeight1?: number;
+	ExposedHeight2?: number;
+	AvalancheProblemTypeId?: number;
+	AvalancheTypeId?: number;
+	AvalancheExtId?: number;
+	DestructiveSizeExtId?: number;
+	AvalPropagationId?: number;
+}
+
+interface AvalancheForecast {
+	RegId: number;
+	RegionId: number;
+	RegionName: string;
+	RegionTypeId: number;
+	RegionTypeName: string;
+	DangerLevel: string;
+	ValidFrom: string;
+	ValidTo: string;
+	NextWarningTime: string;
+	PublishTime: string;
+	MainText: string;
+	LangKey: number;
+	AvalancheProblems: AvalancheProblem[];
+	AvalancheDangerTID: number;
+	UtmZone: number;
+	UtmEast: number;
+	UtmNorth: number;
+}
+
+// Import helper functions from TestAvalanche
+function getDangerLevelImagePath(forecast: AvalancheForecast): string {
+	if (!forecast.DangerLevel || forecast.DangerLevel === '0') {
+		return `/avalanche/dangerLevelDry/Icon-Avalanche-Danger-Level-No-Rating-EAWS.png`;
+	}
+
+	const hasWetSnowProblem =
+		forecast.AvalancheProblems?.some(
+			(problem: any) =>
+				[5, 45].includes(problem.AvalancheProblemTypeId || 0) || [15, 25, 30].includes(problem.AvalancheExtId || 0)
+		) || false;
+
+	const baseDir = hasWetSnowProblem ? 'dangerLevelWet' : 'dangerLevelDry';
+	const dangerLevel = ['4', '5'].includes(forecast.DangerLevel) ? '4-5' : forecast.DangerLevel;
+
+	return `/avalanche/${baseDir}/Icon-Avalanche-Danger-Level-${hasWetSnowProblem ? 'Wet' : 'Dry'}-Snow-${dangerLevel}-EAWS.png`;
+}
+
+function getProblemImagePath(problemTypeId: number | undefined): string {
+	if (!problemTypeId) return '';
+
+	const problemTypeToImage: Record<number, string> = {
+		3: 'New-Snow',
+		5: 'Wet-Snow',
+		7: 'New-Snow',
+		10: 'Wind-Slab',
+		30: 'Persistent-Weak-Layer',
+		45: 'Wet-Snow',
+		50: 'Gliding-Snow',
+	};
+
+	const imageName = problemTypeToImage[problemTypeId] || 'Unknown';
+	return `/avalanche/problems/Icon-Avalanche-Problem-${imageName}-EAWS.svg`;
+}
+
+function formatExpositions(validExpositions: string[] | string): string {
+	if (!validExpositions) return 'Not specified';
+
+	// If it's a binary string (e.g., "11110000")
+	if (typeof validExpositions === 'string') {
+		const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+		return validExpositions
+			.split('')
+			.map((bit, index) => (bit === '1' ? directions[index] : null))
+			.filter(Boolean)
+			.join(', ');
+	}
+
+	// If it's already an array of directions
+	return Array.isArray(validExpositions) ? validExpositions.join(', ') : 'Not specified';
+}
+
 export function MobileView({
 	isOnline,
 	activeItem,
@@ -74,6 +178,73 @@ export function MobileView({
 	setSelectedRoute,
 	setSelectedWaypoint,
 }: MobileViewProps) {
+	const [forecasts, setForecasts] = useState<AvalancheForecast[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	const fetchForecast = async () => {
+		try {
+			const mapInstance = (window as any).mapInstance;
+			if (!mapInstance) {
+				console.log('Map instance not available');
+				return;
+			}
+
+			const center = mapInstance.getCenter();
+			const response = await fetch(
+				`/api/avalanche-by-coordinates?x=${center.lng.toFixed(6)}&y=${center.lat.toFixed(6)}`
+			);
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.message || 'Failed to fetch forecast');
+			}
+
+			const forecastData = Array.isArray(result.data) ? result.data : [result.data];
+			if (forecastData.length === 0) {
+				setError('No forecast available for this location');
+				setForecasts([]);
+				return;
+			}
+
+			// Get today's and tomorrow's dates at midnight
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
+			const tomorrow = new Date(today);
+			tomorrow.setDate(tomorrow.getDate() + 1);
+			const dayAfterTomorrow = new Date(tomorrow);
+			dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+
+			// Filter forecasts for today and tomorrow
+			const relevantForecasts = forecastData
+				.filter((forecast: AvalancheForecast) => {
+					if (!forecast || !forecast.ValidFrom) return false;
+					const forecastDate = new Date(forecast.ValidFrom);
+					forecastDate.setHours(0, 0, 0, 0);
+					return forecastDate >= today && forecastDate < dayAfterTomorrow;
+				})
+				.sort((a: AvalancheForecast, b: AvalancheForecast) => {
+					if (!a.ValidFrom || !b.ValidFrom) return 0;
+					return new Date(a.ValidFrom).getTime() - new Date(b.ValidFrom).getTime();
+				});
+
+			setForecasts(relevantForecasts);
+			setError(null);
+		} catch (err) {
+			console.error('Error fetching forecast:', err);
+			setError(err instanceof Error ? err.message : 'An error occurred');
+			setForecasts([]);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		if (activeItem === 'avalanche') {
+			fetchForecast();
+		}
+	}, [activeItem]);
+
 	return (
 		<div className="h-[calc(100vh-4rem)] w-full flex flex-col">
 			{!isOnline && (
@@ -104,7 +275,7 @@ export function MobileView({
 							setShowDetailsDrawer={setShowDetailsDrawer}
 						/>
 						<MobileDrawer
-							isOpen={[`activities`, `routes`, `waypoints`].includes(activeItem)}
+							isOpen={[`activities`, `routes`, `waypoints`, `avalanche`].includes(activeItem)}
 							onClose={() => setActiveItem(`nearby`)}
 							title={activeItem.charAt(0).toUpperCase() + activeItem.slice(1)}
 							peekContent={
@@ -171,6 +342,37 @@ export function MobileView({
 											</div>
 										))}
 									</div>
+								) : activeItem === 'avalanche' ? (
+									<div className="space-y-4 overflow-auto max-h-[200px]">
+										{loading ? (
+											<div className="p-4">Loading...</div>
+										) : error ? (
+											<div className="p-4 text-red-500">Error: {error}</div>
+										) : forecasts.length === 0 ? (
+											<div className="p-4">No forecast available for this location</div>
+										) : (
+											<div className="p-4 border rounded-lg">
+												<div className="flex items-center justify-between">
+													<h3 className="font-medium">{forecasts[0].RegionName}</h3>
+													<div className="flex items-center gap-2">
+														<Image
+															src={getDangerLevelImagePath(forecasts[0])}
+															alt={`Danger Level ${forecasts[0].DangerLevel}`}
+															width={40}
+															height={40}
+														/>
+													</div>
+												</div>
+												<div className="mt-2">
+													<p className="text-sm text-muted-foreground">Valid Period</p>
+													<p>
+														{new Date(forecasts[0].ValidFrom).toLocaleDateString()} -{' '}
+														{new Date(forecasts[0].ValidTo).toLocaleDateString()}
+													</p>
+												</div>
+											</div>
+										)}
+									</div>
 								) : null
 							}
 						>
@@ -233,6 +435,85 @@ export function MobileView({
 											</div>
 										</div>
 									))}
+								</div>
+							)}
+							{activeItem === `avalanche` && (
+								<div className="space-y-4">
+									{loading ? (
+										<div className="p-4">Loading...</div>
+									) : error ? (
+										<div className="p-4 text-red-500">Error: {error}</div>
+									) : forecasts.length === 0 ? (
+										<div className="p-4">No forecast available for this location</div>
+									) : (
+										forecasts.map((forecast) => (
+											<div key={`${forecast.RegId}-${forecast.ValidFrom}`} className="p-4 border rounded-lg">
+												<div className="flex flex-col gap-4">
+													<div className="flex items-center justify-between border-b pb-4">
+														<div>
+															<h3 className="font-medium">{forecast.RegionName}</h3>
+															<p className="text-sm text-muted-foreground">
+																{new Date(forecast.ValidFrom).toLocaleDateString()} -{' '}
+																{new Date(forecast.ValidTo).toLocaleDateString()}
+															</p>
+														</div>
+														<Image
+															src={getDangerLevelImagePath(forecast)}
+															alt={`Danger Level ${forecast.DangerLevel}`}
+															width={40}
+															height={40}
+															onError={(e) => {
+																console.error('Error loading image:', e);
+																e.currentTarget.style.display = 'none';
+															}}
+														/>
+													</div>
+
+													<div>
+														<h3 className="font-medium mb-2">Main Warning</h3>
+														<p className="text-sm">{forecast.MainText}</p>
+													</div>
+													{forecast.AvalancheProblems?.map((problem: any, index: number) => (
+														<div key={index}>
+															<h3 className="font-medium mb-2">Avalanche Problem {index + 1}</h3>
+															<div className="bg-accent/50 rounded-lg p-4">
+																<div className="flex items-center gap-4 mb-4">
+																	<Image
+																		src={getProblemImagePath(problem.AvalancheProblemTypeId)}
+																		alt="Avalanche Problem"
+																		width={40}
+																		height={40}
+																		onError={(e) => {
+																			console.error('Error loading image:', e);
+																			e.currentTarget.style.display = 'none';
+																		}}
+																	/>
+																	<div>
+																		<p className="font-medium">{problem.AvalancheType}</p>
+																		<p className="text-sm text-muted-foreground">
+																			{problem.AvalancheProbabilityName} probability, {problem.DestructiveSizeName}
+																		</p>
+																	</div>
+																</div>
+																<div className="space-y-4">
+																	<div>
+																		<p className="text-sm text-muted-foreground">Location</p>
+																		<p>
+																			{problem.ExposedHeight1 !== undefined && problem.ExposedHeight2 !== undefined
+																				? `${problem.ExposedHeight1}m - ${problem.ExposedHeight2}m`
+																				: problem.ExposedHeight}
+																		</p>
+																		<p className="text-sm text-muted-foreground mt-2">Directions</p>
+																		<p>{formatExpositions(problem.ValidExpositions)}</p>
+																	</div>
+																</div>
+															</div>
+														</div>
+													))}
+												</div>
+											</div>
+										))
+									)}
 								</div>
 							)}
 						</MobileDrawer>

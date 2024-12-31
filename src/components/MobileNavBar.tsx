@@ -1,6 +1,6 @@
 'use client';
 
-import { Navigation, Medal, Route, MapPin, User } from 'lucide-react';
+import { Navigation, Medal, Route, MapPin, User, Snowflake } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MobileNavBarProps {
@@ -13,6 +13,7 @@ const navigationItems = [
 	{ id: 'activities', icon: Medal, label: 'Activities' },
 	{ id: 'routes', icon: Route, label: 'Routes' },
 	{ id: 'waypoints', icon: MapPin, label: 'Waypoints' },
+	{ id: 'avalanche', icon: Snowflake, label: 'Avalanche' },
 	{ id: 'profile', icon: User, label: 'Profile' },
 ];
 

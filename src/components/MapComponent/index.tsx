@@ -28,6 +28,12 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { AddWaypointControl } from './controls/AddWaypointControl';
 import { CrosshairOverlay } from './controls/CrosshairOverlay';
 
+declare global {
+	interface Window {
+		mapInstance: any;
+	}
+}
+
 export const MapComponent = ({
 	activities,
 	setVisibleActivitiesId,
@@ -623,6 +629,9 @@ export const MapComponent = ({
 				keyboard={true}
 				onLoad={(evt) => {
 					const map = evt.target;
+					// Store map instance globally
+					window.mapInstance = map;
+
 					if (onMapLoad) {
 						onMapLoad(map);
 					}

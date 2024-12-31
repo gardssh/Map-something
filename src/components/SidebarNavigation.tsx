@@ -1,6 +1,6 @@
 'use client';
 
-import { Navigation, Medal, Route, MapPin, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { Navigation, Medal, Route, MapPin, PanelLeft, PanelLeftClose, Snowflake } from 'lucide-react';
 import { NavUser } from '@/components/nav-user';
 import {
 	Sidebar,
@@ -19,6 +19,7 @@ export const navigationItems = [
 	{ id: 'activities', icon: Medal, label: 'Activities' },
 	{ id: 'routes', icon: Route, label: 'Routes' },
 	{ id: 'waypoints', icon: MapPin, label: 'Waypoints' },
+	{ id: 'avalanche', icon: Snowflake, label: 'Avalanche' },
 ] as const;
 
 interface SidebarNavigationProps {
