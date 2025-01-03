@@ -273,6 +273,7 @@ export function MobileView({
 							selectedWaypoint={selectedWaypoint}
 							setActiveItem={setActiveItem}
 							setShowDetailsDrawer={setShowDetailsDrawer}
+							activeItem={activeItem}
 						/>
 						<MobileDrawer
 							isOpen={[`activities`, `routes`, `waypoints`, `avalanche`].includes(activeItem)}

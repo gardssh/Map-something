@@ -50,6 +50,7 @@ export const MapComponent = ({
 	selectedWaypoint: parentSelectedWaypoint,
 	setActiveItem,
 	setShowDetailsDrawer,
+	activeItem,
 }: {
 	activities: Activity[];
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
@@ -66,6 +67,7 @@ export const MapComponent = ({
 	selectedWaypoint?: Waypoint | null;
 	setActiveItem: (item: string) => void;
 	setShowDetailsDrawer: (show: boolean) => void;
+	activeItem: string;
 }) => {
 	const mapRef = useRef<MapRef>();
 	const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
@@ -94,6 +96,8 @@ export const MapComponent = ({
 	const [visibleWaypointsId, setVisibleWaypointsId] = useState<(string | number)[]>([]);
 	const [isAddingWaypoint, setIsAddingWaypoint] = useState(false);
 	const [mapCenter, setMapCenter] = useState({ lat: 61.375172, lng: 8.296987 });
+	const [waypointsVisible, setWaypointsVisible] = useState(true);
+	const [routesVisible, setRoutesVisible] = useState(true);
 
 	const { availableLayers, initialMapState, mapStyle, mapSettings } = useMapConfig({ mapRef });
 
@@ -662,6 +666,11 @@ export const MapComponent = ({
 					onModeChange={onDrawModeChange}
 					is3DMode={is3DMode}
 					onViewModeToggle={toggleViewMode}
+					waypointsVisible={waypointsVisible}
+					routesVisible={routesVisible}
+					onWaypointsToggle={setWaypointsVisible}
+					onRoutesToggle={setRoutesVisible}
+					activeItem={activeItem}
 				/>
 
 				<AddWaypointControl isActive={isAddingWaypoint} onClick={() => setIsAddingWaypoint(!isAddingWaypoint)} />
@@ -674,9 +683,9 @@ export const MapComponent = ({
 					selectedCategories={selectedCategories}
 				/>
 
-				<RouteLayer routes={localRoutes} selectedRoute={selectedRoute} />
+				<RouteLayer routes={localRoutes} selectedRoute={selectedRoute} visible={routesVisible} />
 
-				<WaypointLayer waypoints={waypoints} selectedWaypoint={selectedWaypoint} />
+				<WaypointLayer waypoints={waypoints} selectedWaypoint={selectedWaypoint} visible={waypointsVisible} />
 
 				<MapUI
 					activities={activities}

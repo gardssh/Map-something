@@ -7,6 +7,7 @@ import { ViewModeControl } from './ViewModeControl';
 import type { DrawnRoute } from '@/types/route';
 import type { DbRoute } from '@/types/supabase';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import HelpButton from '@/components/HelpButton';
 
 interface MapControlsProps {
 	layers: Array<{
@@ -28,6 +29,11 @@ interface MapControlsProps {
 	onModeChange: (evt: { mode: string }) => void;
 	is3DMode: boolean;
 	onViewModeToggle: () => void;
+	waypointsVisible?: boolean;
+	routesVisible?: boolean;
+	onWaypointsToggle?: (visible: boolean) => void;
+	onRoutesToggle?: (visible: boolean) => void;
+	activeItem?: string;
 }
 
 const MapControls = ({
@@ -46,6 +52,11 @@ const MapControls = ({
 	onModeChange,
 	is3DMode,
 	onViewModeToggle,
+	waypointsVisible,
+	routesVisible,
+	onWaypointsToggle,
+	onRoutesToggle,
+	activeItem,
 }: MapControlsProps) => {
 	const { isMobile } = useResponsiveLayout();
 
@@ -60,6 +71,10 @@ const MapControls = ({
 				onLayerToggle={onLayerToggle}
 				selectedCategories={selectedCategories}
 				onCategoryToggle={onCategoryToggle}
+				waypointsVisible={waypointsVisible}
+				routesVisible={routesVisible}
+				onWaypointsToggle={onWaypointsToggle}
+				onRoutesToggle={onRoutesToggle}
 			/>
 			<DrawControl
 				position="top-right"
@@ -76,6 +91,7 @@ const MapControls = ({
 				onModeChange={onModeChange}
 			/>
 			<ViewModeControl is3DMode={is3DMode} onToggle={onViewModeToggle} />
+			<HelpButton activeItem={activeItem} />
 		</div>
 	);
 };
