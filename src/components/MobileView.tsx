@@ -240,9 +240,12 @@ export function MobileView({
 	};
 
 	useEffect(() => {
-		if (activeItem === 'avalanche') {
-			fetchForecast();
-		}
+		const fetchIfAvalanche = () => {
+			if (activeItem === 'avalanche') {
+				fetchForecast();
+			}
+		};
+		fetchIfAvalanche();
 	}, [activeItem]);
 
 	return (
