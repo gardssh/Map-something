@@ -12,10 +12,9 @@ interface HelpButtonProps {
 export default function HelpButton({ activeItem }: HelpButtonProps) {
 	const { isMobile } = useResponsiveLayout();
 
-	// Hide the help button when the profile page is active
-	if (activeItem === 'profile') return null;
-
 	useEffect(() => {
+		if (activeItem === 'profile') return;
+
 		let container: HTMLDivElement | null = null;
 		let button: HTMLButtonElement | null = null;
 
@@ -86,7 +85,9 @@ export default function HelpButton({ activeItem }: HelpButtonProps) {
 				}
 			}
 		};
-	}, []);
+	}, [activeItem]);
+
+	if (activeItem === 'profile') return null;
 
 	return (
 		<div
