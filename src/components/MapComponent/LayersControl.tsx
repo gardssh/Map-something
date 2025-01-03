@@ -1,5 +1,5 @@
 'use client';
-import { Layers, Footprints, Bike, Waves, Snowflake, CircleHelp } from 'lucide-react';
+import { Layers, Footprints, Bike, Waves, Snowflake, CircleHelp, MapPin, Route } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { createPortal } from 'react-dom';
@@ -18,6 +18,10 @@ interface LayersControlProps {
 	onLayerToggle: (layerId: string, isVisible: boolean) => void;
 	selectedCategories: string[];
 	onCategoryToggle: (categories: string[]) => void;
+	waypointsVisible?: boolean;
+	routesVisible?: boolean;
+	onWaypointsToggle?: (visible: boolean) => void;
+	onRoutesToggle?: (visible: boolean) => void;
 }
 
 const defaultLayers: LayerOption[] = [
@@ -36,6 +40,10 @@ export const LayersControl = ({
 	onLayerToggle,
 	selectedCategories,
 	onCategoryToggle,
+	waypointsVisible = true,
+	routesVisible = true,
+	onWaypointsToggle,
+	onRoutesToggle,
 }: LayersControlProps) => {
 	const baseLayers = layers?.filter((l) => l.isBase) || [];
 	const overlayLayers = layers?.filter((l) => !l.isBase) || [];
@@ -95,6 +103,16 @@ export const LayersControl = ({
 		{ id: 'Other Sports', name: 'Other Sports', icon: <CircleHelp className="h-4 w-4 mr-2" /> },
 	];
 
+	const allSportsSelected = sportCategories.every((category) => selectedCategories.includes(category.id));
+
+	const handleToggleAllSports = () => {
+		if (allSportsSelected) {
+			onCategoryToggle([]);
+		} else {
+			onCategoryToggle(sportCategories.map((cat) => cat.id));
+		}
+	};
+
 	return (
 		<>
 			{isOpen && buttonRect && (
@@ -143,12 +161,52 @@ export const LayersControl = ({
 						</div>
 					</div>
 
+					{/* Features */}
+					<div className="mb-6">
+						<div className="text-sm font-semibold text-gray-500 mb-3">Features</div>
+						<div className="flex flex-col space-y-2">
+							<label className="flex items-center space-x-2 cursor-pointer">
+								<input
+									type="checkbox"
+									checked={waypointsVisible}
+									onChange={(e) => onWaypointsToggle?.(e.target.checked)}
+									className="form-checkbox h-4 w-4 text-blue-600"
+								/>
+								<span className="text-sm text-gray-700 flex items-center">
+									<MapPin className="h-4 w-4 mr-2" />
+									Waypoints
+								</span>
+							</label>
+							<label className="flex items-center space-x-2 cursor-pointer">
+								<input
+									type="checkbox"
+									checked={routesVisible}
+									onChange={(e) => onRoutesToggle?.(e.target.checked)}
+									className="form-checkbox h-4 w-4 text-blue-600"
+								/>
+								<span className="text-sm text-gray-700 flex items-center">
+									<Route className="h-4 w-4 mr-2" />
+									Routes
+								</span>
+							</label>
+						</div>
+					</div>
+
 					{/* Sport Types */}
 					<div>
 						<div className="text-sm font-semibold text-gray-500 mb-3">Sport Types</div>
 						<div className="flex flex-col space-y-2">
+							<label className="flex items-center space-x-2 cursor-pointer">
+								<input
+									type="checkbox"
+									checked={allSportsSelected}
+									onChange={handleToggleAllSports}
+									className="form-checkbox h-4 w-4 text-blue-600"
+								/>
+								<span className="text-sm text-gray-700 font-medium">Toggle All Sports</span>
+							</label>
 							{sportCategories.map((category) => (
-								<label key={category.id} className="flex items-center space-x-2 cursor-pointer">
+								<label key={category.id} className="flex items-center space-x-2 cursor-pointer ml-2">
 									<input
 										type="checkbox"
 										checked={selectedCategories.includes(category.id)}

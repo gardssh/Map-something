@@ -5,6 +5,7 @@ import { useEffect, useMemo } from 'react';
 interface WaypointLayerProps {
 	waypoints?: Waypoint[];
 	selectedWaypoint?: Waypoint | null;
+	visible?: boolean;
 }
 
 const circlePaint: LayerProps['paint'] = {
@@ -23,7 +24,7 @@ const circlePaint: LayerProps['paint'] = {
 	'circle-stroke-opacity': 1,
 };
 
-export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProps) => {
+export const WaypointLayer = ({ waypoints, selectedWaypoint, visible = true }: WaypointLayerProps) => {
 	const { current: map } = useMap();
 
 	// Create features only when waypoints or selection changes
@@ -56,12 +57,12 @@ export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProp
 				// Initialize each layer independently
 				const mainLayer = map.getMap().getLayer('waypoints-layer');
 				if (mainLayer) {
-					map.getMap().setLayoutProperty('waypoints-layer', 'visibility', 'visible');
+					map.getMap().setLayoutProperty('waypoints-layer', 'visibility', visible ? 'visible' : 'none');
 				}
 
 				const touchLayer = map.getMap().getLayer('waypoints-layer-touch');
 				if (touchLayer) {
-					map.getMap().setLayoutProperty('waypoints-layer-touch', 'visibility', 'visible');
+					map.getMap().setLayoutProperty('waypoints-layer-touch', 'visibility', visible ? 'visible' : 'none');
 				}
 
 				// If either layer is missing, try again
@@ -85,7 +86,7 @@ export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProp
 		return () => {
 			map.getMap().off('styledata', handleStyleData);
 		};
-	}, [map, features]);
+	}, [map, features, visible]);
 
 	if (!features.length) return null;
 
@@ -105,7 +106,7 @@ export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProp
 				paint={circlePaint}
 				filter={['==', ['get', 'type'], 'waypoint']}
 				layout={{
-					visibility: 'visible',
+					visibility: visible ? 'visible' : 'none',
 				}}
 				minzoom={0}
 				maxzoom={24}
@@ -122,7 +123,7 @@ export const WaypointLayer = ({ waypoints, selectedWaypoint }: WaypointLayerProp
 				}}
 				filter={['==', ['get', 'type'], 'waypoint']}
 				layout={{
-					visibility: 'visible',
+					visibility: visible ? 'visible' : 'none',
 				}}
 				minzoom={0}
 				maxzoom={24}

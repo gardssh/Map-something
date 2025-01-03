@@ -13,10 +13,18 @@ export const ViewModeControl = ({ is3DMode, onToggle }: ViewModeControlProps) =>
 		if (isMobile) return; // Don't create the control on mobile
 
 		const container = document.createElement('div');
-		container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
+		container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group view-mode-control';
 		const controlGroup = document.querySelector('.mapboxgl-ctrl-top-right');
 		if (controlGroup) {
-			controlGroup.appendChild(container);
+			// Find the help button container if it exists
+			const helpButton = controlGroup.querySelector('.help-button-container');
+
+			// Insert the view mode control before the help button
+			if (helpButton) {
+				controlGroup.insertBefore(container, helpButton);
+			} else {
+				controlGroup.appendChild(container);
+			}
 
 			const button = document.createElement('button');
 			button.className = 'mapbox-gl-draw_ctrl-draw-btn';

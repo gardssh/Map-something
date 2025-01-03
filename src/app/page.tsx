@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LngLatBounds } from 'mapbox-gl';
 import { switchCoordinates } from '@/components/activities/switchCor';
 import type { DbRoute, DbWaypoint } from '@/types/supabase';
-import HelpButton from '@/components/HelpButton';
 import * as turf from '@turf/turf';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { redirect } from 'next/navigation';
@@ -372,7 +371,6 @@ export default function Home() {
 						<MobileNavBar activeItem={activeItem} onItemSelect={setActiveItem} />
 					</>
 				)}
-				<HelpButton activeItem={activeItem} />
 				{isMobile && !isPWA && <PWAInstallPrompt />}
 			</SidebarProvider>
 		</main>

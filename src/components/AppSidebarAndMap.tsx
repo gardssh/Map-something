@@ -117,6 +117,7 @@ export function AppSidebarAndMap({
 						selectedWaypoint={selectedWaypoint}
 						setActiveItem={setActiveItem}
 						setShowDetailsDrawer={setShowDetailsDrawer}
+						activeItem={activeItem}
 					/>
 				</div>
 			</SidebarInset>

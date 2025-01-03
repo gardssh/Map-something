@@ -240,9 +240,12 @@ export function MobileView({
 	};
 
 	useEffect(() => {
-		if (activeItem === 'avalanche') {
-			fetchForecast();
-		}
+		const fetchIfAvalanche = () => {
+			if (activeItem === 'avalanche') {
+				fetchForecast();
+			}
+		};
+		fetchIfAvalanche();
 	}, [activeItem]);
 
 	return (
@@ -273,6 +276,7 @@ export function MobileView({
 							selectedWaypoint={selectedWaypoint}
 							setActiveItem={setActiveItem}
 							setShowDetailsDrawer={setShowDetailsDrawer}
+							activeItem={activeItem}
 						/>
 						<MobileDrawer
 							isOpen={[`activities`, `routes`, `waypoints`, `avalanche`].includes(activeItem)}
