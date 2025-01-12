@@ -9,207 +9,236 @@ import { createClient } from '@/lib/supabase';
 import type { DbProfile, DbProfileRow } from '@/types/supabase';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function ProfilePage() {
-  const { user, refreshSession } = useAuth();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+	const { user, refreshSession } = useAuth();
+	const [firstName, setFirstName] = useState('');
+	const [lastName, setLastName] = useState('');
+	const [password, setPassword] = useState('');
+	const [confirmPassword, setConfirmPassword] = useState('');
+	const [message, setMessage] = useState('');
+	const [loading, setLoading] = useState(false);
+	const supabase = createClient();
 
-  // Load initial values
-  useEffect(() => {
-    if (user?.user_metadata) {
-      setFirstName(user.user_metadata.first_name || '');
-      setLastName(user.user_metadata.last_name || '');
-    }
-  }, [user]);
+	// Load initial values
+	useEffect(() => {
+		if (user?.user_metadata) {
+			setFirstName(user.user_metadata.first_name || '');
+			setLastName(user.user_metadata.last_name || '');
+		}
+	}, [user]);
 
-  const updateNames = async () => {
-    if (!firstName.trim() || !lastName.trim()) {
-      setMessage('First name and last name are required');
-      return;
-    }
+	const updateNames = async () => {
+		if (!firstName.trim() || !lastName.trim()) {
+			setMessage('First name and last name are required');
+			return;
+		}
 
-    if (!user?.id) {
-      setMessage('User not authenticated');
-      return;
-    }
+		if (!user?.id) {
+			setMessage('User not authenticated');
+			return;
+		}
 
-    try {
-      setLoading(true);
-      setMessage('');
-      
-      // Update auth metadata
-      const { data: { user: updatedUser }, error: authError } = await supabase.auth.updateUser({
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          full_name: `${firstName} ${lastName}`,
-        },
-      });
+		try {
+			setLoading(true);
+			setMessage('');
 
-      if (authError) throw authError;
+			// Update auth metadata
+			const {
+				data: { user: updatedUser },
+				error: authError,
+			} = await supabase.auth.updateUser({
+				data: {
+					first_name: firstName,
+					last_name: lastName,
+					full_name: `${firstName} ${lastName}`,
+				},
+			});
 
-      // Update profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          first_name: firstName,
-          last_name: lastName,
-          updated_at: new Date().toISOString(),
-        } satisfies DbProfile['Insert']);
+			if (authError) throw authError;
 
-      if (profileError) throw profileError;
+			// Update profiles table
+			const { error: profileError } = await supabase.from('profiles').upsert({
+				id: user.id,
+				first_name: firstName,
+				last_name: lastName,
+				updated_at: new Date().toISOString(),
+			} satisfies DbProfile['Insert']);
 
-      // Force a session refresh to update the UI
-      await refreshSession();
-      
-      // Update local state with new values
-      if (updatedUser?.user_metadata) {
-        setFirstName(updatedUser.user_metadata.first_name || '');
-        setLastName(updatedUser.user_metadata.last_name || '');
-      }
+			if (profileError) throw profileError;
 
-      setMessage('Names updated successfully!');
-    } catch (error: any) {
-      console.error('Error updating names:', error);
-      setMessage(error.message || 'Error updating names');
-    } finally {
-      setLoading(false);
-    }
-  };
+			// Force a session refresh to update the UI
+			await refreshSession();
 
-  const updatePassword = async () => {
-    if (password !== confirmPassword) {
-      setMessage('Passwords do not match');
-      return;
-    }
+			// Update local state with new values
+			if (updatedUser?.user_metadata) {
+				setFirstName(updatedUser.user_metadata.first_name || '');
+				setLastName(updatedUser.user_metadata.last_name || '');
+			}
 
-    if (password.length < 6) {
-      setMessage('Password must be at least 6 characters');
-      return;
-    }
+			setMessage('Names updated successfully!');
+		} catch (error: any) {
+			console.error('Error updating names:', error);
+			setMessage(error.message || 'Error updating names');
+		} finally {
+			setLoading(false);
+		}
+	};
 
-    try {
-      setLoading(true);
-      setMessage('');
-      
-      const { error } = await supabase.auth.updateUser({
-        password: password,
-      });
+	const updatePassword = async () => {
+		if (password !== confirmPassword) {
+			setMessage('Passwords do not match');
+			return;
+		}
 
-      if (error) throw error;
-      setMessage('Password updated successfully!');
-      setPassword('');
-      setConfirmPassword('');
-    } catch (error: any) {
-      setMessage(error.message || 'Error updating password');
-    } finally {
-      setLoading(false);
-    }
-  };
+		if (password.length < 6) {
+			setMessage('Password must be at least 6 characters');
+			return;
+		}
 
-  return (
-    <div className="container max-w-2xl mx-auto p-4 pt-20">
-      <div className="mb-6">
-        <Link href="/">
-          <Button variant="ghost" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Map
-          </Button>
-        </Link>
-      </div>
-      <h1 className="text-3xl font-bold mb-8">Profile Settings</h1>
+		try {
+			setLoading(true);
+			setMessage('');
 
-      {/* Name Settings */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>Update your name information</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="firstName" className="text-sm font-medium">
-              First Name
-            </label>
-            <Input
-              id="firstName"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Enter your first name"
-              required
-            />
-          </div>
+			const { error } = await supabase.auth.updateUser({
+				password: password,
+			});
 
-          <div className="space-y-2">
-            <label htmlFor="lastName" className="text-sm font-medium">
-              Last Name
-            </label>
-            <Input
-              id="lastName"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              placeholder="Enter your last name"
-              required
-            />
-          </div>
+			if (error) throw error;
+			setMessage('Password updated successfully!');
+			setPassword('');
+			setConfirmPassword('');
+		} catch (error: any) {
+			setMessage(error.message || 'Error updating password');
+		} finally {
+			setLoading(false);
+		}
+	};
 
-          <Button onClick={updateNames} disabled={loading}>
-            {loading ? 'Updating...' : 'Update Names'}
-          </Button>
-        </CardContent>
-      </Card>
+	return (
+		<div className="container max-w-2xl mx-auto p-4 pt-20">
+			<div className="mb-6">
+				<Link href="/">
+					<Button variant="ghost" className="gap-2">
+						<ArrowLeft className="h-4 w-4" />
+						Back to Map
+					</Button>
+				</Link>
+			</div>
+			<h1 className="text-3xl font-bold mb-8">Profile Settings</h1>
 
-      {/* Password Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Security</CardTitle>
-          <CardDescription>Change your password</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">
-              New Password
-            </label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter new password"
-            />
-          </div>
+			{/* Name Settings */}
+			<Card className="mb-8">
+				<CardHeader>
+					<CardTitle>Personal Information</CardTitle>
+					<CardDescription>Update your name information</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<div className="space-y-2">
+						<label htmlFor="firstName" className="text-sm font-medium">
+							First Name
+						</label>
+						<Input
+							id="firstName"
+							value={firstName}
+							onChange={(e) => setFirstName(e.target.value)}
+							placeholder="Enter your first name"
+							required
+						/>
+					</div>
 
-          <div className="space-y-2">
-            <label htmlFor="confirmPassword" className="text-sm font-medium">
-              Confirm New Password
-            </label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
-            />
-          </div>
+					<div className="space-y-2">
+						<label htmlFor="lastName" className="text-sm font-medium">
+							Last Name
+						</label>
+						<Input
+							id="lastName"
+							value={lastName}
+							onChange={(e) => setLastName(e.target.value)}
+							placeholder="Enter your last name"
+							required
+						/>
+					</div>
 
-          <Button onClick={updatePassword} disabled={loading}>
-            {loading ? 'Updating...' : 'Update Password'}
-          </Button>
-        </CardContent>
-      </Card>
+					<Button onClick={updateNames} disabled={loading}>
+						{loading ? 'Updating...' : 'Update Names'}
+					</Button>
+				</CardContent>
+			</Card>
 
-      {/* Message Display */}
-      {message && (
-        <p className={`mt-4 text-sm ${message.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>
-          {message}
-        </p>
-      )}
-    </div>
-  );
-} 
+			{/* Connected Services */}
+			<Card className="mb-8">
+				<CardHeader>
+					<CardTitle>Connected Services</CardTitle>
+					<CardDescription>Connect your Strava account</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="flex flex-col space-y-4">
+						<div className="bg-gray-50 p-6 rounded-lg flex justify-center">
+							<button
+								className="hover:opacity-90 transition-opacity hover:scale-105 transform duration-200"
+								onClick={() => {
+									// TODO: Implement Strava OAuth flow
+									console.log('Connect to Strava clicked');
+								}}
+							>
+								<Image
+									src="/btn_strava_connectwith_light.svg"
+									alt="Connect with Strava"
+									width={193}
+									height={48}
+									priority
+								/>
+							</button>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Password Settings */}
+			<Card>
+				<CardHeader>
+					<CardTitle>Security</CardTitle>
+					<CardDescription>Change your password</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<div className="space-y-2">
+						<label htmlFor="password" className="text-sm font-medium">
+							New Password
+						</label>
+						<Input
+							id="password"
+							type="password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							placeholder="Enter new password"
+						/>
+					</div>
+
+					<div className="space-y-2">
+						<label htmlFor="confirmPassword" className="text-sm font-medium">
+							Confirm New Password
+						</label>
+						<Input
+							id="confirmPassword"
+							type="password"
+							value={confirmPassword}
+							onChange={(e) => setConfirmPassword(e.target.value)}
+							placeholder="Confirm new password"
+						/>
+					</div>
+
+					<Button onClick={updatePassword} disabled={loading}>
+						{loading ? 'Updating...' : 'Update Password'}
+					</Button>
+				</CardContent>
+			</Card>
+
+			{/* Message Display */}
+			{message && (
+				<p className={`mt-4 text-sm ${message.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>{message}</p>
+			)}
+		</div>
+	);
+}

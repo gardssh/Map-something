@@ -32,6 +32,7 @@ export async function GET(request: Request) {
             .filter(activity => activity.summary_polyline && activity.summary_polyline.length > 0)
             .map(activity => ({
                 id: activity.strava_id,
+                strava_id: activity.strava_id,
                 name: activity.name,
                 type: activity.type,
                 sport_type: activity.sport_type,

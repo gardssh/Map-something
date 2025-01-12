@@ -6,6 +6,7 @@ import { formatTime } from '../../lib/timeFormat';
 import { useEffect, useState } from 'react';
 import polyline from '@mapbox/polyline';
 import { Position } from 'geojson';
+import { ExternalLink } from 'lucide-react';
 
 interface ActivityDetailsProps {
 	activity: Activity;
@@ -92,7 +93,20 @@ export const ActivityDetails = ({ activity }: ActivityDetailsProps) => {
 
 	return (
 		<div className="p-4 space-y-4">
-			<h2 className="text-xl font-semibold">{activity.name}</h2>
+			<div>
+				<h2 className="text-xl font-semibold">{activity.name}</h2>
+				{activity.strava_id && (
+					<a
+						href={`https://www.strava.com/activities/${activity.strava_id}`}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="inline-flex items-center gap-1 mt-1 text-sm text-orange-600 hover:text-orange-700"
+					>
+						View in Strava
+						<ExternalLink className="h-3 w-3" />
+					</a>
+				)}
+			</div>
 			<div className="grid grid-cols-2 gap-4">
 				<div>
 					<p className="text-sm text-muted-foreground">Type</p>
@@ -124,10 +138,8 @@ export const ActivityDetails = ({ activity }: ActivityDetailsProps) => {
 				)}
 			</div>
 			{elevationData.length > 0 && (
-				<div>
-					<div className="h-[160px]">
-						<ElevationChart data={elevationData} />
-					</div>
+				<div className="h-[160px]">
+					<ElevationChart data={elevationData} />
 				</div>
 			)}
 		</div>

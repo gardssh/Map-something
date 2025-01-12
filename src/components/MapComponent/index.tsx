@@ -27,6 +27,7 @@ import { ActivityCards } from '@/components/ActivityCards';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { AddWaypointControl } from './controls/AddWaypointControl';
 import { CrosshairOverlay } from './controls/CrosshairOverlay';
+import Image from 'next/image';
 
 declare global {
 	interface Window {
@@ -522,7 +523,10 @@ export const MapComponent = ({
 	}, []);
 
 	return (
-		<div className="absolute inset-0">
+		<div className="relative w-full h-full">
+			<div className="absolute top-4 left-4 z-10 bg-white/90 p-2 rounded-lg shadow-sm">
+				<Image src="/api_logo_cptblWith_strava_horiz_light.svg" alt="Strava API" width={100} height={15} priority />
+			</div>
 			<Map
 				ref={mapRef as React.RefObject<MapRef>}
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}

@@ -3,7 +3,7 @@
 import { Button } from './ui/button';
 import { Card, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
-import { X } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 import { formatTime } from '@/lib/timeFormat';
 import type { ActivityWithMap } from '@/types/activity';
 import { ElevationDetails } from './ElevationDetails';
@@ -16,8 +16,21 @@ interface ActivityDetailsProps {
 export function ActivityDetails({ activity, onClose }: ActivityDetailsProps) {
 	return (
 		<div id="slide" className="grow p-4 flex flex-col gap-4 relative overflow-y-auto">
-			<div className="flex justify-between items-center">
-				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{activity.name}</h3>
+			<div className="flex justify-between items-start">
+				<div>
+					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{activity.name}</h3>
+					{activity.strava_id && (
+						<a
+							href={`https://www.strava.com/activities/${activity.strava_id}`}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="inline-flex items-center gap-1 mt-1 text-sm text-orange-600 hover:text-orange-700"
+						>
+							View in Strava
+							<ExternalLink className="h-3 w-3" />
+						</a>
+					)}
+				</div>
 				<Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={onClose}>
 					<X className="h-4 w-4" />
 					<span className="sr-only">Close activity</span>

@@ -4,7 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import type { Waypoint } from '@/types/waypoint';
 import type { DbRoute } from '@/types/supabase';
 import { ViewCardsButton } from './ViewCardsButton';
-import { X } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 import { Button } from '../ui/button';
 
 // Haversine formula to calculate distance between two points
@@ -340,54 +340,47 @@ export function ActivityCards({
 	}
 
 	return (
-		<div className="fixed bottom-16 left-0 right-0 px-4 pb-4 z-[20]">
+		<div className="fixed bottom-0 left-0 right-0 z-50">
 			<div className="relative">
-				<div
-					ref={scrollContainerRef}
-					className="overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-hide"
-					style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-				>
-					{items.map((item) => (
-						<div
-							key={`${item.type}-${item.id}`}
-							className={`flex-shrink-0 w-[280px] snap-center cursor-pointer rounded-lg bg-background p-4 shadow-lg transition-all ${
-								isSelected(item) ? 'border border-gray-400' : ''
-							}`}
-							onClick={() => handleItemClick(item)}
-						>
-							<div className="space-y-2">
-								<div className="flex items-center gap-2">
-									<span>{getItemIcon(item.type)}</span>
-									<h3 className="font-semibold truncate">{item.name}</h3>
+				{showCards && (
+					<div
+						ref={scrollContainerRef}
+						className="flex gap-4 overflow-x-auto p-4 pb-8 bg-white/95 backdrop-blur-sm shadow-lg"
+					>
+						{items.map((item) => (
+							<div
+								key={`${item.type}-${item.id}`}
+								className={`flex-none w-[280px] p-4 rounded-lg border ${
+									isSelected(item) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+								} shadow-sm cursor-pointer transition-all hover:shadow-md`}
+								onClick={() => handleItemClick(item)}
+							>
+								<div className="flex items-start justify-between mb-2">
+									<div className="flex items-center gap-2">
+										<span className="text-xl">{getItemIcon(item.type)}</span>
+										<h3 className="font-medium text-gray-900 line-clamp-1">{item.name}</h3>
+									</div>
 								</div>
-								<div className="text-sm text-muted-foreground space-y-1">
-									{(item.distance !== undefined || item.duration !== undefined) && (
-										<p>
-											{item.distance !== undefined && formatDistance(item.distance)}
-											{item.distance !== undefined && item.duration !== undefined && ' • '}
-											{item.duration !== undefined && formatDuration(item.duration)}
-										</p>
-									)}
-									<p>{item.date ? new Date(item.date).toLocaleDateString() : 'Date not available'}</p>
-								</div>
+								{item.date && <p className="text-sm text-gray-500 mb-2">{new Date(item.date).toLocaleDateString()}</p>}
+								{item.distance && <p className="text-sm text-gray-600">Distance: {formatDistance(item.distance)}</p>}
+								{item.duration && <p className="text-sm text-gray-600">Duration: {formatDuration(item.duration)}</p>}
+								{item.type === 'activity' && (item.item as Activity).strava_id && (
+									<a
+										href={`https://www.strava.com/activities/${(item.item as Activity).strava_id}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="inline-flex items-center gap-1 mt-2 text-sm text-orange-600 hover:text-orange-700"
+										onClick={(e) => e.stopPropagation()}
+									>
+										View in Strava
+										<ExternalLink className="h-3 w-3" />
+									</a>
+								)}
 							</div>
-						</div>
-					))}
-				</div>
-				<Button
-					variant="ghost"
-					size="icon"
-					className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background shadow-md"
-					onClick={() => {
-						// Clear all highlights before closing
-						onActivityHighlight({} as Activity);
-						onRouteHighlight({} as DbRoute);
-						onWaypointHighlight({} as Waypoint);
-						setShowCards(false);
-					}}
-				>
-					<X className="h-4 w-4" />
-				</Button>
+						))}
+					</div>
+				)}
+				<ViewCardsButton itemCount={items.length} onClick={() => setShowCards(!showCards)} />
 			</div>
 		</div>
 	);
