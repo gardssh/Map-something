@@ -8,7 +8,6 @@ import type { DrawnRoute } from '@/types/route';
 import type { Waypoint } from '@/types/waypoint';
 import type { Activity, HoverInfo } from '@/types/activity';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSession } from 'next-auth/react';
 import type { DbRoute } from '@/types/supabase';
 import { ActivityLayers } from './layers/ActivityLayers';
 import { RouteLayer } from './layers/RouteLayer';
@@ -94,7 +93,6 @@ export const MapComponent = ({
 	const [showWaypointDialog, setShowWaypointDialog] = useState(false);
 	const [isDrawing, setIsDrawing] = useState(false);
 	const { user } = useAuth();
-	const { data: session } = useSession();
 	const { open: isSidebarOpen } = useSidebar();
 	const { isMobile } = useResponsiveLayout();
 	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
@@ -698,7 +696,7 @@ export const MapComponent = ({
 					onLayerToggle={handleLayerToggle}
 					selectedCategories={selectedCategories}
 					onCategoryToggle={setSelectedCategories}
-					userId={session?.user?.id || ''}
+					userId={user?.id || ''}
 					onDrawCreate={onDrawCreate}
 					onDrawUpdate={onDrawUpdate}
 					onDrawDelete={onDrawDelete}
