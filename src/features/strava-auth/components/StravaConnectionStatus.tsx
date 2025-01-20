@@ -60,6 +60,12 @@ function StravaConnectionStatusInner({ isConnected, onDisconnect, athleteId, las
 				return;
 			}
 
+			// Delete activities first
+			const { error: activitiesError } = await supabase.from('strava_activities').delete().eq('user_id', user.id);
+
+			if (activitiesError) throw activitiesError;
+
+			// Then delete Strava tokens
 			const { error } = await supabase.from('strava_tokens').delete().eq('user_id', user.id);
 
 			if (error) throw error;

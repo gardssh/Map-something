@@ -47,27 +47,34 @@ export default function LoginPage() {
 					</CardHeader>
 
 					<CardContent className="space-y-4">
-						<div className="space-y-2">
-							<Input
-								type="email"
-								placeholder="Email address"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-							/>
-						</div>
+						<form
+							onSubmit={(e) => {
+								e.preventDefault();
+								handleSignIn();
+							}}
+						>
+							<div className="space-y-2">
+								<Input
+									type="email"
+									placeholder="Email address"
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
+								/>
+							</div>
 
-						<div className="space-y-2">
-							<Input
-								type="password"
-								placeholder="Password"
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-							/>
-						</div>
+							<div className="space-y-2 mt-4">
+								<Input
+									type="password"
+									placeholder="Password"
+									value={password}
+									onChange={(e) => setPassword(e.target.value)}
+								/>
+							</div>
 
-						<Button className="w-full" onClick={handleSignIn} disabled={loading}>
-							{loading ? 'Signing in...' : 'Log in'}
-						</Button>
+							<Button type="submit" className="w-full mt-4" disabled={loading}>
+								{loading ? 'Signing in...' : 'Log in'}
+							</Button>
+						</form>
 
 						{message && <p className="text-sm text-red-500 mt-2">{message}</p>}
 					</CardContent>
