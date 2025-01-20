@@ -89,31 +89,6 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL('/profile?error=token_storage', REDIRECT_BASE))
     }
 
-    // Trigger activity sync
-    try {
-      // Create headers with cookies for authentication
-      const headers = new Headers({
-        'Content-Type': 'application/json',
-        Cookie: request.headers.get('cookie') || '',
-      })
-
-      const syncResponse = await fetch(new URL('/api/strava/import', REDIRECT_BASE), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ 
-          access_token: tokenData.access_token 
-        }),
-      })
-
-      if (!syncResponse.ok) {
-        console.error('Activity sync failed:', await syncResponse.text())
-        // Don't redirect on sync failure, just log it
-      }
-    } catch (syncError) {
-      console.error('Error syncing activities:', syncError)
-      // Don't redirect on sync failure, just log it
-    }
-
     // Success! Redirect back to profile
     const successUrl = new URL('/profile', REDIRECT_BASE)
     successUrl.searchParams.set('success', 'connected')

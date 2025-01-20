@@ -10,39 +10,23 @@ interface ActivityMap {
     summary_polyline: string;
 }
 
-async function getAllActivities(accessToken: string) {
-    console.log('Starting to fetch all activities...');
-    let page = 1;
-    let allActivities: any[] = [];
-    let hasMore = true;
-    
-    while (hasMore) {
-        console.log(`Fetching page ${page}...`);
-        const response = await fetch(
-            `https://www.strava.com/api/v3/athlete/activities?per_page=200&page=${page}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-            },
-        });
+async function getAllActivities(accessToken: string, page: number = 1, per_page: number = 30) {
+    console.log(`Fetching page ${page} with ${per_page} activities per page...`);
+    const response = await fetch(
+        `https://www.strava.com/api/v3/athlete/activities?per_page=${per_page}&page=${page}`, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+        },
+    });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to fetch activities page ${page}: ${errorText}`);
-        }
-
-        const activities = await response.json();
-        console.log(`Received ${activities.length} activities on page ${page}`);
-        
-        if (activities.length === 0) {
-            hasMore = false;
-        } else {
-            allActivities = [...allActivities, ...activities];
-            page++;
-        }
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch activities page ${page}: ${errorText}`);
     }
 
-    console.log(`Total activities fetched: ${allActivities.length}`);
-    return allActivities;
+    const activities = await response.json();
+    console.log(`Received ${activities.length} activities on page ${page}`);
+    return activities;
 }
 
 function formatElevationData(activity: any) {
@@ -145,20 +129,28 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const { access_token } = await request.json()
+        const { access_token, page = 1 } = await request.json()
         if (!access_token) {
             return NextResponse.json({ error: 'Missing access token' }, { status: 400 })
         }
 
-        // Fetch all activities from Strava
-        console.log('Fetching all Strava activities...')
-        const activities = await getAllActivities(access_token)
-        console.log(`Fetched ${activities.length} total activities from Strava`)
+        // Fetch one page of activities from Strava
+        console.log('Fetching Strava activities...')
+        const activities = await getAllActivities(access_token, page)
+        console.log(`Fetched ${activities.length} activities from Strava`)
+
+        // If no activities returned, we're done
+        if (activities.length === 0) {
+            return NextResponse.json({
+                message: 'Import completed',
+                hasMore: false,
+                nextPage: null
+            })
+        }
 
         // Insert/update activities in Supabase
         console.log('Starting Supabase import...')
         let successCount = 0
-        let updateCount = 0
 
         for (const stravaActivity of activities) {
             try {
@@ -204,7 +196,7 @@ export async function POST(request: Request) {
                     .from('strava_activities')
                     .upsert(activityData, {
                         onConflict: 'strava_id',
-                        ignoreDuplicates: false // We want to update existing records
+                        ignoreDuplicates: false
                     })
 
                 if (upsertError) {
@@ -212,7 +204,6 @@ export async function POST(request: Request) {
                     throw upsertError
                 }
                 
-                // If we get here, the operation was successful
                 successCount++
             } catch (error) {
                 console.error('Error processing activity:', error)
@@ -224,7 +215,9 @@ export async function POST(request: Request) {
             stats: {
                 total: activities.length,
                 success: successCount
-            }
+            },
+            hasMore: activities.length === 30,
+            nextPage: page + 1
         })
     } catch (error) {
         console.error('Import error:', error)

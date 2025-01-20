@@ -6,6 +6,7 @@ import { StravaConnectButton } from './StravaConnectButton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { importActivitiesInBatches } from '../utils/strava-utils';
 
 interface StravaConnectionStatusProps {
 	isConnected: boolean;
@@ -19,6 +20,8 @@ function StravaConnectionStatusInner({ isConnected, onDisconnect, athleteId, las
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
+	const [importing, setImporting] = useState(false);
+	const [importProgress, setImportProgress] = useState(0);
 	const supabase = createClientComponentClient();
 
 	useEffect(() => {
@@ -43,8 +46,36 @@ function StravaConnectionStatusInner({ isConnected, onDisconnect, athleteId, las
 
 		if (successParam === 'connected') {
 			setSuccess('Successfully connected to Strava!');
+			// Start importing activities
+			startImport();
 		}
 	}, [searchParams]);
+
+	const startImport = async () => {
+		try {
+			setImporting(true);
+			setError(null);
+
+			// Get the access token
+			const { data: tokenData } = await supabase.from('strava_tokens').select('access_token').single();
+
+			if (!tokenData?.access_token) {
+				throw new Error('No access token found');
+			}
+
+			// Start the batched import
+			const totalImported = await importActivitiesInBatches(tokenData.access_token, (progress) => {
+				setImportProgress(progress);
+			});
+
+			setSuccess(`Successfully imported ${totalImported} activities from Strava!`);
+		} catch (error: any) {
+			console.error('Error importing activities:', error);
+			setError('Failed to import activities. Please try again later.');
+		} finally {
+			setImporting(false);
+		}
+	};
 
 	const handleDisconnect = async () => {
 		try {
@@ -103,7 +134,12 @@ function StravaConnectionStatusInner({ isConnected, onDisconnect, athleteId, las
 					{lastSync && (
 						<p className="text-sm text-muted-foreground">Last synced: {new Date(lastSync).toLocaleString()}</p>
 					)}
-					<Button onClick={handleDisconnect} variant="destructive" disabled={loading}>
+					{importing && (
+						<p className="text-sm text-muted-foreground">
+							Importing activities... {importProgress} activities imported
+						</p>
+					)}
+					<Button onClick={handleDisconnect} variant="destructive" disabled={loading || importing}>
 						{loading ? 'Disconnecting...' : 'Disconnect Strava'}
 					</Button>
 				</div>

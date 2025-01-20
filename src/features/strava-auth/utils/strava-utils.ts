@@ -72,4 +72,44 @@ export async function getValidStravaToken(userId: string) {
     console.error('Error getting valid Strava token:', error)
     throw error
   }
+}
+
+export async function importActivitiesInBatches(accessToken: string, onProgress?: (progress: number) => void) {
+  let page = 1;
+  let hasMore = true;
+  let totalImported = 0;
+
+  while (hasMore) {
+    try {
+      const response = await fetch('/api/strava/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ access_token: accessToken, page }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to import activities');
+      }
+
+      const data = await response.json();
+      totalImported += data.stats.success;
+      
+      if (onProgress) {
+        onProgress(totalImported);
+      }
+
+      hasMore = data.hasMore;
+      page = data.nextPage;
+
+      // Add a small delay between batches to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error('Error importing activities:', error);
+      throw error;
+    }
+  }
+
+  return totalImported;
 } 
