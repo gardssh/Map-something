@@ -6,9 +6,12 @@ const REDIRECT_BASE = process.env.NODE_ENV === 'production'
   ? 'https://kart.gardsh.no'
   : 'http://localhost:3000'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url)
+    const url = new URL(REDIRECT_BASE)
+    const searchParams = new URL(request.url).searchParams
     const code = searchParams.get('code')
     const state = searchParams.get('state')
     const error = searchParams.get('error')

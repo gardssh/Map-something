@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { StravaConnectButton } from './StravaConnectButton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -14,12 +14,7 @@ interface StravaConnectionStatusProps {
 	lastSync?: string;
 }
 
-export function StravaConnectionStatus({
-	isConnected,
-	onDisconnect,
-	athleteId,
-	lastSync,
-}: StravaConnectionStatusProps) {
+function StravaConnectionStatusInner({ isConnected, onDisconnect, athleteId, lastSync }: StravaConnectionStatusProps) {
 	const searchParams = useSearchParams();
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
@@ -113,5 +108,13 @@ export function StravaConnectionStatus({
 				</div>
 			)}
 		</div>
+	);
+}
+
+export function StravaConnectionStatus(props: StravaConnectionStatusProps) {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<StravaConnectionStatusInner {...props} />
+		</Suspense>
 	);
 }
