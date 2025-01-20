@@ -8,7 +8,7 @@ export interface UseDNTCabinsProps {
 }
 
 export const useDNTCabins = ({ mapRef }: UseDNTCabinsProps) => {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const toggleVisibility = useCallback((visible?: boolean) => {
