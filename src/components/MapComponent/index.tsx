@@ -29,6 +29,7 @@ import { CrosshairOverlay } from './controls/CrosshairOverlay';
 import Image from 'next/image';
 import { DNTCabinLayer } from './layers/DNTCabinLayer';
 import { useDNTCabins } from './hooks/useDNTCabins';
+import { mapLayers } from './config/mapLayers';
 
 declare global {
 	interface Window {
@@ -107,9 +108,7 @@ export const MapComponent = ({
 	const [routesVisible, setRoutesVisible] = useState(true);
 
 	const { availableLayers, initialMapState, mapStyle, mapSettings } = useMapConfig({ mapRef });
-
 	const { currentBaseLayer, overlayStates, handleLayerToggle } = useMapLayers({ mapRef });
-
 	const { isVisible: dntCabinsVisible, toggleVisibility: toggleDNTCabins } = useDNTCabins({ mapRef });
 
 	const getVisibleFeatures = useCallback(() => {
@@ -567,7 +566,7 @@ export const MapComponent = ({
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
 				initialViewState={initialMapState}
 				style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-				mapStyle="mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm"
+				mapStyle={mapStyle}
 				onMoveEnd={() => updateVisibleIds()}
 				onMouseMove={onHover}
 				onClick={(e) => {
@@ -658,6 +657,9 @@ export const MapComponent = ({
 					'saved-routes-layer',
 					'saved-routes-border',
 					'saved-routes-touch',
+					'dnt-cabins',
+					'dnt-cabins-touch',
+					'dnt-cabins-label',
 				]}
 				renderWorldCopies={false}
 				maxTileCacheSize={50}
@@ -709,8 +711,8 @@ export const MapComponent = ({
 					routesVisible={routesVisible}
 					onWaypointsToggle={setWaypointsVisible}
 					onRoutesToggle={setRoutesVisible}
-					dntCabinsVisible={overlayStates['dnt-cabins']}
-					onDNTCabinsToggle={(visible) => handleLayerToggle('dnt-cabins', visible)}
+					dntCabinsVisible={dntCabinsVisible}
+					onDNTCabinsToggle={toggleDNTCabins}
 					activeItem={activeItem}
 				/>
 
@@ -745,7 +747,7 @@ export const MapComponent = ({
 					<CrosshairOverlay onConfirm={handleWaypointPlacementConfirm} onCancel={() => setIsAddingWaypoint(false)} />
 				)}
 
-				<DNTCabinLayer visible={overlayStates['dnt-cabins']} />
+				<DNTCabinLayer visible={dntCabinsVisible} />
 			</Map>
 
 			{isMobile && !isAddingWaypoint && (
@@ -786,27 +788,3 @@ export const MapComponent = ({
 		</div>
 	);
 };
-
-const mapSettings = (isDrawing: boolean) => ({
-	renderWorldCopies: false,
-	maxTileCacheSize: 50,
-	trackResize: false,
-	dragRotate: true,
-	pitchWithRotate: true,
-	dragPan: true,
-	touchZoomRotate: true,
-	touchPitch: true,
-	interactiveLayerIds: isDrawing
-		? []
-		: [
-				'waypoints-layer',
-				'foot-sports',
-				'cycle-sports',
-				'water-sports',
-				'winter-sports',
-				'other-sports',
-				'unknown-sports',
-				'saved-routes-layer',
-				'saved-routes-border',
-			],
-});

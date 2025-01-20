@@ -2,21 +2,18 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import type { MapRef } from 'react-map-gl';
-import type { LineLayer, CircleLayer } from 'react-map-gl';
-import type { StyleSpecification } from 'mapbox-gl';
-import { useMapConfig } from './useMapConfig';
+import { mapLayers, DEFAULT_BASE_LAYER, type BaseLayerId, type OverlayLayerId } from '../config/mapLayers';
 
 export interface UseMapLayersProps {
 	mapRef: React.MutableRefObject<MapRef | undefined> | React.RefObject<MapRef>;
 }
 
 export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
-	const { mapStyles } = useMapConfig({ mapRef });
-	const [currentBaseLayer, setCurrentBaseLayer] = useState<string>('default');
-	const [overlayStates, setOverlayStates] = useState<{ [key: string]: boolean }>({
+	const [currentBaseLayer, setCurrentBaseLayer] = useState<BaseLayerId>(DEFAULT_BASE_LAYER);
+	const [overlayStates, setOverlayStates] = useState<Record<OverlayLayerId, boolean>>({
 		bratthet: false,
 		snoskred: false,
-		'custom-tileset': false,
+		'custom-tileset': false
 	});
 	const [isAddingLayers, setIsAddingLayers] = useState(false);
 
@@ -38,61 +35,42 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 			}
 
 			try {
-				['bratthet', 'snoskred'].forEach(layerId => {
+				// Add or update overlay layers
+				Object.entries(overlayStates).forEach(([layerId, isVisible]) => {
+					const layer = mapLayers.getOverlayLayer(layerId as OverlayLayerId);
+					if (!layer) return;
+
+					// Remove existing layer and source if present
 					if (map.getLayer(layerId)) {
 						map.removeLayer(layerId);
 					}
 					if (map.getSource(layerId)) {
 						map.removeSource(layerId);
 					}
-				});
 
-				// Add bratthet layer
-				if (!map.getSource('bratthet')) {
-					map.addSource('bratthet', {
-						type: 'raster',
-						tiles: [
-							'https://nve.geodataonline.no/arcgis/services/Bratthet/MapServer/WMSServer?service=WMS&request=GetMap&version=1.1.1&layers=Bratthet_snoskred&styles=&format=image/png&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true'
-						]
-					});
-				}
-				if (!map.getLayer('bratthet')) {
-					map.addLayer({
-						id: 'bratthet',
-						type: 'raster',
-						source: 'bratthet',
-						paint: { 'raster-opacity': 0.6 },
-						layout: { visibility: overlayStates.bratthet ? 'visible' : 'none' }
-					});
-				}
+					// Add source and layer if style is defined
+					if (layer.style && typeof layer.style === 'object' && layer.style.sources) {
+						// Add sources
+						Object.entries(layer.style.sources).forEach(([sourceId, source]) => {
+							if (!map.getSource(sourceId)) {
+								map.addSource(sourceId, source);
+							}
+						});
 
-				// Add snoskred layer
-				if (!map.getSource('snoskred')) {
-					map.addSource('snoskred', {
-						type: 'raster',
-						tiles: [
-							'https://gis3.nve.no/arcgis/rest/services/wmts/KastWMTS/MapServer/export?dpi=96&transparent=true&format=png32&bbox={bbox-epsg-3857}&bboxSR=EPSG:3857&imageSR=EPSG:3857&size=256,256&f=image&layers=show:0,1,2,3,4'
-						]
-					});
-				}
-				if (!map.getLayer('snoskred')) {
-					map.addLayer({
-						id: 'snoskred',
-						type: 'raster',
-						source: 'snoskred',
-						paint: { 'raster-opacity': 0.6 },
-						layout: { visibility: overlayStates.snoskred ? 'visible' : 'none' }
-					});
-				}
-
-				// Update layer visibility
-				['bratthet', 'snoskred'].forEach(layerId => {
-					if (map.getLayer(layerId)) {
-						map.setLayoutProperty(
-							layerId,
-							'visibility',
-							overlayStates[layerId] ? 'visible' : 'none'
-						);
+						// Add layers
+						layer.style.layers?.forEach((layerDef) => {
+							if (!map.getLayer(layerDef.id)) {
+								map.addLayer({
+									...layerDef,
+									layout: {
+										...layerDef.layout,
+										visibility: isVisible ? 'visible' : 'none'
+									}
+								});
+							} else {
+								map.setLayoutProperty(layerDef.id, 'visibility', isVisible ? 'visible' : 'none');
+							}
+						});
 					}
 				});
 
@@ -112,102 +90,41 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 		const map = mapRef.current.getMap();
 
 		// Handle base layer changes
-		if (['satellite', 'norge-topo', 'default'].includes(layerId)) {
+		if (mapLayers.getBaseLayer(layerId as BaseLayerId)) {
 			if (layerId !== currentBaseLayer) {
-				setCurrentBaseLayer(layerId);
+				setCurrentBaseLayer(layerId as BaseLayerId);
 				const currentOverlayStates = { ...overlayStates };
+				const newStyle = mapLayers.getBaseLayer(layerId as BaseLayerId)?.style;
 
-				let newStyle: string | StyleSpecification;
-				switch (layerId) {
-					case 'satellite':
-						newStyle = 'mapbox://styles/mapbox/satellite-v9';
-						break;
-					case 'norge-topo':
-						newStyle = {
-							version: 8,
-							glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
-							sources: {
-								'norge-topo': {
-									type: 'raster',
-									tiles: ['https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png'],
-									tileSize: 256,
-									attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
-								}
-							},
-							layers: [
-								{
-									id: 'norge-topo-layer',
-									type: 'raster',
-									source: 'norge-topo',
-									paint: { 'raster-opacity': 1 }
-								}
-							]
-						} as StyleSpecification;
-						break;
-					default:
-						newStyle = 'mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm';
+				if (newStyle) {
+					map.setStyle(newStyle);
+					map.once('style.load', () => {
+						setOverlayStates(currentOverlayStates);
+						setTimeout(() => {
+							addOverlayLayers();
+						}, 200);
+					});
 				}
-
-				map.setStyle(newStyle);
-
-				map.once('style.load', () => {
-					setOverlayStates(currentOverlayStates);
-					setTimeout(() => {
-						addOverlayLayers();
-					}, 200);
-				});
 			}
-		} 
+		}
 		// Handle overlay toggles
-		else {
+		else if (mapLayers.getOverlayLayer(layerId as OverlayLayerId)) {
 			setOverlayStates(prev => ({
 				...prev,
 				[layerId]: isVisible
 			}));
 
-			if (layerId === 'bratthet' || layerId === 'snoskred') {
-				const source = layerId === 'bratthet' ? {
-					type: 'raster' as const,
-					tiles: [
-						'https://nve.geodataonline.no/arcgis/services/Bratthet/MapServer/WMSServer?service=WMS&request=GetMap&version=1.1.1&layers=Bratthet_snoskred&styles=&format=image/png&srs=EPSG:3857&bbox={bbox-epsg-3857}&width=256&height=256&transparent=true'
-					]
-				} : {
-					type: 'raster' as const,
-					tiles: [
-						'https://gis3.nve.no/arcgis/rest/services/wmts/KastWMTS/MapServer/export?dpi=96&transparent=true&format=png32&bbox={bbox-epsg-3857}&bboxSR=EPSG:3857&imageSR=EPSG:3857&size=256,256&f=image&layers=show:0,1,2,3,4'
-					]
-				};
-
-				try {
-					if (!map.getSource(layerId)) {
-						map.addSource(layerId, source);
-					}
-
-					if (!map.getLayer(layerId)) {
-						map.addLayer({
-							id: layerId,
-							type: 'raster',
-							source: layerId,
-							paint: { 'raster-opacity': 0.6 },
-							layout: { visibility: isVisible ? 'visible' : 'none' }
-						});
-					} else {
-						map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
-					}
-				} catch (error) {
-					console.error(`Error handling layer ${layerId}:`, error);
-					if (!map.getLayer(layerId)) {
-						addOverlayLayers();
-					}
-				}
+			// Update layer visibility if it exists
+			if (map.getLayer(layerId)) {
+				map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
 			} else {
-				if (map.getLayer(layerId)) {
-					map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
-				}
+				// If layer doesn't exist, try to add it
+				addOverlayLayers();
 			}
 		}
 	}, [addOverlayLayers, overlayStates, mapRef, currentBaseLayer]);
 
+	// Initialize layers when map loads
 	useEffect(() => {
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
@@ -218,9 +135,7 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 					setTimeout(checkAndAddLayers, 100);
 					return;
 				}
-				if (!map.getLayer('bratthet') && !map.getLayer('snoskred')) {
-					addOverlayLayers();
-				}
+				addOverlayLayers();
 			};
 			checkAndAddLayers();
 		};
@@ -229,15 +144,9 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 		
 		if (map.isStyleLoaded()) {
 			if (map.areTilesLoaded()) {
-				if (!map.getLayer('bratthet') && !map.getLayer('snoskred')) {
-					addOverlayLayers();
-				}
+				addOverlayLayers();
 			} else {
-				map.once('idle', () => {
-					if (!map.getLayer('bratthet') && !map.getLayer('snoskred')) {
-						addOverlayLayers();
-					}
-				});
+				map.once('idle', addOverlayLayers);
 			}
 		}
 
@@ -246,48 +155,7 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 		};
 	}, [addOverlayLayers, mapRef]);
 
-	const layers: (LineLayer | CircleLayer)[] = [
-		{
-			id: 'activities-layer',
-			type: 'line',
-			source: 'activities',
-			layout: {
-				'line-join': 'round',
-				'line-cap': 'round',
-			},
-			paint: {
-				'line-color': '#ff4400',
-				'line-width': 2,
-			},
-		},
-		{
-			id: 'saved-routes-layer',
-			type: 'line',
-			source: 'saved-routes',
-			layout: {
-				'line-join': 'round',
-				'line-cap': 'round',
-			},
-			paint: {
-				'line-color': '#0088ff',
-				'line-width': 2,
-			},
-		},
-		{
-			id: 'waypoints-layer',
-			type: 'circle',
-			source: 'waypoints',
-			paint: {
-				'circle-radius': 6,
-				'circle-color': '#00ff88',
-				'circle-stroke-width': 2,
-				'circle-stroke-color': '#ffffff',
-			},
-		},
-	];
-
 	return {
-		layers,
 		currentBaseLayer,
 		overlayStates,
 		handleLayerToggle,

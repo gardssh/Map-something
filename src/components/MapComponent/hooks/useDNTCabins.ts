@@ -11,19 +11,10 @@ export const useDNTCabins = ({ mapRef }: UseDNTCabinsProps) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const toggleVisibility = useCallback((visible: boolean) => {
-    if (!mapRef.current) return;
-    const map = mapRef.current.getMap();
-    
-    if (map.getLayer('dnt-cabins-layer')) {
-      map.setLayoutProperty(
-        'dnt-cabins-layer',
-        'visibility',
-        visible ? 'visible' : 'none'
-      );
-    }
-    setIsVisible(visible);
-  }, [mapRef]);
+  const toggleVisibility = useCallback((visible?: boolean) => {
+    const newVisibility = visible !== undefined ? visible : !isVisible;
+    setIsVisible(newVisibility);
+  }, [isVisible]);
 
   useEffect(() => {
     if (!mapRef.current) return;

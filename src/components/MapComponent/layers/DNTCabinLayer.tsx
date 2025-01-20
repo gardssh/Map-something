@@ -7,10 +7,15 @@ import { Lock } from 'lucide-react';
 import { useDNTCabins } from '@/hooks/useDNTCabins';
 import type { CabinFeature } from '@/types/dnt-cabins';
 
-export function DNTCabinLayer({ visible = true }: { visible?: boolean }) {
+export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 	const { current: map } = useMap();
 	const cabinData = useDNTCabins();
 	const [selectedCabin, setSelectedCabin] = useState<CabinFeature | null>(null);
+	const [hoveredCabin, setHoveredCabin] = useState<CabinFeature | null>(null);
+
+	const handlePopupClose = useCallback(() => {
+		setSelectedCabin(null);
+	}, []);
 
 	useEffect(() => {
 		if (!map) return;
@@ -30,34 +35,66 @@ export function DNTCabinLayer({ visible = true }: { visible?: boolean }) {
 			}
 		};
 
+		const handleMouseMove = (e: mapboxgl.MapMouseEvent) => {
+			const features = map.queryRenderedFeatures(e.point, {
+				layers: ['dnt-cabins-touch'],
+			});
+
+			if (features.length > 0) {
+				const cabin = features[0] as unknown as CabinFeature;
+				if (cabin.properties) {
+					setHoveredCabin(cabin);
+					map.getCanvas().style.cursor = 'pointer';
+				}
+			} else {
+				setHoveredCabin(null);
+				map.getCanvas().style.cursor = '';
+			}
+		};
+
+		const handleMouseLeave = () => {
+			setHoveredCabin(null);
+			map.getCanvas().style.cursor = '';
+		};
+
 		map.on('click', handleMapClick);
+		map.on('mousemove', handleMouseMove);
+		map.on('mouseleave', handleMouseLeave);
 
 		return () => {
 			map.off('click', handleMapClick);
+			map.off('mousemove', handleMouseMove);
+			map.off('mouseleave', handleMouseLeave);
 		};
 	}, [map]);
 
+	if (!cabinData.features.length) return null;
+
 	return (
 		<>
-			<Source type="geojson" data={cabinData}>
+			<Source id="dnt-cabins" type="geojson" data={cabinData}>
 				{/* Touch layer for better interaction */}
 				<Layer
 					id="dnt-cabins-touch"
 					type="circle"
+					source="dnt-cabins"
 					layout={{
 						visibility: visible ? 'visible' : 'none',
 					}}
 					paint={{
 						'circle-color': '#000000',
-						'circle-radius': 12,
+						'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 15, 10, 20, 15, 25, 20, 30],
 						'circle-opacity': 0,
 					}}
+					minzoom={0}
+					maxzoom={24}
 				/>
 
 				{/* Visual cabin dot layer */}
 				<Layer
 					id="dnt-cabins"
 					type="circle"
+					source="dnt-cabins"
 					layout={{
 						visibility: visible ? 'visible' : 'none',
 					}}
@@ -66,13 +103,18 @@ export function DNTCabinLayer({ visible = true }: { visible?: boolean }) {
 						'circle-radius': 6,
 						'circle-stroke-width': 2,
 						'circle-stroke-color': '#ffffff',
+						'circle-opacity': 1,
+						'circle-stroke-opacity': 1,
 					}}
+					minzoom={0}
+					maxzoom={24}
 				/>
 
 				{/* Text label layer */}
 				<Layer
 					id="dnt-cabins-label"
 					type="symbol"
+					source="dnt-cabins"
 					layout={{
 						visibility: visible ? 'visible' : 'none',
 						'text-field': ['get', 'name'],
@@ -85,14 +127,34 @@ export function DNTCabinLayer({ visible = true }: { visible?: boolean }) {
 						'text-halo-color': '#ffffff',
 						'text-halo-width': 2,
 					}}
+					minzoom={0}
+					maxzoom={24}
 				/>
 			</Source>
 
+			{/* Hover popup */}
+			{hoveredCabin && !selectedCabin && (
+				<Popup
+					longitude={hoveredCabin.geometry.coordinates[0]}
+					latitude={hoveredCabin.geometry.coordinates[1]}
+					closeButton={false}
+					closeOnClick={false}
+					anchor="bottom"
+					className="p-0 overflow-hidden [&_.mapboxgl-popup-content]:p-2"
+				>
+					<div className="text-sm">
+						<div className="font-semibold">{hoveredCabin.properties.name}</div>
+						<div className="text-muted-foreground">{hoveredCabin.properties.serviceLevel}</div>
+					</div>
+				</Popup>
+			)}
+
+			{/* Click popup */}
 			{selectedCabin && (
 				<Popup
 					longitude={selectedCabin.geometry.coordinates[0]}
 					latitude={selectedCabin.geometry.coordinates[1]}
-					onClose={() => setSelectedCabin(null)}
+					onClose={handlePopupClose}
 					anchor="bottom"
 					className="p-0 overflow-hidden [&_.mapboxgl-popup-content]:p-0 [&_.mapboxgl-popup-close-button]:p-2 [&_.mapboxgl-popup-close-button]:mr-1"
 				>
