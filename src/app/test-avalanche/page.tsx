@@ -304,8 +304,8 @@ export default function TestAvalanche() {
 				<div key={`${forecast.RegId}-${forecast.ValidFrom}`} className="space-y-4">
 					{/* Danger Level Header Box */}
 					<Card className="overflow-hidden">
-						<div className={`p-4 ${getDangerLevelColor(forecast.DangerLevel)}`}>
-							<div className="flex items-center gap-4">
+						<div className={`p-2 ${getDangerLevelColor(forecast.DangerLevel)}`}>
+							<div className="flex items-center gap-2">
 								<img
 									src={getDangerLevelImagePath(forecast)}
 									alt={`Danger Level ${forecast.DangerLevel}`}
@@ -324,7 +324,7 @@ export default function TestAvalanche() {
 					</Card>
 
 					{/* Main Content */}
-					<div className="space-y-4 px-4">
+					<div className="space-y-4 px-2">
 						<div>
 							<h3 className="font-semibold">Valid Period</h3>
 							<p>From: {new Date(forecast.ValidFrom).toLocaleString()}</p>

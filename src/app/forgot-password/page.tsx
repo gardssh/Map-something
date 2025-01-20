@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { AuthNav } from '@/components/auth-nav';
+import { AuthNav } from '@/components/Auth/auth-nav';
 
 export default function ForgotPasswordPage() {
 	const [email, setEmail] = useState('');

@@ -11,7 +11,10 @@
 		"setup-webhook": "node setup-webhook.mjs",
 		"fetch-strava": "tsx src/scripts/fetch-strava.ts",
 		"strava-auth": "tsx src/scripts/strava-auth.ts",
-		"get-token": "tsx src/scripts/get-refresh-token.ts"
+		"get-token": "tsx src/scripts/get-refresh-token.ts",
+		"webhook": "tsx src/scripts/create-webhook.ts",
+		"list-activities": "tsx src/scripts/list-activities.ts",
+		"list-tokens": "tsx src/scripts/list-tokens.ts"
 	},
 	"dependencies": {
 		"@headlessui/react": "^2.2.0",
@@ -39,7 +42,7 @@
 		"@supabase/auth-helpers-nextjs": "^0.10.0",
 		"@supabase/ssr": "^0.5.2",
 		"@supabase/supabase-js": "^2.47.5",
-		"@turf/turf": "^7.1.0",
+		"@turf/turf": "^7.2.0",
 		"@types/mapbox-gl": "^3.4.1",
 		"@types/mapbox__mapbox-gl-draw": "^1.4.8",
 		"@types/next-auth": "^3.15.0",
@@ -51,7 +54,7 @@
 		"button": "^1.1.1",
 		"chart.js": "^4.4.7",
 		"class-variance-authority": "^0.7.1",
-		"clsx": "^2.1.0",
+		"clsx": "^2.1.1",
 		"cmdk": "1.0.0",
 		"dotenv": "^16.4.7",
 		"framer-motion": "^11.15.0",
@@ -73,7 +76,7 @@
 		"react-resizable-panels": "^2.1.7",
 		"recharts": "^2.12.2",
 		"shadcn-ui": "^0.9.4",
-		"tailwind-merge": "^2.2.1",
+		"tailwind-merge": "^2.6.0",
 		"tailwindcss-animate": "^1.0.7",
 		"three": "^0.172.0",
 		"ts-node": "^10.9.2",
@@ -81,15 +84,16 @@
 	},
 	"devDependencies": {
 		"@types/geojson": "^7946.0.15",
-		"@types/node": "^22.10.1",
+		"@types/node": "^22.10.6",
 		"@types/react": "^18",
 		"@types/react-dom": "^18",
 		"autoprefixer": "^10.4.20",
 		"eslint": "^8",
 		"eslint-config-next": "14.2.5",
+		"playwright": "^1.49.1",
 		"postcss": "^8.4.49",
 		"tailwindcss": "^3.4.17",
 		"tsx": "^4.19.2",
-		"typescript": "^5.7.2"
+		"typescript": "^5.7.3"
 	}
 }

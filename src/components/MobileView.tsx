@@ -1,9 +1,9 @@
 import { MapComponent } from '@/components/MapComponent';
-import { MobileProfile } from '@/components/MobileProfile';
-import { MobileDrawer } from '@/components/MobileDrawer';
-import { ActivityDetails } from '@/components/activities/ActivityDetails';
-import { RouteDetails } from '@/components/routes/RouteDetails';
-import { WaypointDetails } from '@/components/waypoints/WaypointDetails';
+import { MobileProfile } from '@/components/mobile/MobileProfile';
+import { MobileDrawer } from '@/components/mobile/MobileDrawer';
+import { ActivityDetails } from '@/components/details/ActivityDetails';
+import { RouteDetails } from '@/components/details/RouteDetails';
+import { WaypointDetails } from '@/components/details/WaypointDetails';
 import type { Activity } from '@/types/activity';
 import type { DbRoute, DbWaypoint } from '@/types/supabase';
 import Image from 'next/image';
@@ -28,6 +28,8 @@ interface MobileViewProps {
 	handleWaypointDelete: (waypointId: string) => void;
 	handleWaypointRename: (waypointId: string, newName: string) => void;
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
+	setVisibleRoutesId: React.Dispatch<React.SetStateAction<(string | number)[]>>;
+	setVisibleWaypointsId: React.Dispatch<React.SetStateAction<(string | number)[]>>;
 	handleRouteSave: (route: DbRoute) => void;
 	handleWaypointSave: (waypoint: DbWaypoint) => void;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
@@ -164,6 +166,8 @@ export function MobileView({
 	handleWaypointDelete,
 	handleWaypointRename,
 	setVisibleActivitiesId,
+	setVisibleRoutesId,
+	setVisibleWaypointsId,
 	handleRouteSave,
 	handleWaypointSave,
 	setSelectedRouteId,
@@ -263,6 +267,8 @@ export function MobileView({
 						<MapComponent
 							activities={activities}
 							setVisibleActivitiesId={setVisibleActivitiesId}
+							setVisibleRoutesId={setVisibleRoutesId}
+							setVisibleWaypointsId={setVisibleWaypointsId}
 							selectedRouteId={selectedRouteId}
 							setSelectedRouteId={setSelectedRouteId}
 							onMapLoad={(map) => setMapInstance(map)}

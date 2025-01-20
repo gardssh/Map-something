@@ -22,7 +22,7 @@ export const RouteLayer = ({ routes, selectedRoute, visible = true }: RouteLayer
 						type: 'Feature',
 						geometry: route.geometry,
 						properties: {
-							id: route.id,
+							id: route.id.startsWith('route-') ? route.id : `route-${route.id}`,
 							name: route.name,
 							distance: turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' }),
 							type: 'drawn-route',

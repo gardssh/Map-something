@@ -9,6 +9,7 @@ export interface ActivityMap {
 
 export interface ActivityWithMap extends DbStravaActivity {
   map: ActivityMap;
+  description?: string;
 }
 
 export interface Activity {
@@ -28,26 +29,24 @@ export interface Activity {
   max_heartrate?: number | null;
   elev_high?: number | null;
   elev_low?: number | null;
-  map: {
-    summary_polyline?: string;
-    geometry?: RoutePoints | null;
-  };
-  athlete?: {
-    id: number;
-  };
+  summary_polyline?: string;
   selected?: boolean;
   visible?: boolean;
   coordinates?: number[] | null;
   bounds?: number[][] | null;
   elevation_data?: any;
+  properties?: any;
+  source_id?: string;
+  layer_id?: string;
+  is_hovered?: boolean;
   feature?: Feature<LineString, GeoJsonProperties> | null;
-  sourceId?: string;
-  layerId?: string;
-  isHovered?: boolean;
+  geometry?: LineString | null;
   strava_id?: string | number;
   user_id?: string;
   created_at?: string;
   updated_at?: string;
+  description?: string;
+  map?: ActivityMap | null;
 }
 
 export interface HoverInfo {

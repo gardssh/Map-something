@@ -4,12 +4,14 @@ import { useCallback, useState, useEffect } from 'react';
 import type { MapRef } from 'react-map-gl';
 import type { LineLayer, CircleLayer } from 'react-map-gl';
 import type { StyleSpecification } from 'mapbox-gl';
+import { useMapConfig } from './useMapConfig';
 
 export interface UseMapLayersProps {
 	mapRef: React.MutableRefObject<MapRef | undefined> | React.RefObject<MapRef>;
 }
 
 export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
+	const { mapStyles } = useMapConfig({ mapRef });
 	const [currentBaseLayer, setCurrentBaseLayer] = useState<string>('default');
 	const [overlayStates, setOverlayStates] = useState<{ [key: string]: boolean }>({
 		bratthet: false,
@@ -111,45 +113,50 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 
 		// Handle base layer changes
 		if (['satellite', 'norge-topo', 'default'].includes(layerId)) {
-			setCurrentBaseLayer(layerId);
-			
-			const norgeTopoStyle: StyleSpecification = {
-				version: 8,
-				glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
-				sources: {
-					'norge-topo': {
-						type: 'raster',
-						tiles: ['https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png'],
-						tileSize: 256,
-						attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
-					}
-				},
-				layers: [
-					{
-						id: 'norge-topo-layer',
-						type: 'raster',
-						source: 'norge-topo',
-						paint: { 'raster-opacity': 1 }
-					}
-				]
-			};
+			if (layerId !== currentBaseLayer) {
+				setCurrentBaseLayer(layerId);
+				const currentOverlayStates = { ...overlayStates };
 
-			const newStyle = layerId === 'satellite'
-				? 'mapbox://styles/mapbox/satellite-v9'
-				: layerId === 'norge-topo'
-					? norgeTopoStyle
-					: 'mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm';
+				let newStyle: string | StyleSpecification;
+				switch (layerId) {
+					case 'satellite':
+						newStyle = 'mapbox://styles/mapbox/satellite-v9';
+						break;
+					case 'norge-topo':
+						newStyle = {
+							version: 8,
+							glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+							sources: {
+								'norge-topo': {
+									type: 'raster',
+									tiles: ['https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png'],
+									tileSize: 256,
+									attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
+								}
+							},
+							layers: [
+								{
+									id: 'norge-topo-layer',
+									type: 'raster',
+									source: 'norge-topo',
+									paint: { 'raster-opacity': 1 }
+								}
+							]
+						} as StyleSpecification;
+						break;
+					default:
+						newStyle = 'mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm';
+				}
 
-			const currentOverlayStates = { ...overlayStates };
+				map.setStyle(newStyle);
 
-			map.setStyle(newStyle as string);
-
-			map.once('style.load', () => {
-				setOverlayStates(currentOverlayStates);
-				setTimeout(() => {
-					addOverlayLayers();
-				}, 200);
-			});
+				map.once('style.load', () => {
+					setOverlayStates(currentOverlayStates);
+					setTimeout(() => {
+						addOverlayLayers();
+					}, 200);
+				});
+			}
 		} 
 		// Handle overlay toggles
 		else {
@@ -199,7 +206,7 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 				}
 			}
 		}
-	}, [addOverlayLayers, overlayStates, mapRef]);
+	}, [addOverlayLayers, overlayStates, mapRef, currentBaseLayer]);
 
 	useEffect(() => {
 		if (!mapRef.current) return;

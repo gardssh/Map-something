@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase';
-import type { DbProfile, DbProfileRow } from '@/types/supabase';
+import type { DbProfile } from '@/types/supabase';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { StravaConnectionStatus } from '@/features/strava-auth/components/StravaConnectionStatus';
 
 export default function ProfilePage() {
 	const { user, refreshSession } = useAuth();
@@ -19,14 +20,33 @@ export default function ProfilePage() {
 	const [confirmPassword, setConfirmPassword] = useState('');
 	const [message, setMessage] = useState('');
 	const [loading, setLoading] = useState(false);
+	const [stravaToken, setStravaToken] = useState<any>(null);
+	const [activitiesCount, setActivitiesCount] = useState(0);
 	const supabase = createClient();
 
-	// Load initial values
+	// Load initial values and data
 	useEffect(() => {
-		if (user?.user_metadata) {
-			setFirstName(user.user_metadata.first_name || '');
-			setLastName(user.user_metadata.last_name || '');
+		async function loadData() {
+			if (user?.id) {
+				// Load profile metadata
+				if (user.user_metadata) {
+					setFirstName(user.user_metadata.first_name || '');
+					setLastName(user.user_metadata.last_name || '');
+				}
+
+				// Load Strava token
+				const { data: token } = await supabase.from('strava_tokens').select('*').eq('user_id', user.id).single();
+				setStravaToken(token);
+
+				// Load activities count
+				const { count } = await supabase
+					.from('strava_activities')
+					.select('*', { count: 'exact', head: true })
+					.eq('user_id', user.id);
+				setActivitiesCount(count || 0);
+			}
 		}
+		loadData();
 	}, [user]);
 
 	const updateNames = async () => {
@@ -128,6 +148,36 @@ export default function ProfilePage() {
 			</div>
 			<h1 className="text-3xl font-bold mb-8">Profile Settings</h1>
 
+			{/* Profile Overview */}
+			<Card className="mb-8">
+				<CardHeader>
+					<CardTitle>Profile Overview</CardTitle>
+					<CardDescription>Your account information and statistics</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="space-y-4">
+						<div>
+							<h3 className="text-sm font-medium">Email</h3>
+							<p className="text-sm text-muted-foreground">{user?.email}</p>
+						</div>
+						<Separator className="my-4" />
+						<div>
+							<h3 className="text-sm font-medium">Account Statistics</h3>
+							<div className="grid grid-cols-2 gap-4 mt-2">
+								<div>
+									<p className="text-sm text-muted-foreground">Member Since</p>
+									<p className="text-sm">{user?.created_at && new Date(user.created_at).toLocaleDateString()}</p>
+								</div>
+								<div>
+									<p className="text-sm text-muted-foreground">Activities</p>
+									<p className="text-sm">{activitiesCount}</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+
 			{/* Name Settings */}
 			<Card className="mb-8">
 				<CardHeader>
@@ -167,37 +217,27 @@ export default function ProfilePage() {
 				</CardContent>
 			</Card>
 
-			{/* Connected Services */}
+			{/* Strava Connection */}
 			<Card className="mb-8">
 				<CardHeader>
-					<CardTitle>Connected Services</CardTitle>
-					<CardDescription>Connect your Strava account</CardDescription>
+					<CardTitle>Strava Connection</CardTitle>
+					<CardDescription>Connect your Strava account to sync activities</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<div className="flex flex-col space-y-4">
-						<div className="bg-gray-50 p-6 rounded-lg flex justify-center">
-							<button
-								className="hover:opacity-90 transition-opacity hover:scale-105 transform duration-200"
-								onClick={() => {
-									// TODO: Implement Strava OAuth flow
-									console.log('Connect to Strava clicked');
-								}}
-							>
-								<Image
-									src="/btn_strava_connectwith_light.svg"
-									alt="Connect with Strava"
-									width={193}
-									height={48}
-									priority
-								/>
-							</button>
-						</div>
-					</div>
+					<StravaConnectionStatus
+						isConnected={!!stravaToken}
+						athleteId={stravaToken?.strava_athlete_id}
+						lastSync={stravaToken?.updated_at}
+						onDisconnect={() => {
+							setStravaToken(null);
+							setActivitiesCount(0);
+						}}
+					/>
 				</CardContent>
 			</Card>
 
 			{/* Password Settings */}
-			<Card>
+			<Card className="mb-8">
 				<CardHeader>
 					<CardTitle>Security</CardTitle>
 					<CardDescription>Change your password</CardDescription>

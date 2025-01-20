@@ -33,6 +33,8 @@ interface MapControlsProps {
 	routesVisible?: boolean;
 	onWaypointsToggle?: (visible: boolean) => void;
 	onRoutesToggle?: (visible: boolean) => void;
+	dntCabinsVisible?: boolean;
+	onDNTCabinsToggle?: (visible: boolean) => void;
 	activeItem?: string;
 }
 
@@ -56,6 +58,8 @@ const MapControls = ({
 	routesVisible,
 	onWaypointsToggle,
 	onRoutesToggle,
+	dntCabinsVisible,
+	onDNTCabinsToggle,
 	activeItem,
 }: MapControlsProps) => {
 	const { isMobile } = useResponsiveLayout();
@@ -75,6 +79,8 @@ const MapControls = ({
 				routesVisible={routesVisible}
 				onWaypointsToggle={onWaypointsToggle}
 				onRoutesToggle={onRoutesToggle}
+				dntCabinsVisible={dntCabinsVisible}
+				onDNTCabinsToggle={onDNTCabinsToggle}
 			/>
 			<DrawControl
 				position="top-right"

@@ -4,8 +4,9 @@ import { useRef, useEffect, useState } from 'react';
 import type { Waypoint } from '@/types/waypoint';
 import type { DbRoute } from '@/types/supabase';
 import { ViewCardsButton } from './ViewCardsButton';
-import { X, ExternalLink } from 'lucide-react';
+import { X, ExternalLink, Eye } from 'lucide-react';
 import { Button } from '../ui/button';
+import * as turf from '@turf/turf';
 
 // Haversine formula to calculate distance between two points
 function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -81,6 +82,15 @@ export function ActivityCards({
 		waypoints: visibleWaypointsId,
 	});
 
+	// Calculate route distance using the same method as the drawer
+	const calculateRouteDistance = (route: DbRoute) => {
+		if (!route.geometry?.coordinates) return 0;
+		const validCoords = route.geometry.coordinates.filter(
+			(coord): coord is [number, number] => Array.isArray(coord) && coord.length === 2
+		);
+		return turf.length(turf.lineString(validCoords), { units: 'kilometers' });
+	};
+
 	// Combine all items into a single array with unified format
 	const items: CardItem[] = [
 		...activities
@@ -101,7 +111,7 @@ export function ActivityCards({
 				type: 'route' as const,
 				name: route.name || 'Unnamed Route',
 				date: route.created_at,
-				distance: route.distance,
+				distance: route.distance || calculateRouteDistance(route),
 				item: route,
 			})),
 		...waypoints
@@ -147,10 +157,9 @@ export function ActivityCards({
 			const scrollLeft = container.scrollLeft;
 			const cardWidth = 280 + 16; // card width + gap
 
-			// Find the card that takes up most of the container width
-			// If we're at the start (scrollLeft is 0), always select the first card
-			const visibleCardIndex = scrollLeft === 0 ? 0 : Math.round((scrollLeft + containerWidth / 2) / cardWidth);
-			const item = items[visibleCardIndex];
+			// Find which card is most visible in the viewport
+			const visibleCardIndex = Math.round(scrollLeft / cardWidth);
+			const item = items[Math.min(visibleCardIndex, items.length - 1)];
 
 			if (item) {
 				const currentHighlightId = selectedActivity?.id || selectedRoute?.id || selectedWaypoint?.id;
@@ -158,9 +167,9 @@ export function ActivityCards({
 				// Only update if the highlighted item has changed
 				if (currentHighlightId !== item.id) {
 					// Clear other selections first
-					if (item.type !== 'activity') onActivityHighlight({} as Activity);
-					if (item.type !== 'route') onRouteHighlight({} as DbRoute);
-					if (item.type !== 'waypoint') onWaypointHighlight({} as Waypoint);
+					onActivityHighlight({} as Activity);
+					onRouteHighlight({} as DbRoute);
+					onWaypointHighlight({} as Waypoint);
 
 					// Then highlight the current item
 					switch (item.type) {
@@ -178,25 +187,27 @@ export function ActivityCards({
 			}
 		};
 
+		let scrollTimeout: NodeJS.Timeout;
 		const handleScroll = () => {
-			isScrollingRef.current = true;
-			clearTimeout(scrollTimeoutRef.current);
+			// Clear the previous timeout
+			clearTimeout(scrollTimeout);
 
-			scrollTimeoutRef.current = setTimeout(() => {
+			// Set a new timeout to handle the scroll end
+			scrollTimeout = setTimeout(() => {
 				highlightVisibleCard();
-				isScrollingRef.current = false;
-			}, 100); // Reduced timeout for more responsive highlighting
+			}, 100); // Slightly reduced timeout for better responsiveness
 		};
+
+		container.addEventListener('scroll', handleScroll);
 
 		// Initial highlight when cards are shown
 		if (items.length > 0) {
 			highlightVisibleCard();
 		}
 
-		container.addEventListener('scroll', handleScroll);
 		return () => {
 			container.removeEventListener('scroll', handleScroll);
-			clearTimeout(scrollTimeoutRef.current);
+			clearTimeout(scrollTimeout);
 		};
 	}, [
 		items,
@@ -229,6 +240,9 @@ export function ActivityCards({
 				onWaypointSelect(item.item as Waypoint);
 				break;
 		}
+
+		// Hide cards when opening drawer
+		setShowCards(false);
 	};
 
 	const isSelected = (item: CardItem) => {
@@ -291,96 +305,107 @@ export function ActivityCards({
 
 	if (!showCards) {
 		return (
-			<ViewCardsButton
-				itemCount={items.length}
-				onClick={() => {
-					setShowCards(true);
-					// Set initial values for map center and visible IDs when opening cards
-					setLastMapCenter(mapCenter);
-					setLastVisibleIds({
-						activities: visibleActivitiesId,
-						routes: visibleRoutesId,
-						waypoints: visibleWaypointsId,
-					});
+			<div className="fixed bottom-16 left-0 right-0 z-30 pb-4 flex justify-center">
+				<ViewCardsButton
+					itemCount={items.length}
+					onClick={() => {
+						setShowCards(true);
+						// Set initial values for map center and visible IDs when opening cards
+						setLastMapCenter(mapCenter);
+						setLastVisibleIds({
+							activities: visibleActivitiesId,
+							routes: visibleRoutesId,
+							waypoints: visibleWaypointsId,
+						});
 
-					if (items.length > 0) {
-						const firstItem = items[0];
-						// Clear other highlights first
-						if (firstItem.type !== 'activity') onActivityHighlight({} as Activity);
-						if (firstItem.type !== 'route') onRouteHighlight({} as DbRoute);
-						if (firstItem.type !== 'waypoint') onWaypointHighlight({} as Waypoint);
+						if (items.length > 0) {
+							const firstItem = items[0];
+							// Clear other highlights first
+							if (firstItem.type !== 'activity') onActivityHighlight({} as Activity);
+							if (firstItem.type !== 'route') onRouteHighlight({} as DbRoute);
+							if (firstItem.type !== 'waypoint') onWaypointHighlight({} as Waypoint);
 
-						// Then highlight the first item
-						switch (firstItem.type) {
-							case 'activity':
-								onActivityHighlight(firstItem.item as Activity);
-								break;
-							case 'route':
-								onRouteHighlight(firstItem.item as DbRoute);
-								break;
-							case 'waypoint':
-								onWaypointHighlight(firstItem.item as Waypoint);
-								break;
-						}
-
-						// Ensure we scroll to the first card after the component renders
-						setTimeout(() => {
-							const container = scrollContainerRef.current;
-							if (container) {
-								container.scrollTo({
-									left: 0,
-									behavior: 'smooth',
-								});
+							// Then highlight the first item
+							switch (firstItem.type) {
+								case 'activity':
+									onActivityHighlight(firstItem.item as Activity);
+									break;
+								case 'route':
+									onRouteHighlight(firstItem.item as DbRoute);
+									break;
+								case 'waypoint':
+									onWaypointHighlight(firstItem.item as Waypoint);
+									break;
 							}
-						}, 0);
-					}
-				}}
-			/>
+
+							// Ensure we scroll to the first card after the component renders
+							setTimeout(() => {
+								const container = scrollContainerRef.current;
+								if (container) {
+									container.scrollTo({
+										left: 0,
+										behavior: 'smooth',
+									});
+								}
+							}, 0);
+						}
+					}}
+				/>
+			</div>
 		);
 	}
 
 	return (
-		<div className="fixed bottom-0 left-0 right-0 z-50">
-			<div className="relative">
-				{showCards && (
-					<div
-						ref={scrollContainerRef}
-						className="flex gap-4 overflow-x-auto p-4 pb-8 bg-white/95 backdrop-blur-sm shadow-lg"
-					>
-						{items.map((item) => (
-							<div
-								key={`${item.type}-${item.id}`}
-								className={`flex-none w-[280px] p-4 rounded-lg border ${
-									isSelected(item) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
-								} shadow-sm cursor-pointer transition-all hover:shadow-md`}
-								onClick={() => handleItemClick(item)}
-							>
-								<div className="flex items-start justify-between mb-2">
-									<div className="flex items-center gap-2">
-										<span className="text-xl">{getItemIcon(item.type)}</span>
-										<h3 className="font-medium text-gray-900 line-clamp-1">{item.name}</h3>
-									</div>
+		<div className="fixed bottom-16 left-0 right-0 z-30 pb-4">
+			{showCards && (
+				<div ref={scrollContainerRef} className="flex gap-4 overflow-x-auto p-4 pb-8 scrollbar-hide">
+					{items.map((item) => (
+						<div
+							key={`${item.type}-${item.id}`}
+							className={`flex-none w-[280px] p-4 rounded-lg ${
+								isSelected(item) ? 'bg-blue-50 shadow-md' : 'bg-white'
+							} shadow-sm cursor-pointer transition-all hover:shadow-md`}
+							onClick={() => handleItemClick(item)}
+						>
+							<div className="flex items-start justify-between mb-2">
+								<div className="flex items-center gap-2">
+									<span className="text-xl">{getItemIcon(item.type)}</span>
+									<h3 className="font-medium text-gray-900 line-clamp-1">{item.name}</h3>
 								</div>
-								{item.date && <p className="text-sm text-gray-500 mb-2">{new Date(item.date).toLocaleDateString()}</p>}
-								{item.distance && <p className="text-sm text-gray-600">Distance: {formatDistance(item.distance)}</p>}
-								{item.duration && <p className="text-sm text-gray-600">Duration: {formatDuration(item.duration)}</p>}
-								{item.type === 'activity' && (item.item as Activity).strava_id && (
-									<a
-										href={`https://www.strava.com/activities/${(item.item as Activity).strava_id}`}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="inline-flex items-center gap-1 mt-2 text-sm text-orange-600 hover:text-orange-700"
-										onClick={(e) => e.stopPropagation()}
-									>
-										View in Strava
-										<ExternalLink className="h-3 w-3" />
-									</a>
-								)}
 							</div>
-						))}
-					</div>
-				)}
-				<ViewCardsButton itemCount={items.length} onClick={() => setShowCards(!showCards)} />
+							{item.date && <p className="text-sm text-gray-500 mb-2">{new Date(item.date).toLocaleDateString()}</p>}
+							{item.distance && (
+								<p className="text-sm text-gray-600">
+									Distance:{' '}
+									{item.type === 'activity' ? formatDistance(item.distance) : `${item.distance.toFixed(1)} km`}
+								</p>
+							)}
+							{item.duration && <p className="text-sm text-gray-600">Duration: {formatDuration(item.duration)}</p>}
+							{item.type === 'activity' && (item.item as Activity).strava_id && (
+								<a
+									href={`https://www.strava.com/activities/${(item.item as Activity).strava_id}`}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-1 mt-2 text-sm text-orange-600 hover:text-orange-700"
+									onClick={(e) => e.stopPropagation()}
+								>
+									View in Strava
+									<ExternalLink className="h-3 w-3" />
+								</a>
+							)}
+						</div>
+					))}
+				</div>
+			)}
+			<div className="flex justify-center">
+				<Button
+					variant="default"
+					className="shadow-lg flex items-center gap-2"
+					onClick={() => setShowCards(!showCards)}
+				>
+					<Eye className="h-4 w-4" />
+					<span>{showCards ? 'Hide items' : `See ${items.length} items in this area`}</span>
+				</Button>
 			</div>
 		</div>
 	);

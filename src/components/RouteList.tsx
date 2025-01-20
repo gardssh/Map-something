@@ -7,6 +7,7 @@ import { GpxUpload } from './MapComponent/controls/GpxUpload';
 import type { DbRoute } from '@/types/supabase';
 import type { DrawnRoute } from '@/types/route';
 import { LineString } from 'geojson';
+import * as turf from '@turf/turf';
 
 interface RouteListProps {
 	routes: DbRoute[];
@@ -15,24 +16,6 @@ interface RouteListProps {
 	onRouteSelect?: (route: DbRoute | null) => void;
 	setSelectedRouteId: (id: string | number | null) => void;
 }
-
-const calculateRouteDistance = (coordinates: [number, number][]) => {
-	return coordinates.reduce((total, coord, i) => {
-		if (i === 0) return 0;
-		const prev = coordinates[i - 1];
-		const R = 6371; // Earth's radius in km
-		const dLat = ((coord[1] - prev[1]) * Math.PI) / 180;
-		const dLon = ((coord[0] - prev[0]) * Math.PI) / 180;
-		const a =
-			Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-			Math.cos((prev[1] * Math.PI) / 180) *
-				Math.cos((coord[1] * Math.PI) / 180) *
-				Math.sin(dLon / 2) *
-				Math.sin(dLon / 2);
-		const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-		return total + R * c;
-	}, 0);
-};
 
 export function RouteList({ routes, userId, onRouteSave, onRouteSelect, setSelectedRouteId }: RouteListProps) {
 	return (
@@ -60,30 +43,32 @@ export function RouteList({ routes, userId, onRouteSave, onRouteSelect, setSelec
 				</div>
 			</div>
 			{routes && routes.length > 0 ? (
-				routes.map((route) => (
-					<Card
-						key={route.id}
-						className="mb-2 hover:bg-accent cursor-pointer transition-colors"
-						onClick={() => {
-							onRouteSelect?.(route);
-							setSelectedRouteId(route.id);
-						}}
-					>
-						<CardHeader>
-							<CardTitle>{route.name}</CardTitle>
-							{route.geometry && (route.geometry as LineString).coordinates && (
-								<CardDescription>
-									Distance:{' '}
-									{calculateRouteDistance((route.geometry as LineString).coordinates as [number, number][]).toFixed(2)}{' '}
-									km
-								</CardDescription>
-							)}
-						</CardHeader>
-						<CardContent>
-							<p>Created: {new Date(route.created_at).toLocaleString()}</p>
-						</CardContent>
-					</Card>
-				))
+				routes.map((route) => {
+					const distance =
+						route.distance ||
+						(route.geometry?.coordinates
+							? turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' })
+							: 0);
+
+					return (
+						<Card
+							key={route.id}
+							className="mb-2 hover:bg-accent cursor-pointer transition-colors"
+							onClick={() => {
+								onRouteSelect?.(route);
+								setSelectedRouteId(route.id);
+							}}
+						>
+							<CardHeader>
+								<CardTitle>{route.name}</CardTitle>
+								<CardDescription>Distance: {distance.toFixed(2)} km</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<p>Created: {new Date(route.created_at).toLocaleString()}</p>
+							</CardContent>
+						</Card>
+					);
+				})
 			) : (
 				<p className="text-muted-foreground">No routes yet</p>
 			)}

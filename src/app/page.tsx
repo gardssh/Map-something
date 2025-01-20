@@ -8,14 +8,14 @@ import type { DbRoute, DbWaypoint } from '@/types/supabase';
 import * as turf from '@turf/turf';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { redirect } from 'next/navigation';
-import { MobileNavBar } from '@/components/MobileNavBar';
+import { MobileNavBar } from '@/components/mobile/MobileNavBar';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
-import { AppSidebarAndMap } from '@/components/AppSidebarAndMap';
+import { PWAInstallPrompt } from '@/components/pwa/PWAInstallPrompt';
+import { AppSidebarAndMap } from '@/components/sidebar-desktop/AppSidebarAndMap';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { MobileView } from '@/components/MobileView';
+import { MobileView } from '@/components/mobile/MobileView';
 import * as api from '@/services/api';
-import { ElevationDetails } from '@/components/ElevationDetails';
+import { ElevationDetails } from '@/components/activities/ElevationDetails';
 
 export default function Home() {
 	const { user, loading: authLoading } = useAuth();
@@ -23,6 +23,8 @@ export default function Home() {
 	const [activities, setActivities] = useState<any[]>([]);
 	const [activitiesLoading, setActivitiesLoading] = useState(true);
 	const [visibleActivitiesId, setVisibleActivitiesId] = useState<number[]>([]);
+	const [visibleRoutesId, setVisibleRoutesId] = useState<(string | number)[]>([]);
+	const [visibleWaypointsId, setVisibleWaypointsId] = useState<(string | number)[]>([]);
 	const [selectedRouteId, setSelectedRouteId] = useState<string | number | null>(null);
 	const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null);
 	const [selectedRoute, setSelectedRoute] = useState<DbRoute | null>(null);
@@ -323,6 +325,8 @@ export default function Home() {
 						handleWaypointDelete={handleWaypointDelete}
 						handleWaypointRename={handleWaypointRename}
 						setVisibleActivitiesId={setVisibleActivitiesId}
+						setVisibleRoutesId={setVisibleRoutesId}
+						setVisibleWaypointsId={setVisibleWaypointsId}
 						handleRouteSave={handleRouteSave}
 						handleWaypointSave={handleWaypointSave}
 						setSelectedRouteId={setSelectedRouteId}
@@ -354,6 +358,8 @@ export default function Home() {
 							handleWaypointDelete={handleWaypointDelete}
 							handleWaypointRename={handleWaypointRename}
 							setVisibleActivitiesId={setVisibleActivitiesId}
+							setVisibleRoutesId={setVisibleRoutesId}
+							setVisibleWaypointsId={setVisibleWaypointsId}
 							handleRouteSave={handleRouteSave}
 							handleWaypointSave={handleWaypointSave}
 							setSelectedRouteId={setSelectedRouteId}

@@ -28,6 +28,8 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { AddWaypointControl } from './controls/AddWaypointControl';
 import { CrosshairOverlay } from './controls/CrosshairOverlay';
 import Image from 'next/image';
+import { DNTCabinLayer } from './layers/DNTCabinLayer';
+import { useDNTCabins } from './hooks/useDNTCabins';
 
 declare global {
 	interface Window {
@@ -35,26 +37,11 @@ declare global {
 	}
 }
 
-export const MapComponent = ({
-	activities,
-	setVisibleActivitiesId,
-	selectedRouteId,
-	setSelectedRouteId,
-	onMapLoad,
-	onRouteSelect,
-	onRouteSave,
-	routes = [],
-	waypoints = [],
-	onWaypointSave,
-	onActivitySelect,
-	handleWaypointSelect,
-	selectedWaypoint: parentSelectedWaypoint,
-	setActiveItem,
-	setShowDetailsDrawer,
-	activeItem,
-}: {
+interface MapComponentProps {
 	activities: Activity[];
 	setVisibleActivitiesId: React.Dispatch<React.SetStateAction<number[]>>;
+	setVisibleRoutesId: React.Dispatch<React.SetStateAction<(string | number)[]>>;
+	setVisibleWaypointsId: React.Dispatch<React.SetStateAction<(string | number)[]>>;
 	selectedRouteId: string | number | null;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
 	onMapLoad?: (map: mapboxgl.Map) => void;
@@ -69,7 +56,28 @@ export const MapComponent = ({
 	setActiveItem: (item: string) => void;
 	setShowDetailsDrawer: (show: boolean) => void;
 	activeItem: string;
-}) => {
+}
+
+export const MapComponent = ({
+	activities,
+	setVisibleActivitiesId,
+	setVisibleRoutesId,
+	setVisibleWaypointsId,
+	selectedRouteId,
+	setSelectedRouteId,
+	onMapLoad,
+	onRouteSelect,
+	onRouteSave,
+	routes = [],
+	waypoints = [],
+	onWaypointSave,
+	onActivitySelect,
+	handleWaypointSelect,
+	selectedWaypoint: parentSelectedWaypoint,
+	setActiveItem,
+	setShowDetailsDrawer,
+	activeItem,
+}: MapComponentProps) => {
 	const mapRef = useRef<MapRef>();
 	const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
 	const [selectedCategories, setSelectedCategories] = useState<string[]>([
@@ -92,9 +100,9 @@ export const MapComponent = ({
 	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
 	const [is3DMode, setIs3DMode] = useState(!isMobile);
 	const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-	const [visibleActivitiesId, setLocalVisibleActivitiesId] = useState<number[]>([]);
-	const [visibleRoutesId, setVisibleRoutesId] = useState<(string | number)[]>([]);
-	const [visibleWaypointsId, setVisibleWaypointsId] = useState<(string | number)[]>([]);
+	const [localVisibleActivitiesId, setLocalVisibleActivitiesId] = useState<number[]>([]);
+	const [localVisibleRoutesId, setLocalVisibleRoutesId] = useState<(string | number)[]>([]);
+	const [localVisibleWaypointsId, setLocalVisibleWaypointsId] = useState<(string | number)[]>([]);
 	const [isAddingWaypoint, setIsAddingWaypoint] = useState(false);
 	const [mapCenter, setMapCenter] = useState({ lat: 61.375172, lng: 8.296987 });
 	const [waypointsVisible, setWaypointsVisible] = useState(true);
@@ -104,39 +112,50 @@ export const MapComponent = ({
 
 	const { currentBaseLayer, overlayStates, handleLayerToggle } = useMapLayers({ mapRef });
 
+	const { isVisible: dntCabinsVisible, toggleVisibility: toggleDNTCabins } = useDNTCabins({ mapRef });
+
 	const getVisibleFeatures = useCallback(() => {
 		if (!mapRef.current) return { activities: [], routes: [], waypoints: [] };
 		const map = mapRef.current.getMap();
 
-		const activityFeatures = map.queryRenderedFeatures(
-			[
-				[0, 0],
-				[map.getCanvas().width, map.getCanvas().height],
-			],
-			{
-				layers: ['foot-sports', 'cycle-sports', 'water-sports', 'winter-sports', 'other-sports'],
-			}
-		);
+		// Get the current bounds with a small buffer
+		const bounds = map.getBounds();
+		if (!bounds) return { activities: [], routes: [], waypoints: [] };
 
-		const routeFeatures = map.queryRenderedFeatures(
-			[
-				[0, 0],
-				[map.getCanvas().width, map.getCanvas().height],
-			],
-			{
-				layers: ['saved-routes-layer', 'saved-routes-border'],
-			}
-		);
+		const sw = bounds.getSouthWest();
+		const ne = bounds.getNorthEast();
 
-		const waypointFeatures = map.queryRenderedFeatures(
-			[
-				[0, 0],
-				[map.getCanvas().width, map.getCanvas().height],
-			],
-			{
-				layers: ['waypoints-layer'],
-			}
-		);
+		// Add a 10% buffer to the bounds
+		const buffer = {
+			lng: Math.abs(ne.lng - sw.lng) * 0.1,
+			lat: Math.abs(ne.lat - sw.lat) * 0.1,
+		};
+
+		// Convert geographic coordinates to screen coordinates
+		const swPoint = map.project([sw.lng - buffer.lng, sw.lat - buffer.lat]);
+		const nePoint = map.project([ne.lng + buffer.lng, ne.lat + buffer.lat]);
+
+		const bbox: [mapboxgl.PointLike, mapboxgl.PointLike] = [
+			[swPoint.x, swPoint.y],
+			[nePoint.x, nePoint.y],
+		];
+
+		const activityLayers = ['foot-sports', 'cycle-sports', 'water-sports', 'winter-sports', 'other-sports'];
+		const routeLayers = ['saved-routes-layer', 'saved-routes-border'];
+		const waypointLayers = ['waypoints-layer'];
+
+		// Only query layers that exist
+		const activityFeatures = activityLayers.some((layer) => map.getLayer(layer))
+			? map.queryRenderedFeatures(bbox, { layers: activityLayers })
+			: [];
+
+		const routeFeatures = routeLayers.some((layer) => map.getLayer(layer))
+			? map.queryRenderedFeatures(bbox, { layers: routeLayers })
+			: [];
+
+		const waypointFeatures = waypointLayers.some((layer) => map.getLayer(layer))
+			? map.queryRenderedFeatures(bbox, { layers: waypointLayers })
+			: [];
 
 		return {
 			activities: activityFeatures,
@@ -148,7 +167,10 @@ export const MapComponent = ({
 	const updateVisibleIds = useCallback(() => {
 		const { activities, routes, waypoints } = getVisibleFeatures();
 
-		const visibleActivityIds = activities.map((feature) => feature.properties?.id).filter((id) => id != null);
+		const visibleActivityIds = activities
+			.map((feature) => feature.properties?.id)
+			.filter((id) => id != null)
+			.map(Number);
 
 		const visibleRouteIds = routes.map((feature) => feature.properties?.id).filter((id) => id != null);
 
@@ -156,9 +178,11 @@ export const MapComponent = ({
 
 		setLocalVisibleActivitiesId(visibleActivityIds);
 		setVisibleActivitiesId(visibleActivityIds);
+		setLocalVisibleRoutesId(visibleRouteIds);
 		setVisibleRoutesId(visibleRouteIds);
+		setLocalVisibleWaypointsId(visibleWaypointIds);
 		setVisibleWaypointsId(visibleWaypointIds);
-	}, [getVisibleFeatures, setVisibleActivitiesId]);
+	}, [getVisibleFeatures, setVisibleActivitiesId, setVisibleRoutesId, setVisibleWaypointsId]);
 
 	// Update visible features when the map moves or loads
 	useEffect(() => {
@@ -284,16 +308,29 @@ export const MapComponent = ({
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
 
-		if (is3DMode && !isMobile) {
-			map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-			map.touchZoomRotate.enableRotation();
-			map.touchPitch.enable();
+		const updateTerrain = () => {
+			if (is3DMode && !isMobile) {
+				map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+				map.touchZoomRotate.enableRotation();
+				map.touchPitch.enable();
+			} else {
+				map.setTerrain(null);
+				map.setPitch(0);
+				map.touchZoomRotate.disableRotation();
+				map.touchPitch.disable();
+			}
+		};
+
+		// Only update terrain after style is loaded
+		if (map.isStyleLoaded()) {
+			updateTerrain();
 		} else {
-			map.setTerrain(null);
-			map.setPitch(0);
-			map.touchZoomRotate.disableRotation();
-			map.touchPitch.disable();
+			map.once('style.load', updateTerrain);
 		}
+
+		return () => {
+			map.off('style.load', updateTerrain);
+		};
 	}, [is3DMode, isMobile]);
 
 	const toggleViewMode = useCallback(() => {
@@ -532,7 +569,7 @@ export const MapComponent = ({
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
 				initialViewState={initialMapState}
 				style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-				mapStyle={mapStyle}
+				mapStyle="mapbox://styles/gardsh/clyqbqyjs005s01phc7p2a8dm"
 				onMoveEnd={() => updateVisibleIds()}
 				onMouseMove={onHover}
 				onClick={(e) => {
@@ -674,6 +711,8 @@ export const MapComponent = ({
 					routesVisible={routesVisible}
 					onWaypointsToggle={setWaypointsVisible}
 					onRoutesToggle={setRoutesVisible}
+					dntCabinsVisible={overlayStates['dnt-cabins']}
+					onDNTCabinsToggle={(visible) => handleLayerToggle('dnt-cabins', visible)}
 					activeItem={activeItem}
 				/>
 
@@ -707,6 +746,8 @@ export const MapComponent = ({
 				{isAddingWaypoint && (
 					<CrosshairOverlay onConfirm={handleWaypointPlacementConfirm} onCancel={() => setIsAddingWaypoint(false)} />
 				)}
+
+				<DNTCabinLayer visible={overlayStates['dnt-cabins']} />
 			</Map>
 
 			{isMobile && !isAddingWaypoint && (
@@ -738,9 +779,9 @@ export const MapComponent = ({
 					onActivityHighlight={handleActivityHighlight}
 					onRouteHighlight={handleRouteHighlight}
 					onWaypointHighlight={handleWaypointHighlight}
-					visibleActivitiesId={visibleActivitiesId}
-					visibleRoutesId={visibleRoutesId}
-					visibleWaypointsId={visibleWaypointsId}
+					visibleActivitiesId={localVisibleActivitiesId}
+					visibleRoutesId={localVisibleRoutesId}
+					visibleWaypointsId={localVisibleWaypointsId}
 					mapCenter={mapCenter}
 				/>
 			)}

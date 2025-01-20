@@ -1,5 +1,5 @@
 'use client';
-import { Layers, Footprints, Bike, Waves, Snowflake, CircleHelp, MapPin, Route } from 'lucide-react';
+import { Layers, Footprints, Bike, Waves, Snowflake, CircleHelp, MapPin, Route, Home } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { createPortal } from 'react-dom';
@@ -22,10 +22,12 @@ interface LayersControlProps {
 	routesVisible?: boolean;
 	onWaypointsToggle?: (visible: boolean) => void;
 	onRoutesToggle?: (visible: boolean) => void;
+	dntCabinsVisible?: boolean;
+	onDNTCabinsToggle?: (visible: boolean) => void;
 }
 
 const defaultLayers: LayerOption[] = [
-	{ id: 'default', name: 'Default', isBase: true },
+	{ id: 'default', name: 'Outdoors', isBase: true },
 	{ id: 'satellite', name: 'Satellite', isBase: true },
 	{ id: 'norge-topo', name: 'Norge Topo', isBase: true },
 	{ id: 'bratthet', name: 'Bratthet' },
@@ -44,6 +46,8 @@ export const LayersControl = ({
 	routesVisible = true,
 	onWaypointsToggle,
 	onRoutesToggle,
+	dntCabinsVisible = true,
+	onDNTCabinsToggle,
 }: LayersControlProps) => {
 	const baseLayers = layers?.filter((l) => l.isBase) || [];
 	const overlayLayers = layers?.filter((l) => !l.isBase) || [];
@@ -187,6 +191,18 @@ export const LayersControl = ({
 								<span className="text-sm text-gray-700 flex items-center">
 									<Route className="h-4 w-4 mr-2" />
 									Routes
+								</span>
+							</label>
+							<label className="flex items-center space-x-2 cursor-pointer">
+								<input
+									type="checkbox"
+									checked={dntCabinsVisible}
+									onChange={(e) => onDNTCabinsToggle?.(e.target.checked)}
+									className="form-checkbox h-4 w-4 text-blue-600"
+								/>
+								<span className="text-sm text-gray-700 flex items-center">
+									<Home className="h-4 w-4 mr-2" />
+									DNT Cabins
 								</span>
 							</label>
 						</div>
