@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Lock } from 'lucide-react';
 import { useDNTCabins } from '@/hooks/useDNTCabins';
 import type { CabinFeature } from '@/types/dnt-cabins';
+import type { MapLayerMouseEvent } from 'react-map-gl';
 
 export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 	const { current: map } = useMap();
@@ -17,25 +18,13 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 		setSelectedCabin(null);
 	}, []);
 
-	useEffect(() => {
-		if (!map) return;
+	const handleMouseMove = useCallback(
+		(e: mapboxgl.MapMouseEvent) => {
+			if (!map) return;
 
-		const handleMapClick = (e: mapboxgl.MapMouseEvent) => {
-			const features = map.queryRenderedFeatures(e.point, {
-				layers: ['dnt-cabins-touch'],
-			});
+			// Check if the layer exists before querying features
+			if (!map.getLayer('dnt-cabins-touch')) return;
 
-			if (features.length > 0) {
-				const cabin = features[0] as unknown as CabinFeature;
-				if (cabin.properties) {
-					setSelectedCabin(cabin);
-				}
-			} else {
-				setSelectedCabin(null);
-			}
-		};
-
-		const handleMouseMove = (e: mapboxgl.MapMouseEvent) => {
 			const features = map.queryRenderedFeatures(e.point, {
 				layers: ['dnt-cabins-touch'],
 			});
@@ -50,12 +39,37 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 				setHoveredCabin(null);
 				map.getCanvas().style.cursor = '';
 			}
-		};
+		},
+		[map]
+	);
 
-		const handleMouseLeave = () => {
-			setHoveredCabin(null);
-			map.getCanvas().style.cursor = '';
-		};
+	const handleMouseLeave = useCallback(() => {
+		if (!map) return;
+		setHoveredCabin(null);
+		map.getCanvas().style.cursor = '';
+	}, [map]);
+
+	const handleMapClick = useCallback(
+		(e: mapboxgl.MapMouseEvent) => {
+			if (!map) return;
+			const features = map.queryRenderedFeatures(e.point, {
+				layers: ['dnt-cabins-touch'],
+			});
+
+			if (features.length > 0) {
+				const cabin = features[0] as unknown as CabinFeature;
+				if (cabin.properties) {
+					setSelectedCabin(cabin);
+				}
+			} else {
+				setSelectedCabin(null);
+			}
+		},
+		[map]
+	);
+
+	useEffect(() => {
+		if (!map) return;
 
 		map.on('click', handleMapClick);
 		map.on('mousemove', handleMouseMove);
@@ -66,7 +80,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 			map.off('mousemove', handleMouseMove);
 			map.off('mouseleave', handleMouseLeave);
 		};
-	}, [map]);
+	}, [map, handleMapClick, handleMouseMove, handleMouseLeave]);
 
 	if (!cabinData.features.length) return null;
 
