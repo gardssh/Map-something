@@ -93,8 +93,8 @@ export default function HelpButton({ activeItem }: HelpButtonProps) {
 		<div
 			id="help-content"
 			style={{ display: 'none' }}
-			className={`fixed z-50 bg-white rounded-lg shadow-lg w-[80vw] md:w-[686px] p-6 space-y-6 ${
-				isMobile ? 'top-32 right-[46px]' : 'top-4 right-[46px]'
+			className={`fixed z-50 bg-white rounded-lg shadow-lg w-[80vw] md:w-[686px] p-6 space-y-6 max-h-[80vh] overflow-y-auto ${
+				isMobile ? 'top-20 right-[10px] left-[10px] w-auto' : 'top-4 right-[46px]'
 			}`}
 		>
 			<div className="flex justify-between items-center">
