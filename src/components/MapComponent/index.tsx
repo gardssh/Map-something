@@ -551,7 +551,7 @@ export const MapComponent = ({
 	return (
 		<div
 			ref={mapContainerRef}
-			className="fixed inset-0 w-full h-[100dvh] overflow-hidden"
+			className="fixed inset-0 w-full h-[100dvh] overflow-hidden md:relative"
 			style={{ touchAction: 'none' }}
 		>
 			<div className="absolute top-4 left-4 z-10 bg-white/90 p-2 rounded-lg shadow-sm">
@@ -747,39 +747,41 @@ export const MapComponent = ({
 			</Map>
 
 			{isMobile && !isAddingWaypoint && (
-				<ActivityCards
-					activities={activities}
-					routes={routes}
-					waypoints={waypoints}
-					selectedActivity={selectedActivity}
-					selectedRoute={selectedRoute}
-					selectedWaypoint={selectedWaypoint}
-					onActivitySelect={handleActivitySelect}
-					onRouteSelect={(route) => {
-						setSelectedRouteId(route.id);
-						setSelectedRoute(route);
-						onRouteSelect?.(route);
-						if ('coordinates' in route.geometry) {
-							handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
-						}
-					}}
-					onWaypointSelect={(waypoint) => {
-						handleWaypointSelect?.(waypoint);
-						if (mapRef.current && waypoint.coordinates) {
-							mapRef.current.getMap().flyTo({
-								center: waypoint.coordinates as [number, number],
-								zoom: 14,
-							});
-						}
-					}}
-					onActivityHighlight={handleActivityHighlight}
-					onRouteHighlight={handleRouteHighlight}
-					onWaypointHighlight={handleWaypointHighlight}
-					visibleActivitiesId={localVisibleActivitiesId}
-					visibleRoutesId={localVisibleRoutesId}
-					visibleWaypointsId={localVisibleWaypointsId}
-					mapCenter={mapCenter}
-				/>
+				<div className="fixed bottom-0 left-0 right-0 mb-[calc(4rem+env(safe-area-inset-bottom,0px))] z-[9]">
+					<ActivityCards
+						activities={activities}
+						routes={routes}
+						waypoints={waypoints}
+						selectedActivity={selectedActivity}
+						selectedRoute={selectedRoute}
+						selectedWaypoint={selectedWaypoint}
+						onActivitySelect={handleActivitySelect}
+						onRouteSelect={(route) => {
+							setSelectedRouteId(route.id);
+							setSelectedRoute(route);
+							onRouteSelect?.(route);
+							if ('coordinates' in route.geometry) {
+								handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
+							}
+						}}
+						onWaypointSelect={(waypoint) => {
+							handleWaypointSelect?.(waypoint);
+							if (mapRef.current && waypoint.coordinates) {
+								mapRef.current.getMap().flyTo({
+									center: waypoint.coordinates as [number, number],
+									zoom: 14,
+								});
+							}
+						}}
+						onActivityHighlight={handleActivityHighlight}
+						onRouteHighlight={handleRouteHighlight}
+						onWaypointHighlight={handleWaypointHighlight}
+						visibleActivitiesId={localVisibleActivitiesId}
+						visibleRoutesId={localVisibleRoutesId}
+						visibleWaypointsId={localVisibleWaypointsId}
+						mapCenter={mapCenter}
+					/>
+				</div>
 			)}
 		</div>
 	);

@@ -3,6 +3,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import type { MapRef } from 'react-map-gl';
 import { mapLayers, DEFAULT_BASE_LAYER, type BaseLayerId, type OverlayLayerId } from '../config/mapLayers';
+import type { LayerSpecification, StyleSpecification } from 'mapbox-gl';
 
 export interface UseMapLayersProps {
 	mapRef: React.MutableRefObject<MapRef | undefined> | React.RefObject<MapRef>;
@@ -40,35 +41,42 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 					const layer = mapLayers.getOverlayLayer(layerId as OverlayLayerId);
 					if (!layer) return;
 
-					// Remove existing layer and source if present
-					if (map.getLayer(layerId)) {
-						map.removeLayer(layerId);
+					// First, remove any existing layers that use this source
+					const style = layer.style as StyleSpecification;
+					if (style?.layers) {
+						style.layers.forEach((layerDef: LayerSpecification) => {
+							if (map.getLayer(layerDef.id)) {
+								map.removeLayer(layerDef.id);
+							}
+						});
 					}
+
+					// Then remove the source
 					if (map.getSource(layerId)) {
 						map.removeSource(layerId);
 					}
 
-					// Add source and layer if style is defined
-					if (layer.style && typeof layer.style === 'object' && layer.style.sources) {
+					// Add source and layer if style is defined and overlay is enabled
+					if (style?.sources && isVisible) {
 						// Add sources
-						Object.entries(layer.style.sources).forEach(([sourceId, source]) => {
+						Object.entries(style.sources).forEach(([sourceId, source]) => {
 							if (!map.getSource(sourceId)) {
 								map.addSource(sourceId, source);
 							}
 						});
 
 						// Add layers
-						layer.style.layers?.forEach((layerDef) => {
+						style.layers?.forEach((layerDef: LayerSpecification) => {
 							if (!map.getLayer(layerDef.id)) {
 								map.addLayer({
 									...layerDef,
 									layout: {
 										...layerDef.layout,
-										visibility: isVisible ? 'visible' : 'none'
+										visibility: 'visible'
 									}
 								});
 							} else {
-								map.setLayoutProperty(layerDef.id, 'visibility', isVisible ? 'visible' : 'none');
+								map.setLayoutProperty(layerDef.id, 'visibility', 'visible');
 							}
 						});
 					}
@@ -114,12 +122,27 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 				[layerId]: isVisible
 			}));
 
-			// Update layer visibility if it exists
-			if (map.getLayer(layerId)) {
-				map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
-			} else {
-				// If layer doesn't exist, try to add it
-				addOverlayLayers();
+			const layer = mapLayers.getOverlayLayer(layerId as OverlayLayerId);
+			if (!layer) return;
+
+			const style = layer.style as StyleSpecification;
+			if (style?.layers) {
+				// If turning off, remove layers and sources
+				if (!isVisible) {
+					// First remove all layers
+					style.layers.forEach((layerDef: LayerSpecification) => {
+						if (map.getLayer(layerDef.id)) {
+							map.removeLayer(layerDef.id);
+						}
+					});
+					// Then remove the source
+					if (map.getSource(layerId)) {
+						map.removeSource(layerId);
+					}
+				} else {
+					// If turning on, add the layer
+					addOverlayLayers();
+				}
 			}
 		}
 	}, [addOverlayLayers, overlayStates, mapRef, currentBaseLayer]);

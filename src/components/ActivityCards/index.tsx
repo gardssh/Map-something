@@ -305,7 +305,10 @@ export function ActivityCards({
 
 	if (!showCards) {
 		return (
-			<div className="fixed bottom-16 left-0 right-0 z-30 pb-4 flex justify-center">
+			<div
+				className="fixed left-0 right-0 z-30 pb-4 flex justify-center"
+				style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 16px))' }}
+			>
 				<ViewCardsButton
 					itemCount={items.length}
 					onClick={() => {
@@ -337,17 +340,6 @@ export function ActivityCards({
 									onWaypointHighlight(firstItem.item as Waypoint);
 									break;
 							}
-
-							// Ensure we scroll to the first card after the component renders
-							setTimeout(() => {
-								const container = scrollContainerRef.current;
-								if (container) {
-									container.scrollTo({
-										left: 0,
-										behavior: 'smooth',
-									});
-								}
-							}, 0);
 						}
 					}}
 				/>
@@ -356,7 +348,10 @@ export function ActivityCards({
 	}
 
 	return (
-		<div className="fixed bottom-16 left-0 right-0 z-30 pb-4">
+		<div
+			className="fixed left-0 right-0 z-30 pb-4"
+			style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 16px))' }}
+		>
 			{showCards && (
 				<div ref={scrollContainerRef} className="flex gap-4 overflow-x-auto p-4 pb-8 scrollbar-hide">
 					{items.map((item) => (
