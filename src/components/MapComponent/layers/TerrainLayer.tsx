@@ -1,39 +1,42 @@
 'use client';
 
-import { Source, Layer } from 'react-map-gl';
+import { useEffect } from 'react';
+import { Source } from 'react-map-gl';
+import { useMap } from 'react-map-gl';
 
 interface TerrainLayerProps {
-	overlayStates: { [key: string]: boolean };
+	is3DMode: boolean;
 }
 
-export const TerrainLayer = ({ overlayStates }: TerrainLayerProps) => {
-	return (
-		<>
-			<Source
-				id="mapbox-dem"
-				type="raster-dem"
-				url="mapbox://mapbox.mapbox-terrain-dem-v1"
-				tileSize={512}
-				maxzoom={14}
-			/>
+export const TerrainLayer = ({ is3DMode }: TerrainLayerProps) => {
+	const { current: mapRef } = useMap();
 
-			<Source id="custom-tileset" type="vector" url="mapbox://gardsh.dppfxauy">
-				<Layer
-					id="custom-tileset-layer"
-					type="line"
-					source-layer="fixedmore-5dbb12"
-					paint={{
-						'line-color': '#8B5CF6',
-						'line-width': 1,
-						'line-opacity': 0.3,
-					}}
-					layout={{
-						visibility: overlayStates['custom-tileset'] ? 'visible' : 'none',
-						'line-join': 'round',
-						'line-cap': 'round',
-					}}
-				/>
-			</Source>
-		</>
+	useEffect(() => {
+		if (!mapRef) return;
+		const map = mapRef.getMap();
+
+		const updateTerrain = () => {
+			if (is3DMode) {
+				map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+			} else {
+				map.setTerrain(null);
+			}
+		};
+
+		// Only update terrain after style is loaded
+		if (map.isStyleLoaded()) {
+			updateTerrain();
+		} else {
+			map.once('style.load', updateTerrain);
+		}
+
+		return () => {
+			map.off('style.load', updateTerrain);
+		};
+	}, [mapRef, is3DMode]);
+
+	// Always render the source, but terrain effect is controlled by setTerrain
+	return (
+		<Source id="mapbox-dem" type="raster-dem" url="mapbox://mapbox.mapbox-terrain-dem-v1" tileSize={512} maxzoom={14} />
 	);
 };

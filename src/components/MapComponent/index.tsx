@@ -97,7 +97,7 @@ export const MapComponent = ({
 	const { open: isSidebarOpen } = useSidebar();
 	const { isMobile } = useResponsiveLayout();
 	const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
-	const [is3DMode, setIs3DMode] = useState(!isMobile);
+	const [is3DMode, setIs3DMode] = useState(false);
 	const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 	const [localVisibleActivitiesId, setLocalVisibleActivitiesId] = useState<number[]>([]);
 	const [localVisibleRoutesId, setLocalVisibleRoutesId] = useState<(string | number)[]>([]);
@@ -305,29 +305,20 @@ export const MapComponent = ({
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
 
-		const updateTerrain = () => {
-			if (is3DMode && !isMobile) {
-				map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-				map.touchZoomRotate.enableRotation();
-				map.touchPitch.enable();
-			} else {
-				map.setTerrain(null);
-				map.setPitch(0);
-				map.touchZoomRotate.disableRotation();
-				map.touchPitch.disable();
+		// Update touch controls based on 3D mode
+		if (is3DMode && !isMobile) {
+			map.touchZoomRotate.enableRotation();
+			map.touchPitch.enable();
+			// Only reset to a slight pitch if currently at 0
+			if (map.getPitch() === 0) {
+				map.easeTo({ pitch: 30, duration: 1000 });
 			}
-		};
-
-		// Only update terrain after style is loaded
-		if (map.isStyleLoaded()) {
-			updateTerrain();
 		} else {
-			map.once('style.load', updateTerrain);
+			map.touchZoomRotate.disableRotation();
+			map.touchPitch.disable();
+			// Reset pitch to 0 when exiting 3D mode
+			map.easeTo({ pitch: 0, duration: 1000 });
 		}
-
-		return () => {
-			map.off('style.load', updateTerrain);
-		};
 	}, [is3DMode, isMobile]);
 
 	const toggleViewMode = useCallback(() => {
@@ -665,10 +656,10 @@ export const MapComponent = ({
 				maxTileCacheSize={50}
 				trackResize={false}
 				dragRotate={is3DMode}
-				pitchWithRotate={is3DMode}
+				pitchWithRotate={true}
 				dragPan={true}
 				touchZoomRotate={true}
-				touchPitch={false}
+				touchPitch={is3DMode && !isMobile}
 				maxPitch={isMobile ? 0 : 85}
 				minPitch={0}
 				keyboard={true}
@@ -718,7 +709,7 @@ export const MapComponent = ({
 
 				<AddWaypointControl isActive={isAddingWaypoint} onClick={() => setIsAddingWaypoint(!isAddingWaypoint)} />
 
-				<TerrainLayer overlayStates={overlayStates} />
+				<TerrainLayer is3DMode={is3DMode} />
 
 				<ActivityLayers
 					activities={activities}
