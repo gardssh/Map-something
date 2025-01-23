@@ -15,15 +15,12 @@ export const useMapConfig = ({ mapRef }: MapConfigOptions) => {
 		pitch: 0,
 	};
 
-	const mapSettings = (isDrawing: boolean) => ({
+	const mapSettings = (isDrawing: boolean, is3DMode: boolean = false) => ({
 		renderWorldCopies: false,
 		maxTileCacheSize: 50,
 		trackResize: false,
-		dragRotate: true,
-		pitchWithRotate: true,
 		dragPan: true,
-		touchZoomRotate: true,
-		touchPitch: true,
+		keyboard: true,
 		interactiveLayerIds: isDrawing
 			? []
 			: [

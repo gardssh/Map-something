@@ -10,8 +10,6 @@ export const ViewModeControl = ({ is3DMode, onToggle }: ViewModeControlProps) =>
 	const { isMobile } = useResponsiveLayout();
 
 	useEffect(() => {
-		if (isMobile) return; // Don't create the control on mobile
-
 		const container = document.createElement('div');
 		container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group view-mode-control';
 		const controlGroup = document.querySelector('.mapboxgl-ctrl-top-right');
@@ -50,7 +48,7 @@ export const ViewModeControl = ({ is3DMode, onToggle }: ViewModeControlProps) =>
 				}
 			};
 		}
-	}, [is3DMode, onToggle, isMobile]);
+	}, [is3DMode, onToggle]);
 
 	return null;
 };

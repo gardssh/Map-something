@@ -302,43 +302,42 @@ export const MapComponent = ({
 		}
 	}, [isSidebarOpen]);
 
-	// Initialize map controls
+	const updateMapControls = useCallback(
+		(map: mapboxgl.Map) => {
+			if (is3DMode) {
+				// Enable 3D mode
+				map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+				map.dragRotate.enable();
+				map.touchZoomRotate.enableRotation();
+				map.touchPitch.enable();
+				map.setMaxPitch(85);
+				map.easeTo({ pitch: 30, duration: 1000 });
+			} else {
+				// Disable 3D mode but keep rotation enabled
+				map.setTerrain(null);
+				map.dragRotate.enable();
+				map.touchZoomRotate.enableRotation();
+				map.touchPitch.disable();
+				map.setMaxPitch(0);
+				map.easeTo({ pitch: 0, duration: 1000 });
+			}
+		},
+		[is3DMode]
+	);
+
+	// Update controls when mode changes
 	useEffect(() => {
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
-
-		// Update touch controls based on 3D mode
-		if (is3DMode && !isMobile) {
-			map.touchZoomRotate.enableRotation();
-			map.touchPitch.enable();
-			// Only reset to a slight pitch if currently at 0
-			if (map.getPitch() === 0) {
-				map.easeTo({ pitch: 30, duration: 1000 });
-			}
-		} else {
-			map.touchZoomRotate.disableRotation();
-			map.touchPitch.disable();
-			// Reset pitch to 0 when exiting 3D mode
-			map.easeTo({ pitch: 0, duration: 1000 });
-		}
-	}, [is3DMode, isMobile]);
+		updateMapControls(map);
+	}, [is3DMode, updateMapControls]);
 
 	const toggleViewMode = useCallback(() => {
-		if (isMobile) return; // Prevent toggling on mobile
 		if (!mapRef.current) return;
-		const map = mapRef.current.getMap();
-		const newMode = !is3DMode;
-		setIs3DMode(newMode);
 
-		if (newMode) {
-			// Enable 3D mode
-			map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-		} else {
-			// Enable 2D mode
-			map.setTerrain(null);
-			map.setPitch(0);
-		}
-	}, [is3DMode, isMobile]);
+		// Just toggle the mode - useEffect will handle the rest
+		setIs3DMode(!is3DMode);
+	}, [is3DMode]);
 
 	useEffect(() => {
 		setSelectedWaypoint(parentSelectedWaypoint || null);
@@ -673,34 +672,9 @@ export const MapComponent = ({
 				}}
 				onTouchStart={handleTouchStart}
 				onTouchEnd={handleTouchEnd}
-				interactiveLayerIds={[
-					'foot-sports',
-					'foot-sports-touch',
-					'cycle-sports',
-					'cycle-sports-touch',
-					'water-sports',
-					'water-sports-touch',
-					'winter-sports',
-					'winter-sports-touch',
-					'other-sports',
-					'other-sports-touch',
-					'waypoints-layer',
-					'waypoints-layer-touch',
-					'saved-routes-layer',
-					'saved-routes-border',
-					'saved-routes-touch',
-					'dnt-cabins',
-					'dnt-cabins-touch',
-					'dnt-cabins-label',
-				]}
-				renderWorldCopies={false}
-				maxTileCacheSize={50}
-				trackResize={false}
-				pitchWithRotate={true}
-				keyboard={true}
+				{...mapSettings(isDrawing, is3DMode)}
 				onLoad={(evt) => {
 					const map = evt.target;
-					// Store map instance globally
 					window.mapInstance = map;
 
 					if (onMapLoad) {
@@ -737,16 +711,12 @@ export const MapComponent = ({
 
 					map.on('mousemove', handleMouseMove);
 
-					// Only enable touch controls if 3D mode is on
-					if (is3DMode && !isMobile) {
-						map.touchZoomRotate.enableRotation();
-						map.touchPitch.enable();
-					} else {
-						map.touchZoomRotate.disableRotation();
-						map.touchPitch.disable();
-					}
+					// Initialize controls after map is loaded
+					requestAnimationFrame(() => {
+						updateMapControls(map);
+					});
 				}}
-				terrain={is3DMode && !isMobile ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
+				terrain={is3DMode ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
 			>
 				<MapControls
 					layers={availableLayers}
