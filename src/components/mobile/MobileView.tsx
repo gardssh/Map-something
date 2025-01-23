@@ -427,7 +427,9 @@ export function MobileView({
 											<div className="flex justify-between items-start">
 												<div>
 													<h3 className="font-medium">{route.name}</h3>
-													<p className="text-sm text-muted-foreground">Distance: {route.distance?.toFixed(1)} km</p>
+													<p className="text-sm text-muted-foreground">
+														Distance: {(route.distance || calculateRouteDistance(route)).toFixed(1)} km
+													</p>
 													{route.comments && <p className="text-sm text-muted-foreground mt-2">{route.comments}</p>}
 												</div>
 											</div>
@@ -614,6 +616,11 @@ export function MobileView({
 										handleRouteRename(routeId, newName);
 										onRouteCommentUpdate(routeId, newComment);
 									}}
+									onClose={() => {
+										setShowDetailsDrawer(false);
+										setSelectedRoute(null);
+										setSelectedRouteId(null);
+									}}
 								/>
 							)}
 							{selectedWaypoint && (
@@ -623,6 +630,11 @@ export function MobileView({
 									onEdit={(waypointId, newName, newComment) => {
 										handleWaypointRename(waypointId, newName);
 										onWaypointCommentUpdate(waypointId, newComment);
+									}}
+									onClose={() => {
+										setShowDetailsDrawer(false);
+										setSelectedWaypoint(null);
+										handleWaypointSelect?.(null);
 									}}
 								/>
 							)}

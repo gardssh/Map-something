@@ -128,17 +128,6 @@ export function NearbyList({
 		}
 	};
 
-	const getItemIcon = (type: NearbyItem['type']) => {
-		switch (type) {
-			case 'activity':
-				return <Activity className="h-4 w-4" />;
-			case 'route':
-				return <Route className="h-4 w-4" />;
-			case 'waypoint':
-				return <MapPin className="h-4 w-4" />;
-		}
-	};
-
 	const getItemDetails = (item: NearbyItem) => {
 		switch (item.type) {
 			case 'activity': {
@@ -229,7 +218,6 @@ export function NearbyList({
 					<CardHeader className="flex flex-row items-start space-y-0 pb-2">
 						<div className="flex-1">
 							<div className="flex items-center gap-2">
-								{getItemIcon(item.type)}
 								<CardTitle className="text-base">{item.name}</CardTitle>
 							</div>
 							<CardDescription>{item.date ? new Date(item.date).toLocaleDateString() : 'No date'}</CardDescription>

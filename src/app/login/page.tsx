@@ -1,6 +1,6 @@
 'use client';
-// Noe fix
-import { useState } from 'react';
+
+import { useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,9 +13,17 @@ export default function LoginPage() {
 	const [password, setPassword] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [message, setMessage] = useState('');
-	const supabase = createClient();
 
-	const handleSignIn = async () => {
+	// Memoize the Supabase client
+	const supabase = useMemo(() => createClient(), []);
+
+	// Memoize the sign in handler
+	const handleSignIn = useCallback(async () => {
+		if (!email || !password) {
+			setMessage('Please enter both email and password');
+			return;
+		}
+
 		try {
 			setLoading(true);
 			const { error } = await supabase.auth.signInWithPassword({
@@ -29,7 +37,16 @@ export default function LoginPage() {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [email, password, supabase]);
+
+	// Memoize the form submit handler
+	const handleSubmit = useCallback(
+		(e: React.FormEvent) => {
+			e.preventDefault();
+			handleSignIn();
+		},
+		[handleSignIn]
+	);
 
 	return (
 		<div
@@ -47,12 +64,7 @@ export default function LoginPage() {
 					</CardHeader>
 
 					<CardContent className="space-y-4">
-						<form
-							onSubmit={(e) => {
-								e.preventDefault();
-								handleSignIn();
-							}}
-						>
+						<form onSubmit={handleSubmit}>
 							<div className="space-y-2">
 								<Input
 									type="email"

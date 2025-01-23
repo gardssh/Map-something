@@ -1,8 +1,8 @@
 'use client';
 import { useRef, useCallback, useState, useEffect } from 'react';
-import Map, { Source, Layer, MapLayerTouchEvent, GeolocateControl, NavigationControl } from 'react-map-gl';
+import Map, { Source, Layer, MapLayerTouchEvent, GeolocateControl, NavigationControl, MapRef } from 'react-map-gl';
 import { switchCoordinates } from '../activities/switchCor';
-import type { MapRef, MapLayerMouseEvent } from 'react-map-gl';
+import type { MapLayerMouseEvent } from 'react-map-gl';
 import type { StyleSpecification } from 'mapbox-gl';
 import type { DrawnRoute } from '@/types/route';
 import type { Waypoint } from '@/types/waypoint';
@@ -30,6 +30,7 @@ import Image from 'next/image';
 import { DNTCabinLayer } from './layers/DNTCabinLayer';
 import { useDNTCabins } from './hooks/useDNTCabins';
 import { mapLayers } from './config/mapLayers';
+import { SearchBox } from './controls/SearchBox';
 
 declare global {
 	interface Window {
@@ -548,25 +549,70 @@ export const MapComponent = ({
 		};
 	}, []);
 
+	// Cursor management
+	useEffect(() => {
+		if (!mapRef.current) return;
+		const map = mapRef.current.getMap();
+		const canvas = map.getCanvas();
+
+		// Disable default map interactions when in waypoint mode
+		if (isAddingWaypoint && !isMobile) {
+			map.dragPan.disable();
+			map.dragRotate.disable();
+			map.doubleClickZoom.disable();
+			canvas.style.cursor = 'crosshair';
+			map.getCanvas().classList.add('crosshair-cursor');
+		} else {
+			map.dragPan.enable();
+			map.dragRotate.enable();
+			map.doubleClickZoom.enable();
+			canvas.style.cursor = '';
+			map.getCanvas().classList.remove('crosshair-cursor');
+		}
+
+		return () => {
+			map.dragPan.enable();
+			map.dragRotate.enable();
+			map.doubleClickZoom.enable();
+			canvas.style.cursor = '';
+			map.getCanvas().classList.remove('crosshair-cursor');
+		};
+	}, [isAddingWaypoint, isMobile]);
+
 	return (
 		<div
 			ref={mapContainerRef}
 			className="fixed inset-0 w-full h-[100dvh] overflow-hidden md:relative"
-			style={{ touchAction: 'none' }}
+			style={{
+				touchAction: 'none',
+			}}
 		>
 			<div className="absolute top-4 left-4 z-10 bg-white/90 p-2 rounded-lg shadow-sm">
 				<Image src="/api_logo_cptblWith_strava_horiz_light.svg" alt="Strava API" width={100} height={15} priority />
 			</div>
+			<SearchBox mapRef={mapRef as React.RefObject<MapRef>} />
 			<Map
 				ref={mapRef as React.RefObject<MapRef>}
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
 				initialViewState={initialMapState}
-				style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+				style={{
+					position: 'absolute',
+					inset: 0,
+					width: '100%',
+					height: '100%',
+				}}
 				mapStyle={mapStyle}
 				onMoveEnd={() => updateVisibleIds()}
 				onMouseMove={onHover}
 				onClick={(e) => {
 					if (isDrawing) return;
+					if (isAddingWaypoint && !isMobile) {
+						// Handle waypoint placement on desktop
+						setNewWaypointCoords([e.lngLat.lng, e.lngLat.lat]);
+						setShowWaypointDialog(true);
+						setIsAddingWaypoint(false);
+						return;
+					}
 
 					const features = e.features || [];
 
@@ -625,16 +671,6 @@ export const MapComponent = ({
 						return;
 					}
 				}}
-				onContextMenu={(e) => {
-					if (isDrawing) return;
-					if (!isMobile) {
-						// Only handle right-click on desktop
-						e.preventDefault();
-						const coords = e.lngLat;
-						setNewWaypointCoords([coords.lng, coords.lat]);
-						setShowWaypointDialog(true);
-					}
-				}}
 				onTouchStart={handleTouchStart}
 				onTouchEnd={handleTouchEnd}
 				interactiveLayerIds={[
@@ -660,13 +696,7 @@ export const MapComponent = ({
 				renderWorldCopies={false}
 				maxTileCacheSize={50}
 				trackResize={false}
-				dragRotate={is3DMode}
 				pitchWithRotate={true}
-				dragPan={true}
-				touchZoomRotate={true}
-				touchPitch={is3DMode && !isMobile}
-				maxPitch={isMobile ? 0 : 85}
-				minPitch={0}
 				keyboard={true}
 				onLoad={(evt) => {
 					const map = evt.target;
@@ -676,6 +706,37 @@ export const MapComponent = ({
 					if (onMapLoad) {
 						onMapLoad(map);
 					}
+
+					// Initialize cursor behavior
+					const handleMouseMove = (e: mapboxgl.MapMouseEvent) => {
+						const canvas = map.getCanvas();
+						if (isAddingWaypoint && !isMobile) {
+							canvas.style.cursor = 'crosshair';
+							return;
+						}
+
+						const features = map.queryRenderedFeatures(e.point, {
+							layers: [
+								'foot-sports',
+								'cycle-sports',
+								'water-sports',
+								'winter-sports',
+								'other-sports',
+								'waypoints-layer',
+								'waypoints-layer-touch',
+								'saved-routes-layer',
+								'saved-routes-border',
+								'saved-routes-touch',
+								'dnt-cabins',
+								'dnt-cabins-touch',
+							],
+						});
+
+						canvas.style.cursor = features.length > 0 ? 'pointer' : '';
+					};
+
+					map.on('mousemove', handleMouseMove);
+
 					// Only enable touch controls if 3D mode is on
 					if (is3DMode && !isMobile) {
 						map.touchZoomRotate.enableRotation();
@@ -739,7 +800,7 @@ export const MapComponent = ({
 					handleWaypointSave={handleWaypointSave}
 				/>
 
-				{isAddingWaypoint && (
+				{isAddingWaypoint && isMobile && (
 					<CrosshairOverlay onConfirm={handleWaypointPlacementConfirm} onCancel={() => setIsAddingWaypoint(false)} />
 				)}
 
