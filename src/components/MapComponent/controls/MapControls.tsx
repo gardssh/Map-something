@@ -8,34 +8,37 @@ import type { DrawnRoute } from '@/types/route';
 import type { DbRoute } from '@/types/supabase';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import HelpButton from '@/components/HelpButton';
+import { ActivityCategory } from '@/lib/categories';
+
+interface Layer {
+	id: string;
+	name: string;
+	isBase: boolean;
+}
 
 interface MapControlsProps {
-	layers: Array<{
-		id: string;
-		name: string;
-		isBase: boolean;
-	}>;
+	layers: Layer[];
 	currentBaseLayer: string;
-	overlayStates: { [key: string]: boolean };
+	overlayStates: Record<string, boolean>;
 	onLayerToggle: (layerId: string, isVisible: boolean) => void;
-	selectedCategories: string[];
-	onCategoryToggle: (categories: string[]) => void;
+	selectedCategories: ActivityCategory[];
+	onCategoryToggle: (categories: ActivityCategory[]) => void;
 	userId: string;
 	onDrawCreate: (evt: { features: any[] }) => void;
 	onDrawUpdate: (evt: { features: any[]; action: string }) => void;
 	onDrawDelete: (evt: { features: any[] }) => void;
-	onRouteSave?: (route: DrawnRoute) => void;
-	onRouteAdd: (route: DbRoute) => void;
+	onRouteSave: (route: DrawnRoute) => void;
+	onRouteAdd: (route: DrawnRoute) => void;
 	onModeChange: (evt: { mode: string }) => void;
 	is3DMode: boolean;
 	onViewModeToggle: () => void;
-	waypointsVisible?: boolean;
-	routesVisible?: boolean;
-	onWaypointsToggle?: (visible: boolean) => void;
-	onRoutesToggle?: (visible: boolean) => void;
-	dntCabinsVisible?: boolean;
-	onDNTCabinsToggle?: (visible: boolean) => void;
-	activeItem?: string;
+	waypointsVisible: boolean;
+	routesVisible: boolean;
+	onWaypointsToggle: (visible: boolean) => void;
+	onRoutesToggle: (visible: boolean) => void;
+	dntCabinsVisible: boolean;
+	onDNTCabinsToggle: (visible: boolean) => void;
+	activeItem: string;
 }
 
 const MapControls = ({
@@ -63,6 +66,13 @@ const MapControls = ({
 	activeItem,
 }: MapControlsProps) => {
 	const { isMobile } = useResponsiveLayout();
+
+	const handleCategoryToggle = (category: ActivityCategory) => {
+		const newCategories = selectedCategories.includes(category)
+			? selectedCategories.filter((c) => c !== category)
+			: [...selectedCategories, category];
+		onCategoryToggle(newCategories);
+	};
 
 	return (
 		<div className="absolute top-4 right-4 flex flex-col gap-2">

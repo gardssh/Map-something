@@ -119,6 +119,8 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	userId: string;
 	activeItem?: string;
 	setActiveItem?: (item: string) => void;
+	selectedCategories: ActivityCategory[];
+	setSelectedCategories: React.Dispatch<React.SetStateAction<ActivityCategory[]>>;
 }
 
 export function AppSidebar({
@@ -147,6 +149,8 @@ export function AppSidebar({
 	userId,
 	activeItem: externalActiveItem,
 	setActiveItem: externalSetActiveItem,
+	selectedCategories,
+	setSelectedCategories,
 	...props
 }: AppSidebarProps) {
 	const { user } = useAuth();
@@ -161,13 +165,6 @@ export function AppSidebar({
 	const [editingRouteId, setEditingRouteId] = React.useState<string | null>(null);
 	const [editingName, setEditingName] = React.useState<string>('');
 	const [editingComments, setEditingComments] = React.useState<string>('');
-	const [selectedCategories, setSelectedCategories] = React.useState<ActivityCategory[]>([
-		'Foot Sports',
-		'Cycle Sports',
-		'Water Sports',
-		'Winter Sports',
-		'Other Sports',
-	]);
 	const [chartData, setChartData] = React.useState<ElevationPoint[]>([]);
 	const scrollRef = React.useRef<HTMLDivElement>(null);
 	const [editingWaypointId, setEditingWaypointId] = React.useState<string | null>(null);

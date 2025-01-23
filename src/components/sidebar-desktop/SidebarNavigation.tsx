@@ -1,6 +1,18 @@
 'use client';
 
-import { Navigation, Medal, Route, MapPin, AlertTriangle, PanelLeftClose, PanelLeft, User, LogOut } from 'lucide-react';
+import {
+	Navigation,
+	Medal,
+	Route,
+	MapPin,
+	AlertTriangle,
+	PanelLeftClose,
+	PanelLeft,
+	User,
+	LogOut,
+	Coffee,
+	MessageCircle,
+} from 'lucide-react';
 import Link from 'next/link';
 import {
 	DropdownMenu,
@@ -72,6 +84,23 @@ export function SidebarNavigation({ activeItem, open, setOpen, onNavigate }: Sid
 							<User className="h-4 w-4 mr-2" />
 							Profile
 						</Link>
+					</DropdownMenuItem>
+					<DropdownMenuItem asChild>
+						<a
+							href="https://buymeacoffee.com/gardsh"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex items-center"
+						>
+							<Coffee className="h-4 w-4 mr-2" />
+							Donate
+						</a>
+					</DropdownMenuItem>
+					<DropdownMenuItem asChild>
+						<a href="mailto:d48bwgqhrv@privaterelay.appleid.com" className="flex items-center">
+							<MessageCircle className="h-4 w-4 mr-2" />
+							Send Feedback
+						</a>
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={() => signOut()} className="flex items-center text-destructive">
 						<LogOut className="h-4 w-4 mr-2" />

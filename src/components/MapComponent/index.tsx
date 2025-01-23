@@ -8,7 +8,7 @@ import type { DrawnRoute } from '@/types/route';
 import type { Waypoint } from '@/types/waypoint';
 import type { Activity, HoverInfo } from '@/types/activity';
 import { useAuth } from '@/contexts/AuthContext';
-import type { DbRoute } from '@/types/supabase';
+import type { DbRoute, DbWaypoint } from '@/types/supabase';
 import { ActivityLayers } from './layers/ActivityLayers';
 import { RouteLayer } from './layers/RouteLayer';
 import { TerrainLayer } from './layers/TerrainLayer';
@@ -31,6 +31,7 @@ import { DNTCabinLayer } from './layers/DNTCabinLayer';
 import { useDNTCabins } from './hooks/useDNTCabins';
 import { mapLayers } from './config/mapLayers';
 import { SearchBox } from './controls/SearchBox';
+import { ActivityCategory } from '@/lib/categories';
 
 declare global {
 	interface Window {
@@ -45,18 +46,20 @@ interface MapComponentProps {
 	setVisibleWaypointsId: React.Dispatch<React.SetStateAction<(string | number)[]>>;
 	selectedRouteId: string | number | null;
 	setSelectedRouteId: React.Dispatch<React.SetStateAction<string | number | null>>;
-	onMapLoad?: (map: mapboxgl.Map) => void;
-	onRouteSelect?: (route: DbRoute | null) => void;
-	onRouteSave?: (route: DrawnRoute) => void;
-	routes?: DbRoute[];
-	waypoints?: Waypoint[];
-	onWaypointSave?: (waypoint: Waypoint) => void;
-	onActivitySelect?: (activity: any | null) => void;
-	handleWaypointSelect?: (waypoint: Waypoint | null) => void;
-	selectedWaypoint?: Waypoint | null;
+	onMapLoad: (map: mapboxgl.Map) => void;
+	onRouteSelect: (route: DbRoute | null) => void;
+	onRouteSave: (route: DbRoute) => void;
+	routes: DbRoute[];
+	waypoints: DbWaypoint[];
+	onWaypointSave: (waypoint: DbWaypoint) => void;
+	onActivitySelect: (activity: Activity | null) => void;
+	handleWaypointSelect: (waypoint: DbWaypoint | null) => void;
+	selectedWaypoint: DbWaypoint | null;
 	setActiveItem: (item: string) => void;
 	setShowDetailsDrawer: (show: boolean) => void;
 	activeItem: string;
+	selectedCategories: ActivityCategory[];
+	setSelectedCategories: React.Dispatch<React.SetStateAction<ActivityCategory[]>>;
 }
 
 export const MapComponent = ({
@@ -78,17 +81,12 @@ export const MapComponent = ({
 	setActiveItem,
 	setShowDetailsDrawer,
 	activeItem,
+	selectedCategories,
+	setSelectedCategories,
 }: MapComponentProps) => {
 	const mapContainerRef = useRef<HTMLDivElement>(null);
 	const mapRef = useRef<MapRef>();
 	const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
-	const [selectedCategories, setSelectedCategories] = useState<string[]>([
-		'Foot Sports',
-		'Cycle Sports',
-		'Water Sports',
-		'Winter Sports',
-		'Other Sports',
-	]);
 	const [selectedRoute, setSelectedRoute] = useState<DbRoute | null>(null);
 	const [localRoutes, setLocalRoutes] = useState<DbRoute[]>(routes || []);
 	const [newWaypointCoords, setNewWaypointCoords] = useState<[number, number] | null>(null);
@@ -724,7 +722,7 @@ export const MapComponent = ({
 					overlayStates={overlayStates}
 					onLayerToggle={handleLayerToggle}
 					selectedCategories={selectedCategories}
-					onCategoryToggle={setSelectedCategories}
+					onCategoryToggle={(newCategories) => setSelectedCategories(newCategories as ActivityCategory[])}
 					userId={user?.id || ''}
 					onDrawCreate={onDrawCreate}
 					onDrawUpdate={onDrawUpdate}
