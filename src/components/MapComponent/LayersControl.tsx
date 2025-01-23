@@ -3,6 +3,7 @@ import { Layers, Footprints, Bike, Waves, Snowflake, CircleHelp, MapPin, Route, 
 import { useState, useEffect } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { createPortal } from 'react-dom';
+import { ActivityCategory } from '@/lib/categories';
 
 interface LayerOption {
 	id: string;
@@ -14,16 +15,16 @@ interface LayerOption {
 interface LayersControlProps {
 	layers: LayerOption[];
 	currentBaseLayer: string;
-	overlayStates: { [key: string]: boolean };
+	overlayStates: Record<string, boolean>;
 	onLayerToggle: (layerId: string, isVisible: boolean) => void;
-	selectedCategories: string[];
-	onCategoryToggle: (categories: string[]) => void;
-	waypointsVisible?: boolean;
-	routesVisible?: boolean;
-	onWaypointsToggle?: (visible: boolean) => void;
-	onRoutesToggle?: (visible: boolean) => void;
-	dntCabinsVisible?: boolean;
-	onDNTCabinsToggle?: (visible: boolean) => void;
+	selectedCategories: ActivityCategory[];
+	onCategoryToggle: (categories: ActivityCategory[]) => void;
+	waypointsVisible: boolean;
+	routesVisible: boolean;
+	onWaypointsToggle: (visible: boolean) => void;
+	onRoutesToggle: (visible: boolean) => void;
+	dntCabinsVisible: boolean;
+	onDNTCabinsToggle: (visible: boolean) => void;
 }
 
 const defaultLayers: LayerOption[] = [
@@ -107,13 +108,15 @@ export const LayersControl = ({
 		{ id: 'Other Sports', name: 'Other Sports', icon: <CircleHelp className="h-4 w-4 mr-2" /> },
 	];
 
-	const allSportsSelected = sportCategories.every((category) => selectedCategories.includes(category.id));
+	const allSportsSelected = sportCategories.every((category) =>
+		selectedCategories.includes(category.name as ActivityCategory)
+	);
 
 	const handleToggleAllSports = () => {
 		if (allSportsSelected) {
 			onCategoryToggle([]);
 		} else {
-			onCategoryToggle(sportCategories.map((cat) => cat.id));
+			onCategoryToggle(sportCategories.map((cat) => cat.name as ActivityCategory));
 		}
 	};
 
@@ -225,11 +228,11 @@ export const LayersControl = ({
 								<label key={category.id} className="flex items-center space-x-2 cursor-pointer ml-2">
 									<input
 										type="checkbox"
-										checked={selectedCategories.includes(category.id)}
+										checked={selectedCategories.includes(category.name as ActivityCategory)}
 										onChange={() => {
-											const newCategories = selectedCategories.includes(category.id)
-												? selectedCategories.filter((id) => id !== category.id)
-												: [...selectedCategories, category.id];
+											const newCategories = selectedCategories.includes(category.name as ActivityCategory)
+												? selectedCategories.filter((cat) => cat !== category.name)
+												: [...selectedCategories, category.name as ActivityCategory];
 											onCategoryToggle(newCategories);
 										}}
 										className="form-checkbox h-4 w-4 text-blue-600"

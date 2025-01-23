@@ -11,7 +11,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { Menu, Settings } from 'lucide-react';
+import { Menu, User, Coffee, MessageCircle, LogOut } from 'lucide-react';
 import Link from 'next/link';
 
 export function NavUser() {
@@ -42,7 +42,7 @@ export function NavUser() {
 					</Avatar>
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="w-[var(--sidebar-width-icon)]" align="start" sideOffset={8}>
+			<DropdownMenuContent className="w-48" align="start" sideOffset={8}>
 				<DropdownMenuLabel className="font-normal">
 					<div className="flex flex-col space-y-1">
 						<p className="text-sm font-medium leading-none">{fullName}</p>
@@ -51,12 +51,32 @@ export function NavUser() {
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem asChild>
-					<Link href="/profile" className="flex items-center">
-						<Settings className="mr-2 h-4 w-4" />
-						Profile Settings
+					<Link href="/profile" className="w-full flex items-center">
+						<User className="mr-2 h-4 w-4" />
+						Profile
 					</Link>
 				</DropdownMenuItem>
-				<DropdownMenuItem onClick={() => signOut()}>Log out</DropdownMenuItem>
+				<DropdownMenuItem asChild>
+					<a
+						href="https://buymeacoffee.com/gardsh"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="w-full flex items-center"
+					>
+						<Coffee className="mr-2 h-4 w-4" />
+						Donate
+					</a>
+				</DropdownMenuItem>
+				<DropdownMenuItem asChild>
+					<a href="mailto:d48bwgqhrv@privaterelay.appleid.com" className="w-full flex items-center">
+						<MessageCircle className="mr-2 h-4 w-4" />
+						Send Feedback
+					</a>
+				</DropdownMenuItem>
+				<DropdownMenuItem className="w-full flex items-center" onClick={() => signOut()}>
+					<LogOut className="mr-2 h-4 w-4" />
+					Log out
+				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

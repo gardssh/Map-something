@@ -11,9 +11,22 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { StravaConnectionStatus } from '@/features/strava-auth/components/StravaConnectionStatus';
+import { useRouter } from 'next/navigation';
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function ProfilePage() {
-	const { user, refreshSession } = useAuth();
+	const { user, refreshSession, signOut } = useAuth();
+	const router = useRouter();
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
 	const [password, setPassword] = useState('');
@@ -131,6 +144,33 @@ export default function ProfilePage() {
 			setConfirmPassword('');
 		} catch (error: any) {
 			setMessage(error.message || 'Error updating password');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const deleteAccount = async () => {
+		if (!user?.id) return;
+
+		try {
+			setLoading(true);
+			setMessage('');
+
+			const response = await fetch('/api/user/delete', {
+				method: 'DELETE',
+			});
+
+			if (!response.ok) {
+				const data = await response.json();
+				throw new Error(data.error || 'Error deleting account');
+			}
+
+			// Sign out and redirect to home
+			await signOut();
+			router.push('/');
+		} catch (error: any) {
+			console.error('Error deleting account:', error);
+			setMessage(error.message || 'Error deleting account');
 		} finally {
 			setLoading(false);
 		}
@@ -272,6 +312,36 @@ export default function ProfilePage() {
 					<Button onClick={updatePassword} disabled={loading}>
 						{loading ? 'Updating...' : 'Update Password'}
 					</Button>
+				</CardContent>
+			</Card>
+
+			{/* Danger Zone */}
+			<Card className="mb-8 border-red-200">
+				<CardHeader>
+					<CardTitle className="text-red-600">Danger Zone</CardTitle>
+					<CardDescription>Irreversible actions for your account</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<AlertDialog>
+						<AlertDialogTrigger asChild>
+							<Button variant="destructive">Delete Account</Button>
+						</AlertDialogTrigger>
+						<AlertDialogContent>
+							<AlertDialogHeader>
+								<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+								<AlertDialogDescription>
+									This action cannot be undone. This will permanently delete your account and remove all your data from
+									our servers.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel>Cancel</AlertDialogCancel>
+								<AlertDialogAction onClick={deleteAccount} className="bg-red-600 hover:bg-red-700">
+									{loading ? 'Deleting...' : 'Delete Account'}
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
 				</CardContent>
 			</Card>
 

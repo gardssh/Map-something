@@ -35,7 +35,11 @@ export function categorizeActivity(sportType: string): ActivityCategory {
     'Snowboard', 
     'Cross Country Ski', 
     'Backcountry Ski',
-    'NordicSki'
+    'BackcountrySki',
+    'NordicSki',
+    'Alpine Ski',
+    'AlpineSki',
+    'Snowshoe'
   ];
 
   const otherSports = [

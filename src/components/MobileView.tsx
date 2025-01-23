@@ -8,6 +8,7 @@ import type { Activity } from '@/types/activity';
 import type { DbRoute, DbWaypoint } from '@/types/supabase';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { ActivityCategory } from '@/lib/categories';
 
 interface MobileViewProps {
 	isOnline: boolean;
@@ -185,6 +186,13 @@ export function MobileView({
 	const [forecasts, setForecasts] = useState<AvalancheForecast[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [selectedCategories, setSelectedCategories] = useState<ActivityCategory[]>([
+		'Foot Sports',
+		'Cycle Sports',
+		'Water Sports',
+		'Winter Sports',
+		'Other Sports',
+	]);
 
 	const fetchForecast = async () => {
 		try {
@@ -283,6 +291,8 @@ export function MobileView({
 							setActiveItem={setActiveItem}
 							setShowDetailsDrawer={setShowDetailsDrawer}
 							activeItem={activeItem}
+							selectedCategories={selectedCategories}
+							setSelectedCategories={setSelectedCategories}
 						/>
 						<MobileDrawer
 							isOpen={[`activities`, `routes`, `waypoints`, `avalanche`].includes(activeItem)}

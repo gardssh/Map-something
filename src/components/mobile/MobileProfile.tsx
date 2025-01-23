@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/lib/supabase';
 import type { DbProfile } from '@/types/supabase';
-import { LogOut, Coffee } from 'lucide-react';
+import { LogOut, Coffee, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 import { StravaConnectionStatus } from '@/features/strava-auth/components/StravaConnectionStatus';
@@ -253,6 +253,13 @@ export function MobileProfile() {
 							Donate
 						</Button>
 					</Link>
+
+					<a href="mailto:d48bwgqhrv@privaterelay.appleid.com" className="w-full">
+						<Button variant="outline" className="w-full justify-start">
+							<MessageCircle className="mr-2 h-4 w-4" />
+							Send Feedback
+						</Button>
+					</a>
 
 					<Button variant="outline" className="w-full justify-start text-destructive" onClick={() => signOut()}>
 						<LogOut className="mr-2 h-4 w-4" />

@@ -6,6 +6,7 @@ import type { DbRoute, DbWaypoint, DbStravaActivity } from '@/types/supabase';
 import type { Activity } from '@/types/activity';
 import type { MapRef } from 'react-map-gl';
 import React from 'react';
+import { ActivityCategory } from '@/lib/categories';
 
 interface ActivityWithMap extends DbStravaActivity {
 	map: {
@@ -79,6 +80,13 @@ export function AppSidebarAndMap({
 	const { user } = useAuth();
 	const [localVisibleRoutesId, setLocalVisibleRoutesId] = React.useState<(string | number)[]>([]);
 	const [localVisibleWaypointsId, setLocalVisibleWaypointsId] = React.useState<(string | number)[]>([]);
+	const [selectedCategories, setSelectedCategories] = React.useState<ActivityCategory[]>([
+		'Foot Sports',
+		'Cycle Sports',
+		'Water Sports',
+		'Winter Sports',
+		'Other Sports',
+	]);
 
 	// Update parent state when local state changes
 	React.useEffect(() => {
@@ -99,7 +107,7 @@ export function AppSidebarAndMap({
 				selectedRouteId={selectedRouteId}
 				selectedActivity={currentActivity}
 				map={mapInstance}
-				onActivitySelect={handleActivitySelect}
+				onActivitySelect={(activity) => handleActivitySelect(activity as unknown as ActivityWithMap)}
 				selectedRoute={selectedRoute}
 				selectedWaypoint={selectedWaypoint}
 				routes={routes}
@@ -117,6 +125,8 @@ export function AppSidebarAndMap({
 				onRouteCommentUpdate={onRouteCommentUpdate}
 				activeItem={activeItem}
 				setActiveItem={setActiveItem}
+				selectedCategories={selectedCategories}
+				setSelectedCategories={setSelectedCategories}
 			/>
 			<SidebarInset className="flex flex-col h-screen w-full">
 				<div className="flex-1 relative w-full pb-16 md:pb-0">
@@ -130,7 +140,7 @@ export function AppSidebarAndMap({
 						onMapLoad={(map) => setMapInstance(map)}
 						onRouteSave={handleRouteSave}
 						onRouteSelect={handleRouteSelect}
-						onActivitySelect={handleActivitySelect}
+						onActivitySelect={(activity) => handleActivitySelect(activity as unknown as ActivityWithMap)}
 						routes={routes}
 						waypoints={waypoints}
 						onWaypointSave={handleWaypointSave}
@@ -139,6 +149,8 @@ export function AppSidebarAndMap({
 						setActiveItem={setActiveItem}
 						setShowDetailsDrawer={setShowDetailsDrawer}
 						activeItem={activeItem}
+						selectedCategories={selectedCategories}
+						setSelectedCategories={setSelectedCategories}
 					/>
 				</div>
 			</SidebarInset>
