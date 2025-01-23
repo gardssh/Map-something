@@ -123,129 +123,133 @@ export const LayersControl = ({
 	return (
 		<>
 			{isOpen && buttonRect && (
-				<div
-					className="fixed bg-white rounded-md shadow-lg p-4 min-w-[200px]"
-					style={{
-						right: window.innerWidth - buttonRect.left + 5,
-						top: buttonRect.top,
-						zIndex: 9999,
-					}}
-				>
-					{/* Base Maps */}
-					<div className="mb-6">
-						<div className="text-sm font-semibold text-gray-500 mb-3">Base Maps</div>
-						<div className="flex flex-col space-y-2">
-							{baseLayers.map((layer) => (
-								<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
-									<input
-										type="radio"
-										name="baseLayer"
-										checked={currentBaseLayer === layer.id}
-										onChange={() => onLayerToggle(layer.id, true)}
-										className="form-radio h-4 w-4 text-blue-600"
-									/>
-									<span className="text-sm text-gray-700">{layer.name}</span>
-								</label>
-							))}
+				<>
+					{/* Add overlay */}
+					<div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
+					<div
+						className="fixed bg-white rounded-md shadow-lg p-4 min-w-[200px] z-[9999]"
+						style={{
+							right: window.innerWidth - buttonRect.left + 5,
+							top: buttonRect.top,
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						{/* Base Maps */}
+						<div className="mb-6">
+							<div className="text-sm font-semibold text-gray-500 mb-3">Base Maps</div>
+							<div className="flex flex-col space-y-2">
+								{baseLayers.map((layer) => (
+									<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
+										<input
+											type="radio"
+											name="baseLayer"
+											checked={currentBaseLayer === layer.id}
+											onChange={() => onLayerToggle(layer.id, true)}
+											className="form-radio h-4 w-4 text-blue-600"
+										/>
+										<span className="text-sm text-gray-700">{layer.name}</span>
+									</label>
+								))}
+							</div>
 						</div>
-					</div>
 
-					{/* Overlays */}
-					<div className="mb-6">
-						<div className="text-sm font-semibold text-gray-500 mb-3">Overlays</div>
-						<div className="flex flex-col space-y-2">
-							{overlayLayers.map((layer) => (
-								<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
-									<input
-										type="checkbox"
-										checked={overlayStates[layer.id]}
-										onChange={() => onLayerToggle(layer.id, !overlayStates[layer.id])}
-										className="form-checkbox h-4 w-4 text-blue-600"
-									/>
-									<span className="text-sm text-gray-700">{layer.name}</span>
-								</label>
-							))}
+						{/* Overlays */}
+						<div className="mb-6">
+							<div className="text-sm font-semibold text-gray-500 mb-3">Overlays</div>
+							<div className="flex flex-col space-y-2">
+								{overlayLayers.map((layer) => (
+									<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
+										<input
+											type="checkbox"
+											checked={overlayStates[layer.id]}
+											onChange={() => onLayerToggle(layer.id, !overlayStates[layer.id])}
+											className="form-checkbox h-4 w-4 text-blue-600"
+										/>
+										<span className="text-sm text-gray-700">{layer.name}</span>
+									</label>
+								))}
+							</div>
 						</div>
-					</div>
 
-					{/* Features */}
-					<div className="mb-6">
-						<div className="text-sm font-semibold text-gray-500 mb-3">Features</div>
-						<div className="flex flex-col space-y-2">
-							<label className="flex items-center space-x-2 cursor-pointer">
-								<input
-									type="checkbox"
-									checked={waypointsVisible}
-									onChange={(e) => onWaypointsToggle?.(e.target.checked)}
-									className="form-checkbox h-4 w-4 text-blue-600"
-								/>
-								<span className="text-sm text-gray-700 flex items-center">
-									<MapPin className="h-4 w-4 mr-2" />
-									Waypoints
-								</span>
-							</label>
-							<label className="flex items-center space-x-2 cursor-pointer">
-								<input
-									type="checkbox"
-									checked={routesVisible}
-									onChange={(e) => onRoutesToggle?.(e.target.checked)}
-									className="form-checkbox h-4 w-4 text-blue-600"
-								/>
-								<span className="text-sm text-gray-700 flex items-center">
-									<Route className="h-4 w-4 mr-2" />
-									Routes
-								</span>
-							</label>
-							<label className="flex items-center space-x-2 cursor-pointer">
-								<input
-									type="checkbox"
-									checked={dntCabinsVisible}
-									onChange={(e) => onDNTCabinsToggle?.(e.target.checked)}
-									className="form-checkbox h-4 w-4 text-blue-600"
-								/>
-								<span className="text-sm text-gray-700 flex items-center">
-									<Home className="h-4 w-4 mr-2" />
-									DNT Cabins
-								</span>
-							</label>
-						</div>
-					</div>
-
-					{/* Sport Types */}
-					<div>
-						<div className="text-sm font-semibold text-gray-500 mb-3">Sport Types</div>
-						<div className="flex flex-col space-y-2">
-							<label className="flex items-center space-x-2 cursor-pointer">
-								<input
-									type="checkbox"
-									checked={allSportsSelected}
-									onChange={handleToggleAllSports}
-									className="form-checkbox h-4 w-4 text-blue-600"
-								/>
-								<span className="text-sm text-gray-700 font-medium">Toggle All Sports</span>
-							</label>
-							{sportCategories.map((category) => (
-								<label key={category.id} className="flex items-center space-x-2 cursor-pointer ml-2">
+						{/* Features */}
+						<div className="mb-6">
+							<div className="text-sm font-semibold text-gray-500 mb-3">Features</div>
+							<div className="flex flex-col space-y-2">
+								<label className="flex items-center space-x-2 cursor-pointer">
 									<input
 										type="checkbox"
-										checked={selectedCategories.includes(category.name as ActivityCategory)}
-										onChange={() => {
-											const newCategories = selectedCategories.includes(category.name as ActivityCategory)
-												? selectedCategories.filter((cat) => cat !== category.name)
-												: [...selectedCategories, category.name as ActivityCategory];
-											onCategoryToggle(newCategories);
-										}}
+										checked={waypointsVisible}
+										onChange={(e) => onWaypointsToggle?.(e.target.checked)}
 										className="form-checkbox h-4 w-4 text-blue-600"
 									/>
 									<span className="text-sm text-gray-700 flex items-center">
-										{category.icon}
-										{category.name}
+										<MapPin className="h-4 w-4 mr-2" />
+										Waypoints
 									</span>
 								</label>
-							))}
+								<label className="flex items-center space-x-2 cursor-pointer">
+									<input
+										type="checkbox"
+										checked={routesVisible}
+										onChange={(e) => onRoutesToggle?.(e.target.checked)}
+										className="form-checkbox h-4 w-4 text-blue-600"
+									/>
+									<span className="text-sm text-gray-700 flex items-center">
+										<Route className="h-4 w-4 mr-2" />
+										Routes
+									</span>
+								</label>
+								<label className="flex items-center space-x-2 cursor-pointer">
+									<input
+										type="checkbox"
+										checked={dntCabinsVisible}
+										onChange={(e) => onDNTCabinsToggle?.(e.target.checked)}
+										className="form-checkbox h-4 w-4 text-blue-600"
+									/>
+									<span className="text-sm text-gray-700 flex items-center">
+										<Home className="h-4 w-4 mr-2" />
+										DNT Cabins
+									</span>
+								</label>
+							</div>
+						</div>
+
+						{/* Sport Types */}
+						<div>
+							<div className="text-sm font-semibold text-gray-500 mb-3">Sport Types</div>
+							<div className="flex flex-col space-y-2">
+								<label className="flex items-center space-x-2 cursor-pointer">
+									<input
+										type="checkbox"
+										checked={allSportsSelected}
+										onChange={handleToggleAllSports}
+										className="form-checkbox h-4 w-4 text-blue-600"
+									/>
+									<span className="text-sm text-gray-700 font-medium">Toggle All Sports</span>
+								</label>
+								{sportCategories.map((category) => (
+									<label key={category.id} className="flex items-center space-x-2 cursor-pointer ml-2">
+										<input
+											type="checkbox"
+											checked={selectedCategories.includes(category.name as ActivityCategory)}
+											onChange={() => {
+												const newCategories = selectedCategories.includes(category.name as ActivityCategory)
+													? selectedCategories.filter((cat) => cat !== category.name)
+													: [...selectedCategories, category.name as ActivityCategory];
+												onCategoryToggle(newCategories);
+											}}
+											className="form-checkbox h-4 w-4 text-blue-600"
+										/>
+										<span className="text-sm text-gray-700 flex items-center">
+											{category.icon}
+											{category.name}
+										</span>
+									</label>
+								))}
+							</div>
 						</div>
 					</div>
-				</div>
+				</>
 			)}
 		</>
 	);

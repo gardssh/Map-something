@@ -136,6 +136,7 @@ export function NearbyList({
 					<>
 						<p className="text-sm text-muted-foreground">Type: {activity.sport_type}</p>
 						<p className="text-sm text-muted-foreground">Time: {formatTime(activity.moving_time)}</p>
+						<p className="text-sm text-muted-foreground">Distance: {(activity.distance / 1000).toFixed(2)} km</p>
 					</>
 				);
 			}
