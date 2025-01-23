@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase';
 
@@ -28,7 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const [user, setUser] = useState<User | null>(null);
 	const [session, setSession] = useState<Session | null>(null);
 	const [loading, setLoading] = useState(true);
-	const supabase = createClient();
+	// Memoize the Supabase client
+	const supabase = useMemo(() => createClient(), []);
 
 	const refreshSession = async () => {
 		try {
@@ -36,30 +37,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				data: { session },
 				error: sessionError,
 			} = await supabase.auth.getSession();
-			if (sessionError) {
-				console.error('Session refresh error:', {
-					error: sessionError,
-					message: sessionError.message,
-					status: sessionError.status,
-				});
-				throw sessionError;
-			}
+			if (sessionError) throw sessionError;
 
 			if (session) {
-				const {
-					data: { user: freshUser },
-					error: userError,
-				} = await supabase.auth.getUser();
-				if (userError) {
-					console.error('Get user error:', {
-						error: userError,
-						message: userError.message,
-						status: userError.status,
-					});
-					throw userError;
-				}
 				setSession(session);
-				setUser(freshUser);
+				setUser(session.user);
 			}
 		} catch (error) {
 			console.error('Error refreshing session:', error);
@@ -76,15 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			.getSession()
 			.then(({ data: { session } }) => {
 				if (!mounted) return;
-
 				setSession(session);
 				setUser(session?.user ?? null);
 				setLoading(false);
-
-				// Refresh session after initial load to get fresh data
-				if (session) {
-					refreshSession();
-				}
 			})
 			.catch((error) => {
 				console.error('Error getting session:', error);
@@ -96,28 +72,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((_event, session) => {
 			if (!mounted) return;
-
 			setSession(session);
 			setUser(session?.user ?? null);
 			setLoading(false);
 		});
 
-		// Add visibility change listener
+		// Only refresh session when tab becomes visible and we have a session
 		const handleVisibilityChange = () => {
-			if (document.visibilityState === 'visible') {
+			if (document.visibilityState === 'visible' && session) {
 				refreshSession();
 			}
 		};
 
-		document.addEventListener('visibilitychange', handleVisibilityChange);
+		// Add visibility change listener with a debounce
+		let visibilityTimeout: NodeJS.Timeout;
+		const debouncedVisibilityHandler = () => {
+			clearTimeout(visibilityTimeout);
+			visibilityTimeout = setTimeout(handleVisibilityChange, 1000);
+		};
+
+		document.addEventListener('visibilitychange', debouncedVisibilityHandler);
 
 		// Cleanup
 		return () => {
 			mounted = false;
 			subscription.unsubscribe();
-			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			document.removeEventListener('visibilitychange', debouncedVisibilityHandler);
+			clearTimeout(visibilityTimeout);
 		};
-	}, []);
+	}, [supabase]);
 
 	const signOut = async () => {
 		try {
@@ -128,9 +111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			// Clear auth state
 			setSession(null);
 			setUser(null);
-
-			// Clear any stored auth data
-			localStorage.removeItem('supabase.auth.token');
 
 			// Force reload the page to clear any cached state
 			window.location.href = '/';

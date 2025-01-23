@@ -10,17 +10,20 @@ interface AddWaypointControlProps {
 }
 
 export const AddWaypointControl = ({ isActive, onClick }: AddWaypointControlProps) => {
-	const { isMobile } = useResponsiveLayout();
-
 	useEffect(() => {
-		// Only create the control if we're on mobile
-		if (!isMobile) return;
-
 		const container = document.createElement('div');
 		container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
 		const controlGroup = document.querySelector('.mapboxgl-ctrl-top-right');
 		if (controlGroup) {
-			controlGroup.appendChild(container);
+			// Find the help button container if it exists
+			const helpButton = controlGroup.querySelector('.help-button-container');
+
+			// Insert the waypoint control before the help button
+			if (helpButton) {
+				controlGroup.insertBefore(container, helpButton);
+			} else {
+				controlGroup.appendChild(container);
+			}
 
 			// Add button to container
 			const button = document.createElement('button');
@@ -50,10 +53,12 @@ export const AddWaypointControl = ({ isActive, onClick }: AddWaypointControlProp
 
 			return () => {
 				button.removeEventListener('click', onClick);
-				controlGroup.removeChild(container);
+				if (controlGroup.contains(container)) {
+					controlGroup.removeChild(container);
+				}
 			};
 		}
-	}, [onClick, isActive, isMobile]);
+	}, [onClick, isActive]);
 
 	return null;
 };

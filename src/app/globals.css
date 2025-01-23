@@ -100,3 +100,7 @@
 .mapboxgl-ctrl-group:last-child {
 	margin-bottom: 0 !important;
 }
+
+.crosshair-cursor {
+	cursor: crosshair !important;
+}
