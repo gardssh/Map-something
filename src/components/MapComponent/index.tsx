@@ -494,6 +494,7 @@ export const MapComponent = ({
 		setNewWaypointCoords([center.lng, center.lat]);
 		setShowWaypointDialog(true);
 		setIsAddingWaypoint(false);
+		window.dispatchEvent(new CustomEvent('waypoint-dialog-open'));
 	}, []);
 
 	// Update map center when the map moves
@@ -608,6 +609,7 @@ export const MapComponent = ({
 						setNewWaypointCoords([e.lngLat.lng, e.lngLat.lat]);
 						setShowWaypointDialog(true);
 						setIsAddingWaypoint(false);
+						window.dispatchEvent(new CustomEvent('waypoint-dialog-open'));
 						return;
 					}
 

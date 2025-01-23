@@ -81,7 +81,10 @@ export function ActivityList({
 							<CardDescription>{activity.sport_type}</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<p>Time: {formatTime(activity.moving_time)}</p>
+							<div className="space-y-1">
+								<p>Time: {formatTime(activity.moving_time)}</p>
+								<p>Distance: {(activity.distance / 1000).toFixed(2)} km</p>
+							</div>
 						</CardContent>
 					</Card>
 					{activity.id === selectedRouteId && <div ref={scrollRef} />}

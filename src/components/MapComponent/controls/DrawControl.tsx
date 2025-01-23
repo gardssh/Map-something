@@ -21,6 +21,7 @@ type DrawControlProps = {
 	onRouteAdd?: (route: DrawnRoute) => void;
 	onModeChange?: (evt: { mode: string }) => void;
 	userId: string;
+	onDrawReady?: (draw: any) => void;
 };
 
 const drawStyles = [
@@ -120,14 +121,14 @@ export default function DrawControl(props: DrawControlProps) {
 				styles: drawStyles,
 				...props,
 			});
+			props.onDrawReady?.(drawInstance);
 			return drawInstance;
 		},
-
 		({ map }) => {
 			const mapInst = map.getMap();
 
 			const processRoute = async (coords: [number, number][], featureId: string) => {
-				if (isProcessingRef.current) return; // Prevent duplicate processing
+				if (isProcessingRef.current) return;
 				isProcessingRef.current = true;
 
 				let finalRoute: [number, number][] = [];
@@ -173,12 +174,20 @@ export default function DrawControl(props: DrawControlProps) {
 						source: 'draw',
 					};
 
-					console.log('[DrawControl] Saving drawn route:', newRoute);
+					console.log('[DrawControl] Saving drawn route');
 					await props.onRouteSave?.(newRoute);
 
+					// Dispatch custom event when route is saved
+					window.dispatchEvent(new CustomEvent('route-saved'));
+					console.log('[DrawControl] Route saved event dispatched');
+
 					draw.delete(featureId);
+					draw.changeMode('simple_select');
+					props.onModeChange?.({ mode: 'simple_select' });
 				} catch (error) {
 					console.error('[DrawControl] Error processing route:', error);
+					draw.changeMode('simple_select');
+					props.onModeChange?.({ mode: 'simple_select' });
 				} finally {
 					isProcessingRef.current = false;
 				}
@@ -194,19 +203,13 @@ export default function DrawControl(props: DrawControlProps) {
 				}
 			};
 
-			const handleModeChange = (e: any) => {
-				props.onModeChange?.({ mode: e.mode });
-			};
-
-			// Add event listeners
 			mapInst.on('draw.create', handleCreate);
-			mapInst.on('draw.modechange', handleModeChange);
+			mapInst.on('draw.modechange', (e) => props.onModeChange?.({ mode: e.mode }));
 			mapInst.on('draw.delete', props.onDelete || (() => {}));
 
-			// Return cleanup function
 			return () => {
 				mapInst.off('draw.create', handleCreate);
-				mapInst.off('draw.modechange', handleModeChange);
+				mapInst.off('draw.modechange', (e) => props.onModeChange?.({ mode: e.mode }));
 				mapInst.off('draw.delete', props.onDelete || (() => {}));
 			};
 		},
