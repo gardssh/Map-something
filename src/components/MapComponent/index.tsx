@@ -304,7 +304,7 @@ export const MapComponent = ({
 
 	const updateMapControls = useCallback(
 		(map: mapboxgl.Map) => {
-			if (is3DMode && !isMobile) {
+			if (is3DMode) {
 				// Enable 3D mode
 				map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 				map.dragRotate.enable();
@@ -313,16 +313,16 @@ export const MapComponent = ({
 				map.setMaxPitch(85);
 				map.easeTo({ pitch: 30, duration: 1000 });
 			} else {
-				// Disable 3D mode
+				// Disable 3D mode but keep rotation enabled
 				map.setTerrain(null);
-				map.dragRotate.disable();
-				map.touchZoomRotate.disableRotation();
+				map.dragRotate.enable();
+				map.touchZoomRotate.enableRotation();
 				map.touchPitch.disable();
 				map.setMaxPitch(0);
 				map.easeTo({ pitch: 0, duration: 1000 });
 			}
 		},
-		[is3DMode, isMobile]
+		[is3DMode]
 	);
 
 	// Update controls when mode changes
@@ -330,15 +330,14 @@ export const MapComponent = ({
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
 		updateMapControls(map);
-	}, [is3DMode, isMobile, updateMapControls]);
+	}, [is3DMode, updateMapControls]);
 
 	const toggleViewMode = useCallback(() => {
-		if (isMobile) return; // Prevent toggling on mobile
 		if (!mapRef.current) return;
 
 		// Just toggle the mode - useEffect will handle the rest
 		setIs3DMode(!is3DMode);
-	}, [is3DMode, isMobile]);
+	}, [is3DMode]);
 
 	useEffect(() => {
 		setSelectedWaypoint(parentSelectedWaypoint || null);
@@ -717,7 +716,7 @@ export const MapComponent = ({
 						updateMapControls(map);
 					});
 				}}
-				terrain={is3DMode && !isMobile ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
+				terrain={is3DMode ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
 			>
 				<MapControls
 					layers={availableLayers}
