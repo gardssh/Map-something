@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { useEffect, useState } from 'react';
 
 interface MobileDrawerProps {
@@ -13,27 +13,20 @@ interface MobileDrawerProps {
 const DRAWER_FULL_HEIGHT = 'calc(100vh - 4rem)';
 
 export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerProps) => {
-	const controls = useAnimation();
-	const y = useMotionValue(0);
-	const [drawerState, setDrawerState] = useState<'closed' | 'full'>('closed');
 	const [isDragging, setIsDragging] = useState(false);
-
-	// Calculate background opacity based on drawer position
+	const [drawerState, setDrawerState] = useState<'closed' | 'full'>('closed');
+	const y = useMotionValue(window.innerHeight);
 	const bgOpacity = useTransform(y, [0, window.innerHeight], [0.5, 0]);
 
 	useEffect(() => {
-		if (isOpen && drawerState === 'closed') {
+		if (isOpen) {
 			setDrawerState('full');
-			controls.start({ y: 0 });
-		} else if (!isOpen && drawerState !== 'closed') {
+			y.set(0);
+		} else {
 			setDrawerState('closed');
-			controls.start({ y: window.innerHeight });
+			y.set(window.innerHeight);
 		}
-	}, [isOpen, controls, drawerState]);
-
-	const handleDragStart = () => {
-		setIsDragging(true);
-	};
+	}, [isOpen, y]);
 
 	const handleDragEnd = (event: any, info: any) => {
 		setIsDragging(false);
@@ -42,14 +35,11 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 		const threshold = window.innerHeight * 0.3;
 
 		if (velocity > 500 || position > threshold) {
-			// Close drawer
 			setDrawerState('closed');
 			onClose();
-			controls.start({ y: window.innerHeight });
 		} else {
-			// Keep full
 			setDrawerState('full');
-			controls.start({ y: 0 });
+			y.set(0);
 		}
 	};
 
@@ -60,45 +50,34 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 					<motion.div
 						className="fixed inset-0 bg-black pointer-events-none z-[40]"
 						initial={{ opacity: 0 }}
-						style={{ opacity: bgOpacity }}
+						animate={{ opacity: 0.5 }}
 						exit={{ opacity: 0 }}
 					/>
-					<motion.div
-						className="fixed inset-0 pointer-events-none z-[40]"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-					>
+					<div className="fixed inset-0 pointer-events-none z-[40]">
 						<motion.div
 							className="absolute bottom-0 left-0 right-0 bg-background pointer-events-auto rounded-t-xl overflow-hidden shadow-lg"
-							style={{
-								height: DRAWER_FULL_HEIGHT,
-								y,
-								touchAction: 'none',
-							}}
-							animate={controls}
+							style={{ height: DRAWER_FULL_HEIGHT, y }}
 							initial={{ y: window.innerHeight }}
+							animate={{ y: 0 }}
 							exit={{ y: window.innerHeight }}
 							transition={{
 								type: 'spring',
 								damping: 30,
 								stiffness: 200,
-								mass: 0.5,
 							}}
 						>
 							<div className="absolute inset-x-0 -top-8 h-8 bg-background" />
-							{/* Draggable header */}
+							{/* Header with drag handle */}
 							<motion.div
 								className="p-4 border-b cursor-grab active:cursor-grabbing touch-none"
 								drag="y"
 								dragConstraints={{ top: 0, bottom: window.innerHeight }}
 								dragElastic={0.1}
 								dragMomentum={false}
-								onDragStart={handleDragStart}
+								onDragStart={() => setIsDragging(true)}
 								onDragEnd={handleDragEnd}
-								style={{ touchAction: 'none' }}
 								onDrag={(e, info) => {
-									y.set(y.get() + info.delta.y);
+									y.set(Math.max(0, y.get() + info.delta.y));
 								}}
 							>
 								<div className="w-12 h-1.5 bg-muted-foreground/20 mx-auto rounded-full mb-4" />
@@ -107,7 +86,7 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 								</div>
 							</motion.div>
 							{/* Scrollable content */}
-							<motion.div
+							<div
 								className="overflow-auto overscroll-contain"
 								style={{
 									height: `calc(${DRAWER_FULL_HEIGHT} - 5rem)`,
@@ -116,9 +95,9 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 								}}
 							>
 								<div className="p-4">{children}</div>
-							</motion.div>
+							</div>
 						</motion.div>
-					</motion.div>
+					</div>
 				</>
 			)}
 		</AnimatePresence>
