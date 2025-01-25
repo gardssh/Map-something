@@ -1,52 +1,55 @@
-import type { LineString, Feature, GeoJsonProperties } from 'geojson';
+import type { Feature, LineString, GeoJsonProperties } from 'geojson';
 import type { RoutePoints } from '@/components/activities/switchCor';
 import type { DbStravaActivity } from './supabase';
 
 export interface ActivityMap {
+  id: string;
   summary_polyline: string;
-  geometry?: RoutePoints | null;
-}
-
-export interface ActivityWithMap extends DbStravaActivity {
-  map: ActivityMap;
-  description?: string;
+  resource_state: number;
 }
 
 export interface Activity {
-  id: string | number;
+  id: number | string;
   name: string;
-  type?: string;
+  type: string;
   sport_type: string;
-  distance?: number;
-  moving_time?: number;
-  total_elevation_gain?: number;
-  start_date?: string;
-  start_latlng?: number[] | null;
-  end_latlng?: number[] | null;
-  average_speed?: number;
-  max_speed?: number;
-  average_heartrate?: number | null;
-  max_heartrate?: number | null;
-  elev_high?: number | null;
-  elev_low?: number | null;
+  distance: number;
+  moving_time: number;
+  total_elevation_gain: number;
+  start_date: string;
+  average_speed: number;
+  map?: ActivityMap;
   summary_polyline?: string;
-  selected?: boolean;
-  visible?: boolean;
-  coordinates?: number[] | null;
-  bounds?: number[][] | null;
-  elevation_data?: any;
-  properties?: any;
-  source_id?: string;
-  layer_id?: string;
-  is_hovered?: boolean;
-  feature?: Feature<LineString, GeoJsonProperties> | null;
-  geometry?: LineString | null;
   strava_id?: string | number;
-  user_id?: string;
-  created_at?: string;
-  updated_at?: string;
   description?: string;
-  map?: ActivityMap | null;
+  elev_low?: number;
+  elev_high?: number;
+  selected: boolean;
+  visible: boolean;
+  elevation_data?: Array<{ distance: number; elevation: number }>;
+  properties: GeoJsonProperties;
+  source_id: string;
+  layer_id: string;
+  is_hovered: boolean;
+  feature?: Feature<LineString>;
+  geometry?: LineString;
+  average_heartrate?: number;
+  max_heartrate?: number;
+  max_speed?: number;
+  start_latlng?: number[];
+  end_latlng?: number[];
+  coordinates?: number[];
+  bounds?: number[][];
+}
+
+export interface ActivityWithMap extends Activity {
+  map: ActivityMap;
+  selected: boolean;
+  visible: boolean;
+  properties: GeoJsonProperties;
+  source_id: string;
+  layer_id: string;
+  is_hovered: boolean;
 }
 
 export interface HoverInfo {

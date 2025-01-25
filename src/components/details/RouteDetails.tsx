@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import type { DbRoute } from '@/types/supabase';
-import { ElevationChart } from '@/components/activities/ElevationChart';
 import { Edit2, Trash2, X, Check, Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Card, CardHeader, CardContent } from '../ui/card';
 import * as turf from '@turf/turf';
+import ElevationProfile from '@/components/elevation/ElevationProfile';
+import { encode } from '@mapbox/polyline';
 
 interface RouteDetailsProps {
 	route: DbRoute;
@@ -33,13 +34,20 @@ export function RouteDetails({ route, onDelete, onEdit, onClose }: RouteDetailsP
 		maxElevation: 0,
 		minElevation: 0,
 	});
+	const [distance, setDistance] = useState(0);
+	const [isLoadingElevation, setIsLoadingElevation] = useState(false);
 
 	// Calculate distance using turf.js if not available in the database
-	const distance =
-		route.distance ||
-		(route.geometry?.coordinates
-			? turf.length(turf.lineString(route.geometry.coordinates), { units: 'kilometers' })
-			: 0);
+	useEffect(() => {
+		if (!route.geometry?.coordinates) return;
+		setIsLoadingElevation(true);
+		const coordinates = route.geometry.coordinates;
+		const line = turf.lineString(coordinates);
+		const length = turf.length(line, { units: 'kilometers' });
+		setDistance(length);
+		const polyline = encode(coordinates.map(([lng, lat]) => [lat, lng]));
+		setIsLoadingElevation(false);
+	}, [route]);
 
 	useEffect(() => {
 		setEditName(route.name);
@@ -161,115 +169,125 @@ export function RouteDetails({ route, onDelete, onEdit, onClose }: RouteDetailsP
 	};
 
 	return (
-		<div className="grow p-4 flex flex-col gap-4 relative overflow-y-auto pb-24">
-			<div className="flex justify-between items-start bg-muted/50 p-4 rounded-lg">
-				<div>
-					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{route.name}</h3>
-				</div>
-				<div className="flex gap-2">
+		<div className="grow flex flex-col h-full">
+			<div className="flex-1 overflow-y-auto">
+				<div className="p-4 pb-16 flex flex-col gap-4">
+					<div className="flex justify-between items-start bg-muted/50 p-4 rounded-lg">
+						<div>
+							<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">{route.name}</h3>
+						</div>
+						<div className="flex gap-2">
+							{isEditing ? (
+								<>
+									<Button variant="ghost" size="icon" onClick={handleSave}>
+										<Check className="h-4 w-4" />
+									</Button>
+									<Button variant="ghost" size="icon" onClick={handleCancel}>
+										<X className="h-4 w-4" />
+									</Button>
+								</>
+							) : (
+								<>
+									<Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
+										<Edit2 className="h-4 w-4" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => {
+											if (!onDelete) return;
+											if (window.confirm('Are you sure you want to delete this route?')) {
+												onDelete(route.id as string);
+											}
+										}}
+									>
+										<Trash2 className="h-4 w-4" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => {
+											if (onClose) onClose();
+										}}
+									>
+										<X className="h-4 w-4" />
+									</Button>
+								</>
+							)}
+						</div>
+					</div>
+
 					{isEditing ? (
-						<>
-							<Button variant="ghost" size="icon" onClick={handleSave}>
-								<Check className="h-4 w-4" />
-							</Button>
-							<Button variant="ghost" size="icon" onClick={handleCancel}>
-								<X className="h-4 w-4" />
-							</Button>
-						</>
+						<Card>
+							<CardContent className="p-4 space-y-2">
+								<Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Route name" />
+								<Textarea
+									value={editComment}
+									onChange={(e) => setEditComment(e.target.value)}
+									placeholder="Add a comment..."
+									className="min-h-[100px]"
+								/>
+							</CardContent>
+						</Card>
 					) : (
 						<>
-							<Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
-								<Edit2 className="h-4 w-4" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={() => {
-									if (!onDelete) return;
-									if (window.confirm('Are you sure you want to delete this route?')) {
-										onDelete(route.id as string);
-									}
-								}}
-							>
-								<Trash2 className="h-4 w-4" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={() => {
-									if (onClose) onClose();
-								}}
-							>
-								<X className="h-4 w-4" />
-							</Button>
+							<div className="grid grid-cols-2 gap-4">
+								<Card>
+									<CardHeader>
+										<p>Distance</p>
+										<p className="text-lg font-medium">{distance.toFixed(2)} km</p>
+									</CardHeader>
+								</Card>
+
+								<Card>
+									<CardHeader>
+										<p>Elevation Gain</p>
+										<p className="text-lg font-medium">{stats.totalAscent} m</p>
+									</CardHeader>
+								</Card>
+
+								<Card>
+									<CardHeader>
+										<p>Max Elevation</p>
+										<p className="text-lg font-medium">{stats.maxElevation} m</p>
+									</CardHeader>
+								</Card>
+
+								<Card>
+									<CardHeader>
+										<p>Min Elevation</p>
+										<p className="text-lg font-medium">{stats.minElevation} m</p>
+									</CardHeader>
+								</Card>
+							</div>
+
+							{route.comments && (
+								<Card>
+									<CardHeader>
+										<p>Comments</p>
+										<p className="text-lg font-medium">{route.comments}</p>
+									</CardHeader>
+								</Card>
+							)}
+
+							{route.geometry?.coordinates && (
+								<ElevationProfile
+									polyline={encode(route.geometry.coordinates.map(([lng, lat]) => [lat, lng]))}
+									height={200}
+									isLoading={isLoadingElevation}
+								/>
+							)}
 						</>
 					)}
 				</div>
 			</div>
 
-			{isEditing ? (
-				<Card>
-					<CardContent className="p-4 space-y-2">
-						<Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Route name" />
-						<Textarea
-							value={editComment}
-							onChange={(e) => setEditComment(e.target.value)}
-							placeholder="Add a comment..."
-							className="min-h-[100px]"
-						/>
-					</CardContent>
-				</Card>
-			) : (
-				<>
-					<Card>
-						<CardHeader>
-							<p>Distance</p>
-							<p className="text-lg font-medium">{distance.toFixed(2)} km</p>
-						</CardHeader>
-					</Card>
-
-					<Card>
-						<CardHeader>
-							<p>Elevation Gain</p>
-							<p className="text-lg font-medium">{stats.totalAscent} m</p>
-						</CardHeader>
-					</Card>
-
-					<div className="grid grid-cols-2 gap-4">
-						<Card>
-							<CardHeader>
-								<p>Max Elevation</p>
-								<p className="text-lg font-medium">{stats.maxElevation} m</p>
-							</CardHeader>
-						</Card>
-
-						<Card>
-							<CardHeader>
-								<p>Min Elevation</p>
-								<p className="text-lg font-medium">{stats.minElevation} m</p>
-							</CardHeader>
-						</Card>
-					</div>
-
-					{route.comments && (
-						<Card>
-							<CardHeader>
-								<p>Comments</p>
-								<p className="text-lg font-medium">{route.comments}</p>
-							</CardHeader>
-						</Card>
-					)}
-
-					{elevationData.length > 0 && <ElevationChart data={elevationData} />}
-
-					<div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
-						<Button variant="secondary" className="w-full flex gap-2" onClick={handleDownloadGPX}>
-							<Download className="h-4 w-4" />
-							Download GPX
-						</Button>
-					</div>
-				</>
-			)}
+			<div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t">
+				<Button variant="secondary" className="w-full flex gap-2" onClick={handleDownloadGPX}>
+					<Download className="h-4 w-4" />
+					Download GPX
+				</Button>
+			</div>
 		</div>
 	);
 }

@@ -30,6 +30,34 @@ export const RouteLayer = ({ routes, selectedRoute, visible = true }: RouteLayer
 					})) || [],
 			}}
 		>
+			{/* Touch layer with dim color for debugging */}
+			<Layer
+				id="saved-routes-touch"
+				type="line"
+				layout={{
+					'line-join': 'round',
+					'line-cap': 'round',
+					visibility: visible ? 'visible' : 'none',
+				}}
+				paint={{
+					'line-color': '#000000', // Back to black
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						0,
+						30, // At zoom level 0, width is 30px
+						10,
+						40, // At zoom level 10, width is 40px
+						15,
+						50, // At zoom level 15, width is 50px
+						20,
+						60, // At zoom level 20, width is 60px
+					],
+					'line-opacity': 0, // Invisible again
+				}}
+			/>
+
 			<Layer
 				id="saved-routes-border"
 				type="line"
@@ -43,22 +71,6 @@ export const RouteLayer = ({ routes, selectedRoute, visible = true }: RouteLayer
 					'line-width': ['case', ['==', ['get', 'id'], selectedRoute?.id || ''], 9, 3],
 					'line-opacity': 0.8,
 				}}
-			/>
-
-			<Layer
-				id="saved-routes-touch"
-				type="line"
-				layout={{
-					'line-join': 'round',
-					'line-cap': 'round',
-					visibility: visible ? 'visible' : 'none',
-				}}
-				paint={{
-					'line-color': '#000000',
-					'line-width': ['interpolate', ['linear'], ['zoom'], 0, 20, 10, 25, 15, 30, 20, 35],
-					'line-opacity': 0,
-				}}
-				beforeId="saved-routes-border"
 			/>
 
 			<Layer

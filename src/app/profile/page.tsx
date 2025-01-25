@@ -35,16 +35,26 @@ export default function ProfilePage() {
 	const [loading, setLoading] = useState(false);
 	const [stravaToken, setStravaToken] = useState<any>(null);
 	const [activitiesCount, setActivitiesCount] = useState(0);
+	const [memberSince, setMemberSince] = useState<string | null>(null);
 	const supabase = createClient();
 
 	// Load initial values and data
 	useEffect(() => {
 		async function loadData() {
 			if (user?.id) {
-				// Load profile metadata
-				if (user.user_metadata) {
-					setFirstName(user.user_metadata.first_name || '');
-					setLastName(user.user_metadata.last_name || '');
+				// Load profile data including names and created_at
+				const { data: profile } = await supabase
+					.from('profiles')
+					.select('first_name, last_name, created_at')
+					.eq('id', user.id)
+					.single();
+
+				if (profile) {
+					setFirstName(profile.first_name || '');
+					setLastName(profile.last_name || '');
+					if (profile.created_at) {
+						setMemberSince(new Date(profile.created_at).toLocaleDateString());
+					}
 				}
 
 				// Load Strava token
@@ -101,14 +111,12 @@ export default function ProfilePage() {
 
 			if (profileError) throw profileError;
 
+			// Keep the current values in the input fields
+			setFirstName(firstName);
+			setLastName(lastName);
+
 			// Force a session refresh to update the UI
 			await refreshSession();
-
-			// Update local state with new values
-			if (updatedUser?.user_metadata) {
-				setFirstName(updatedUser.user_metadata.first_name || '');
-				setLastName(updatedUser.user_metadata.last_name || '');
-			}
 
 			setMessage('Names updated successfully!');
 		} catch (error: any) {
@@ -206,7 +214,7 @@ export default function ProfilePage() {
 							<div className="grid grid-cols-2 gap-4 mt-2">
 								<div>
 									<p className="text-sm text-muted-foreground">Member Since</p>
-									<p className="text-sm">{user?.created_at && new Date(user.created_at).toLocaleDateString()}</p>
+									<p className="text-sm">{memberSince || 'Loading...'}</p>
 								</div>
 								<div>
 									<p className="text-sm text-muted-foreground">Activities</p>

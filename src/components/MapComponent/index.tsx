@@ -106,6 +106,7 @@ export const MapComponent = ({
 	const [mapCenter, setMapCenter] = useState({ lat: 61.375172, lng: 8.296987 });
 	const [waypointsVisible, setWaypointsVisible] = useState(true);
 	const [routesVisible, setRoutesVisible] = useState(true);
+	const [touchStartPoint, setTouchStartPoint] = useState<{ x: number; y: number } | null>(null);
 
 	const { availableLayers, initialMapState, mapStyle, mapSettings } = useMapConfig({ mapRef });
 	const { currentBaseLayer, overlayStates, handleLayerToggle } = useMapLayers({ mapRef });
@@ -370,12 +371,27 @@ export const MapComponent = ({
 	);
 
 	const handleTouchStart = useCallback((e: MapLayerTouchEvent) => {
-		// Only handle basic touch events
+		setTouchStartPoint({ x: e.point.x, y: e.point.y });
 	}, []);
 
 	const handleTouchEnd = useCallback(
 		(e: MapLayerTouchEvent) => {
 			if (isDrawing) return;
+
+			// Check if this was a drag or a tap
+			if (touchStartPoint) {
+				const dx = e.point.x - touchStartPoint.x;
+				const dy = e.point.y - touchStartPoint.y;
+				const distance = Math.sqrt(dx * dx + dy * dy);
+
+				// Reset touch start point
+				setTouchStartPoint(null);
+
+				// If moved more than 10 pixels, treat as drag and ignore
+				if (distance > 10) {
+					return;
+				}
+			}
 
 			// Handle normal touch interactions (your existing touch end code)
 			if (!mapRef.current) return;
@@ -389,27 +405,25 @@ export const MapComponent = ({
 					'water-sports',
 					'winter-sports',
 					'other-sports',
+					'foot-sports-touch',
+					'cycle-sports-touch',
+					'water-sports-touch',
+					'winter-sports-touch',
+					'other-sports-touch',
 					'waypoints-layer',
 					'waypoints-layer-touch',
 					'saved-routes-layer',
 					'saved-routes-border',
+					'saved-routes-touch',
 				],
 			});
 
-			console.log('Debug waypoints:', {
-				waypoints,
-				waypointFeatures: map.queryRenderedFeatures(
-					[
-						[0, 0],
-						[map.getCanvas().width, map.getCanvas().height],
-					],
-					{
-						layers: ['waypoints-layer', 'waypoints-layer-touch'],
-					}
-				),
-				clickPoint: point,
-				allFeatures: features,
-				waypointSource: map.getSource('waypoints'),
+			console.log('Touch event debug:', {
+				features,
+				point,
+				firstFeature: features[0],
+				firstFeatureProperties: features[0]?.properties,
+				firstFeatureLayer: features[0]?.layer,
 			});
 
 			// Clear all selections first
@@ -427,7 +441,13 @@ export const MapComponent = ({
 			if (!properties) return;
 
 			// Handle activity touches
-			if (properties.isActivity || (feature.layer && feature.layer.id.endsWith('-touch'))) {
+			if ((properties.isActivity && feature.layer) || feature.layer?.id.endsWith('-sports')) {
+				console.log('Activity touch detected:', {
+					layerId: feature.layer?.id,
+					properties,
+					matchingActivity: activities.find((a) => a.id === properties.id),
+				});
+
 				const activity = activities.find((a) => a.id === properties.id);
 				if (activity) {
 					setSelectedRouteId(activity.id);
@@ -447,6 +467,12 @@ export const MapComponent = ({
 					feature.layer.id === 'saved-routes-border' ||
 					feature.layer.id === 'saved-routes-touch')
 			) {
+				console.log('Route touch detected:', {
+					layerId: feature.layer.id,
+					properties,
+					matchingRoute: routes?.find((r) => r.id === properties.id),
+				});
+
 				const route = routes?.find((r) => r.id === properties.id);
 				if (route) {
 					setSelectedRouteId(route.id);
@@ -631,20 +657,32 @@ export const MapComponent = ({
 
 					if (!properties) return;
 
-					// Handle activity clicks
-					if (properties.isActivity) {
+					// Handle activity touches
+					if ((properties.isActivity && feature.layer) || feature.layer?.id.endsWith('-sports')) {
+						console.log('Activity touch detected:', {
+							layerId: feature.layer?.id,
+							properties,
+							matchingActivity: activities.find((a) => a.id === properties.id),
+						});
+
 						const activity = activities.find((a) => a.id === properties.id);
 						if (activity) {
 							setSelectedRouteId(activity.id);
 							onActivitySelect?.(activity);
+							if (isMobile) {
+								setActiveItem('nearby');
+								setShowDetailsDrawer(true);
+							}
 						}
 						return;
 					}
 
-					// Handle route clicks
+					// Handle route touches
 					if (
 						feature.layer &&
-						(feature.layer.id === 'saved-routes-layer' || feature.layer.id === 'saved-routes-border')
+						(feature.layer.id === 'saved-routes-layer' ||
+							feature.layer.id === 'saved-routes-border' ||
+							feature.layer.id === 'saved-routes-touch')
 					) {
 						const route = routes?.find((r) => r.id === properties.id);
 						if (route) {
@@ -658,7 +696,7 @@ export const MapComponent = ({
 						return;
 					}
 
-					// Handle waypoint clicks
+					// Handle waypoint touches
 					if (
 						feature.layer &&
 						(feature.layer.id === 'waypoints-layer' || feature.layer.id === 'waypoints-layer-touch')

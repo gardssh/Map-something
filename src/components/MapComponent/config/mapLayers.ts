@@ -1,6 +1,6 @@
 import type { StyleSpecification } from 'mapbox-gl';
 
-export type BaseLayerId = 'outdoors' | 'satellite' | 'norge-topo';
+export type BaseLayerId = 'outdoors' | 'satellite' | 'norge-topo' | 'norge-flyfoto';
 export type OverlayLayerId = 'bratthet' | 'snoskred' | 'custom-tileset';
 export type LayerId = BaseLayerId | OverlayLayerId;
 
@@ -45,6 +45,31 @@ const baseLayers: LayerDefinition[] = [
           id: 'norge-topo-layer',
           type: 'raster',
           source: 'norge-topo',
+          paint: { 'raster-opacity': 1 }
+        }
+      ]
+    }
+  },
+  {
+    id: 'norge-flyfoto',
+    name: 'Norge Flyfoto',
+    isBase: true,
+    style: {
+      version: 8,
+      glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+      sources: {
+        'norge-flyfoto': {
+          type: 'raster',
+          tiles: ['https://opencache.statkart.no/gatekeeper/gk/gk.open_nib_web_mercator_wmts_v2?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=Nibcache_web_mercator_v2&STYLE=default&FORMAT=image/png&TILEMATRIXSET=default028mm&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'],
+          tileSize: 256,
+          attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
+        }
+      },
+      layers: [
+        {
+          id: 'norge-flyfoto-layer',
+          type: 'raster',
+          source: 'norge-flyfoto',
           paint: { 'raster-opacity': 1 }
         }
       ]

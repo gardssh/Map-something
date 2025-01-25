@@ -1,4 +1,4 @@
-import type { LineString } from 'geojson';
+import type { Feature, LineString, GeoJsonProperties } from 'geojson';
 
 export type DbProfileRow = {
   id: string;
@@ -219,11 +219,6 @@ export interface Database {
   };
 }
 
-export type DbWaypoint = Database['public']['Tables']['waypoints']['Row'];
-export type DbRoute = Database['public']['Tables']['routes']['Row'];
-export type DbStravaToken = Database['public']['Tables']['strava_tokens']['Row'];
-export type DbStravaActivity = Database['public']['Tables']['strava_activities']['Row'];
-
 export type Json =
   | string
   | number
@@ -231,4 +226,14 @@ export type Json =
   | null
   | { [key: string]: Json | undefined }
   | Json[];
+
+export type DbWaypoint = Database['public']['Tables']['waypoints']['Row'];
+export type DbRoute = Database['public']['Tables']['routes']['Row'] & {
+  selected?: boolean;
+  visible?: boolean;
+  properties?: GeoJsonProperties;
+  feature?: Feature<LineString>;
+};
+export type DbStravaToken = Database['public']['Tables']['strava_tokens']['Row'];
+export type DbStravaActivity = Database['public']['Tables']['strava_activities']['Row'];
  

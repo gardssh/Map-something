@@ -48,6 +48,7 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
 		>
 			{['Foot Sports', 'Cycle Sports', 'Water Sports', 'Winter Sports', 'Other Sports']
 				.map((category) => [
+					// Invisible touch layer
 					<Layer
 						key={`${category.toLowerCase().replace(' ', '-')}-touch`}
 						id={`${category.toLowerCase().replace(' ', '-')}-touch`}
@@ -58,12 +59,25 @@ export const ActivityLayers = ({ activities, selectedRouteId, selectedCategories
 							visibility: selectedCategories.includes(category) ? 'visible' : 'none',
 						}}
 						paint={{
-							'line-color': '#000000',
-							'line-width': ['interpolate', ['linear'], ['zoom'], 0, 20, 10, 25, 15, 30, 20, 35],
-							'line-opacity': 0,
+							'line-color': '#000000', // Back to black
+							'line-width': [
+								'interpolate',
+								['linear'],
+								['zoom'],
+								0,
+								30, // At zoom level 0, width is 30px
+								10,
+								40, // At zoom level 10, width is 40px
+								15,
+								50, // At zoom level 15, width is 50px
+								20,
+								60, // At zoom level 20, width is 60px
+							],
+							'line-opacity': 0, // Invisible again
 						}}
 						filter={['==', ['get', 'activityType'], category]}
 					/>,
+					// Visible line layer
 					<Layer
 						key={category.toLowerCase().replace(' ', '-')}
 						id={category.toLowerCase().replace(' ', '-')}

@@ -30,7 +30,7 @@ async function getAllActivities(accessToken: string, page: number = 1, per_page:
 }
 
 function formatElevationData(activity: any) {
-    if (!activity.map?.summary_polyline) return null;
+    if (!activity.map?.summary_polyline) return undefined;
 
     try {
         const decodedPath = polyline.decode(activity.map.summary_polyline);
@@ -43,13 +43,13 @@ function formatElevationData(activity: any) {
         }));
     } catch (error) {
         console.error('Error formatting elevation data:', error);
-        return null;
+        return undefined;
     }
 }
 
 async function formatStravaActivity(activity: any): Promise<Activity> {
     // Create a GeoJSON LineString from the polyline
-    let geoJsonFeature: Feature<LineString, GeoJsonProperties> | null = null;
+    let geoJsonFeature: Feature<LineString, GeoJsonProperties> | undefined = undefined;
     
     if (activity.map?.summary_polyline) {
         const decodedCoordinates = polyline.decode(activity.map.summary_polyline);
@@ -100,12 +100,12 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
         selected: false,
         visible: true,
         elevation_data: formatElevationData(activity),
-        properties: geoJsonFeature?.properties || null,
+        properties: geoJsonFeature?.properties || {},
         source_id: 'routes',
         layer_id: `route-${activity.id}`,
         is_hovered: false,
         feature: geoJsonFeature,
-        geometry: geoJsonFeature?.geometry || null,
+        geometry: geoJsonFeature?.geometry,
         average_heartrate: activity.average_heartrate,
         max_heartrate: activity.max_heartrate,
         max_speed: activity.max_speed,
