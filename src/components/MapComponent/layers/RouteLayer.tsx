@@ -60,13 +60,13 @@ export const RouteLayer = ({ routes, selectedRoute, visible = true }: RouteLayer
 						['linear'],
 						['zoom'],
 						0,
-						30, // At zoom level 0, width is 30px
+						50, // At zoom level 0, width is 50px
 						10,
-						35, // At zoom level 10, width is 35px
+						60, // At zoom level 10, width is 60px
 						15,
-						40, // At zoom level 15, width is 40px
+						70, // At zoom level 15, width is 70px
 						20,
-						45, // At zoom level 20, width is 45px
+						80, // At zoom level 20, width is 80px
 					],
 					'line-opacity': 0,
 				}}
