@@ -99,6 +99,29 @@ async function formatStravaActivity(activity: any) {
   }
 }
 
+// Add this function at the top with other imports
+async function refreshStravaToken(refresh_token: string) {
+  const response = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      client_id: process.env.NEXT_PUBLIC_STRAVA_ID,
+      client_secret: process.env.NEXT_PUBLIC_STRAVA_CLIENT_SECRET,
+      refresh_token,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to refresh token');
+  }
+
+  const data = await response.json();
+  return data;
+}
+
 // Handle initial webhook verification
 export async function GET(request: Request) {
   try {
@@ -141,69 +164,138 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const event: WebhookEvent = await request.json()
-    console.log('Received webhook event:', event)
+    console.log('Received webhook event:', JSON.stringify(event, null, 2))
 
-    // Return 200 OK quickly as required by Strava
-    // Process the event asynchronously
-    processWebhookEvent(event).catch(console.error)
-
-    return NextResponse.json({ message: 'Success' })
+    // Process the event and wait for it to complete
+    try {
+      await processWebhookEvent(event)
+      return NextResponse.json({ message: 'Success' })
+    } catch (error) {
+      console.error('Error processing webhook event:', error)
+      // Still return 200 to Strava as required
+      return NextResponse.json({ message: 'Processed with errors' })
+    }
   } catch (error) {
     console.error('Webhook event error:', error)
     return NextResponse.json({ error: 'Event processing failed' }, { status: 500 })
   }
 }
 
+// Modify the processWebhookEvent function to handle token refresh
 async function processWebhookEvent(event: WebhookEvent) {
   try {
     switch (event.object_type) {
       case 'activity':
         switch (event.aspect_type) {
           case 'create':
-            // Get the user's access token using service role client
+            console.log('Processing create activity event:', event.object_id)
+            console.log('Owner ID:', event.owner_id)
+            
+            // Get the user's tokens using service role client
             const { data: tokenData, error: tokenError } = await supabase
               .from('strava_tokens')
-              .select('access_token, user_id')
+              .select('access_token, refresh_token, user_id, strava_athlete_id, expires_at')
               .eq('strava_athlete_id', event.owner_id)
               .single()
 
-            if (tokenError || !tokenData?.access_token) {
-              console.error('No access token found for athlete:', event.owner_id, tokenError)
+            if (tokenError) {
+              console.error('Token lookup error:', tokenError)
+              console.error('Looking for athlete_id:', event.owner_id)
               return
             }
 
-            // Fetch the full activity details from Strava
+            if (!tokenData?.access_token) {
+              console.error('No access token found for athlete:', event.owner_id)
+              return
+            }
+
+            // Check if token needs refresh
+            let accessToken = tokenData.access_token;
+            if (tokenData.expires_at * 1000 < Date.now()) {
+              console.log('Token expired, refreshing...');
+              try {
+                const refreshedData = await refreshStravaToken(tokenData.refresh_token);
+                accessToken = refreshedData.access_token;
+                
+                // Update tokens in database
+                await supabase
+                  .from('strava_tokens')
+                  .update({
+                    access_token: refreshedData.access_token,
+                    refresh_token: refreshedData.refresh_token,
+                    expires_at: refreshedData.expires_at,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('strava_athlete_id', event.owner_id);
+                
+                console.log('Token refreshed successfully');
+              } catch (refreshError) {
+                console.error('Failed to refresh token:', refreshError);
+                return;
+              }
+            }
+
+            console.log('Found token for user:', tokenData.user_id)
+
+            // Fetch the full activity details from Strava using the potentially refreshed token
+            console.log('Fetching activity details from Strava...')
             const response = await fetch(
               `https://www.strava.com/api/v3/activities/${event.object_id}`,
               {
                 headers: {
-                  'Authorization': `Bearer ${tokenData.access_token}`
+                  'Authorization': `Bearer ${accessToken}`
                 }
               }
             )
 
             if (!response.ok) {
-              console.error('Failed to fetch activity:', await response.text())
+              const errorText = await response.text()
+              console.error('Failed to fetch activity:', errorText)
               return
             }
 
             const activity = await response.json()
+            console.log('Received activity from Strava:', activity.name)
             
             // Format and store the activity
+            console.log('Formatting activity...')
             const formattedActivity = await formatStravaActivity(activity)
+            
+            // Prepare the activity data
+            const activityData = {
+              id: crypto.randomUUID(),
+              user_id: tokenData.user_id,
+              strava_id: event.object_id,
+              name: activity.name,
+              type: activity.type,
+              sport_type: activity.sport_type,
+              distance: activity.distance,
+              moving_time: activity.moving_time,
+              total_elevation_gain: activity.total_elevation_gain,
+              start_date: activity.start_date,
+              average_speed: activity.average_speed,
+              max_speed: activity.max_speed || 0,
+              summary_polyline: activity.map?.summary_polyline || '',
+              elev_low: activity.elev_low,
+              elev_high: activity.elev_high,
+              selected: false,
+              visible: true,
+              start_latlng: Array.isArray(activity.start_latlng) ? activity.start_latlng.map(Number) : [],
+              end_latlng: Array.isArray(activity.end_latlng) ? activity.end_latlng.map(Number) : [],
+              geometry: formattedActivity.geometry,
+              bounds: formattedActivity.bounds,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+            
+            console.log('Inserting activity into database:', activityData)
             const { error: insertError } = await supabase
               .from('strava_activities')
-              .insert({
-                ...formattedActivity,
-                id: crypto.randomUUID(),
-                strava_id: event.object_id,
-                user_id: tokenData.user_id, // Use the user_id from the token
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
+              .insert(activityData)
 
             if (insertError) {
               console.error('Failed to insert activity:', insertError)
+              throw insertError
             } else {
               console.log('Successfully inserted activity:', event.object_id)
             }
@@ -212,7 +304,7 @@ async function processWebhookEvent(event: WebhookEvent) {
           case 'update':
             // Update the activity in our database
             if (event.updates) {
-              await supabase
+              const { error: updateError } = await supabase
                 .from('strava_activities')
                 .update({
                   name: event.updates.title,
@@ -220,15 +312,27 @@ async function processWebhookEvent(event: WebhookEvent) {
                   updated_at: new Date().toISOString()
                 })
                 .eq('strava_id', event.object_id)
+              
+              if (updateError) {
+                console.error('Failed to update activity:', updateError)
+              } else {
+                console.log('Successfully updated activity:', event.object_id)
+              }
             }
             break
 
           case 'delete':
             // Delete the activity from our database
-            await supabase
+            const { error: deleteError } = await supabase
               .from('strava_activities')
               .delete()
               .eq('strava_id', event.object_id)
+            
+            if (deleteError) {
+              console.error('Failed to delete activity:', deleteError)
+            } else {
+              console.log('Successfully deleted activity:', event.object_id)
+            }
             break
         }
         break
@@ -236,15 +340,21 @@ async function processWebhookEvent(event: WebhookEvent) {
       case 'athlete':
         if (event.updates?.authorized === false) {
           // Handle deauthorization
-          await supabase
+          const { error: deauthError } = await supabase
             .from('strava_tokens')
             .delete()
             .eq('strava_athlete_id', event.owner_id)
+          
+          if (deauthError) {
+            console.error('Failed to handle deauthorization:', deauthError)
+          } else {
+            console.log('Successfully handled deauthorization for athlete:', event.owner_id)
+          }
         }
         break
     }
   } catch (error) {
     console.error('Error processing webhook event:', error)
-    // Log to error tracking service in production
+    throw error // Re-throw to be caught by the POST handler
   }
 } 
