@@ -9,26 +9,22 @@ interface MobileDrawerProps {
 	onClose: () => void;
 	children: React.ReactNode;
 	title?: string;
-	peekContent?: React.ReactNode;
 }
 
-const DRAWER_PEEK_HEIGHT = 280; // Height of the peek view in pixels
 const DRAWER_FULL_HEIGHT = 'calc(100vh - 4rem)';
 
-export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: MobileDrawerProps) => {
+export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerProps) => {
 	const controls = useAnimation();
 	const y = useMotionValue(0);
-	const [drawerState, setDrawerState] = useState<'closed' | 'peek' | 'full'>('closed');
+	const [drawerState, setDrawerState] = useState<'closed' | 'full'>('closed');
 
 	// Calculate background opacity based on drawer position
 	const bgOpacity = useTransform(y, [0, window.innerHeight], [0.5, 0]);
-	const peekContentOpacity = useTransform(y, [0, window.innerHeight - DRAWER_PEEK_HEIGHT], [0, 1]);
-	const fullContentOpacity = useTransform(y, [0, window.innerHeight - DRAWER_PEEK_HEIGHT], [1, 0]);
 
 	useEffect(() => {
 		if (isOpen && drawerState === 'closed') {
-			setDrawerState('peek');
-			controls.start({ y: window.innerHeight - DRAWER_PEEK_HEIGHT });
+			setDrawerState('full');
+			controls.start({ y: 0 });
 		} else if (!isOpen && drawerState !== 'closed') {
 			setDrawerState('closed');
 			controls.start({ y: window.innerHeight });
@@ -40,31 +36,15 @@ export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: 
 		const position = info.point.y;
 		const threshold = window.innerHeight * 0.3;
 
-		if (velocity > 500) {
-			// Fast downward swipe - close drawer
+		if (velocity > 500 || position > threshold) {
+			// Close drawer
 			setDrawerState('closed');
 			onClose();
 			controls.start({ y: window.innerHeight });
-		} else if (velocity < -500) {
-			// Fast upward swipe - open fully
+		} else {
+			// Keep full
 			setDrawerState('full');
 			controls.start({ y: 0 });
-		} else {
-			// Based on position
-			if (position > window.innerHeight - threshold) {
-				// Close
-				setDrawerState('closed');
-				onClose();
-				controls.start({ y: window.innerHeight });
-			} else if (position > DRAWER_PEEK_HEIGHT) {
-				// Peek
-				setDrawerState('peek');
-				controls.start({ y: window.innerHeight - DRAWER_PEEK_HEIGHT });
-			} else {
-				// Full
-				setDrawerState('full');
-				controls.start({ y: 0 });
-			}
 		}
 	};
 
@@ -89,11 +69,11 @@ export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: 
 							style={{
 								height: DRAWER_FULL_HEIGHT,
 								y,
-								touchAction: drawerState === 'full' ? 'none' : 'manipulation',
+								touchAction: 'none',
 							}}
-							drag={drawerState === 'full' ? false : 'y'}
+							drag="y"
 							dragConstraints={{ top: 0, bottom: window.innerHeight }}
-							dragElastic={0.2}
+							dragElastic={0.1}
 							dragMomentum={false}
 							onDragEnd={handleDragEnd}
 							animate={controls}
@@ -101,20 +81,14 @@ export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: 
 							exit={{ y: window.innerHeight }}
 							transition={{
 								type: 'spring',
-								damping: 20,
-								stiffness: 300,
+								damping: 30,
+								stiffness: 200,
+								mass: 0.5,
 							}}
 						>
+							<div className="absolute inset-x-0 -top-8 h-8 bg-background" />
 							<div className="p-4 border-b" onPointerDown={(e) => e.stopPropagation()}>
-								<div
-									className="w-12 h-1.5 bg-muted-foreground/20 mx-auto rounded-full mb-4 cursor-grab active:cursor-grabbing"
-									onPointerDown={(e) => {
-										if (drawerState === 'full') {
-											setDrawerState('peek');
-											controls.start({ y: window.innerHeight - DRAWER_PEEK_HEIGHT });
-										}
-									}}
-								/>
+								<div className="w-12 h-1.5 bg-muted-foreground/20 mx-auto rounded-full mb-4 cursor-grab active:cursor-grabbing" />
 								<div className="flex justify-between items-center">
 									<h2 className="text-lg font-semibold">{title}</h2>
 									<button onClick={onClose} className="p-2 hover:bg-accent rounded-full">
@@ -122,27 +96,10 @@ export const MobileDrawer = ({ isOpen, onClose, children, title, peekContent }: 
 									</button>
 								</div>
 							</div>
-
-							{/* Peek Content */}
-							{peekContent && (
-								<motion.div
-									className="p-4"
-									style={{
-										opacity: peekContentOpacity,
-										display: drawerState === 'full' ? 'none' : 'block',
-									}}
-								>
-									{peekContent}
-								</motion.div>
-							)}
-
-							{/* Full Content */}
 							<motion.div
 								className="overflow-auto"
 								style={{
 									height: `calc(${DRAWER_FULL_HEIGHT} - 5rem)`,
-									opacity: fullContentOpacity,
-									display: drawerState === 'peek' ? 'none' : 'block',
 									overscrollBehavior: 'contain',
 									touchAction: 'pan-y',
 								}}
