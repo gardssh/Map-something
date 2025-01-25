@@ -6,13 +6,15 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Lock } from 'lucide-react';
 import { useDNTCabins } from '@/hooks/useDNTCabins';
 import type { CabinFeature } from '@/types/dnt-cabins';
-import type { MapLayerMouseEvent } from 'react-map-gl';
+import type { MapLayerMouseEvent, MapLayerTouchEvent } from 'react-map-gl';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 	const { current: map } = useMap();
 	const cabinData = useDNTCabins();
 	const [selectedCabin, setSelectedCabin] = useState<CabinFeature | null>(null);
 	const [hoveredCabin, setHoveredCabin] = useState<CabinFeature | null>(null);
+	const { isMobile } = useResponsiveLayout();
 
 	const handlePopupClose = useCallback(() => {
 		setSelectedCabin(null);
@@ -20,7 +22,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 
 	const handleMouseMove = useCallback(
 		(e: mapboxgl.MapMouseEvent) => {
-			if (!map) return;
+			if (!map || isMobile) return;
 
 			// Check if the layer exists before querying features
 			if (!map.getLayer('dnt-cabins-touch')) return;
@@ -40,7 +42,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 				map.getCanvas().style.cursor = '';
 			}
 		},
-		[map]
+		[map, isMobile]
 	);
 
 	const handleMouseLeave = useCallback(() => {
@@ -50,10 +52,10 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 	}, [map]);
 
 	const handleMapClick = useCallback(
-		(e: mapboxgl.MapMouseEvent) => {
+		(e: mapboxgl.MapMouseEvent | mapboxgl.MapLayerTouchEvent) => {
 			if (!map) return;
 			const features = map.queryRenderedFeatures(e.point, {
-				layers: ['dnt-cabins-touch'],
+				layers: ['dnt-cabins-touch', 'dnt-cabins-touch-mobile'],
 			});
 
 			if (features.length > 0) {
@@ -72,11 +74,13 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 		if (!map) return;
 
 		map.on('click', handleMapClick);
+		map.on('touchend', handleMapClick);
 		map.on('mousemove', handleMouseMove);
 		map.on('mouseleave', handleMouseLeave);
 
 		return () => {
 			map.off('click', handleMapClick);
+			map.off('touchend', handleMapClick);
 			map.off('mousemove', handleMouseMove);
 			map.off('mouseleave', handleMouseLeave);
 		};
@@ -87,7 +91,36 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 	return (
 		<>
 			<Source id="dnt-cabins" type="geojson" data={cabinData}>
-				{/* Touch layer for better interaction */}
+				{/* Large touch target layer for mobile */}
+				<Layer
+					id="dnt-cabins-touch-mobile"
+					type="circle"
+					source="dnt-cabins"
+					layout={{
+						visibility: visible ? 'visible' : 'none',
+					}}
+					paint={{
+						'circle-color': '#000000',
+						'circle-radius': [
+							'interpolate',
+							['linear'],
+							['zoom'],
+							0,
+							25, // At zoom level 0, radius is 25px
+							10,
+							30, // At zoom level 10, radius is 30px
+							15,
+							35, // At zoom level 15, radius is 35px
+							20,
+							40, // At zoom level 20, radius is 40px
+						],
+						'circle-opacity': 0,
+					}}
+					minzoom={0}
+					maxzoom={24}
+				/>
+
+				{/* Desktop hover touch target */}
 				<Layer
 					id="dnt-cabins-touch"
 					type="circle"
@@ -97,7 +130,19 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 					}}
 					paint={{
 						'circle-color': '#000000',
-						'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 15, 10, 20, 15, 25, 20, 30],
+						'circle-radius': [
+							'interpolate',
+							['linear'],
+							['zoom'],
+							0,
+							15, // At zoom level 0, radius is 15px
+							10,
+							20, // At zoom level 10, radius is 20px
+							15,
+							25, // At zoom level 15, radius is 25px
+							20,
+							30, // At zoom level 20, radius is 30px
+						],
 						'circle-opacity': 0,
 					}}
 					minzoom={0}
@@ -147,7 +192,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 			</Source>
 
 			{/* Hover popup */}
-			{hoveredCabin && !selectedCabin && (
+			{hoveredCabin && !selectedCabin && !isMobile && (
 				<Popup
 					longitude={hoveredCabin.geometry.coordinates[0]}
 					latitude={hoveredCabin.geometry.coordinates[1]}

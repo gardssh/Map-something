@@ -8,6 +8,7 @@ import type { Waypoint } from '@/types/waypoint';
 import type { Activity, HoverInfo } from '@/types/activity';
 import { categorizeActivity } from '@/lib/utils';
 import { useCallback } from 'react';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 interface MapUIProps {
 	activities: Activity[];
@@ -34,6 +35,7 @@ export const MapUI = ({
 	setNewWaypointName,
 	handleWaypointSave,
 }: MapUIProps) => {
+	const { isMobile } = useResponsiveLayout();
 	const handleSave = useCallback(async () => {
 		if (!newWaypointName.trim()) return;
 
@@ -57,7 +59,7 @@ export const MapUI = ({
 						return null;
 					})}
 
-			{!isDrawing && hoverInfo && (
+			{!isDrawing && !isMobile && hoverInfo && (
 				<Popup
 					longitude={hoverInfo.longitude}
 					latitude={hoverInfo.latitude}
