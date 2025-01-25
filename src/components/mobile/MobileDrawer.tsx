@@ -17,6 +17,7 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 	const controls = useAnimation();
 	const y = useMotionValue(0);
 	const [drawerState, setDrawerState] = useState<'closed' | 'full'>('closed');
+	const [isDragging, setIsDragging] = useState(false);
 
 	// Calculate background opacity based on drawer position
 	const bgOpacity = useTransform(y, [0, window.innerHeight], [0.5, 0]);
@@ -31,7 +32,12 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 		}
 	}, [isOpen, controls, drawerState]);
 
+	const handleDragStart = () => {
+		setIsDragging(true);
+	};
+
 	const handleDragEnd = (event: any, info: any) => {
+		setIsDragging(false);
 		const velocity = info.velocity.y;
 		const position = info.point.y;
 		const threshold = window.innerHeight * 0.3;
@@ -71,11 +77,6 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 								y,
 								touchAction: 'none',
 							}}
-							drag="y"
-							dragConstraints={{ top: 0, bottom: window.innerHeight }}
-							dragElastic={0.1}
-							dragMomentum={false}
-							onDragEnd={handleDragEnd}
 							animate={controls}
 							initial={{ y: window.innerHeight }}
 							exit={{ y: window.innerHeight }}
@@ -87,8 +88,22 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 							}}
 						>
 							<div className="absolute inset-x-0 -top-8 h-8 bg-background" />
-							<div className="p-4 border-b" onPointerDown={(e) => e.stopPropagation()}>
-								<div className="w-12 h-1.5 bg-muted-foreground/20 mx-auto rounded-full mb-4 cursor-grab active:cursor-grabbing" />
+							{/* Draggable header */}
+							<div className="p-4 border-b">
+								<motion.div
+									className="absolute inset-x-0 top-0 h-16 cursor-grab active:cursor-grabbing touch-none"
+									drag="y"
+									dragConstraints={{ top: 0, bottom: window.innerHeight }}
+									dragElastic={0.1}
+									dragMomentum={false}
+									onDragStart={handleDragStart}
+									onDragEnd={handleDragEnd}
+									style={{ touchAction: 'none' }}
+									onDrag={(e, info) => {
+										y.set(y.get() + info.delta.y);
+									}}
+								/>
+								<div className="w-12 h-1.5 bg-muted-foreground/20 mx-auto rounded-full mb-4" />
 								<div className="flex justify-between items-center">
 									<h2 className="text-lg font-semibold">{title}</h2>
 									<button onClick={onClose} className="p-2 hover:bg-accent rounded-full">
@@ -96,14 +111,14 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 									</button>
 								</div>
 							</div>
+							{/* Scrollable content */}
 							<motion.div
-								className="overflow-auto"
+								className="overflow-auto overscroll-contain"
 								style={{
 									height: `calc(${DRAWER_FULL_HEIGHT} - 5rem)`,
-									overscrollBehavior: 'contain',
 									touchAction: 'pan-y',
+									pointerEvents: isDragging ? 'none' : 'auto',
 								}}
-								onPointerDown={(e) => e.stopPropagation()}
 							>
 								<div className="p-4">{children}</div>
 							</motion.div>
