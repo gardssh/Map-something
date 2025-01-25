@@ -3,17 +3,10 @@ import { AppSidebar } from './app-sidebar';
 import { SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import type { DbRoute, DbWaypoint, DbStravaActivity } from '@/types/supabase';
-import type { Activity } from '@/types/activity';
+import type { Activity, ActivityWithMap } from '@/types/activity';
 import type { MapRef } from 'react-map-gl';
 import React from 'react';
 import { ActivityCategory } from '@/lib/categories';
-
-interface ActivityWithMap extends DbStravaActivity {
-	map: {
-		summary_polyline: string;
-	};
-	description?: string;
-}
 
 interface AppSidebarAndMapProps {
 	activities: ActivityWithMap[];
