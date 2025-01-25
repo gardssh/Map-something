@@ -56,7 +56,6 @@ export const RouteLayer = ({ routes, selectedRoute, visible = true }: RouteLayer
 					],
 					'line-opacity': 0, // Invisible again
 				}}
-				beforeId="saved-routes-border" // Make sure it's behind the visible line
 			/>
 
 			<Layer
