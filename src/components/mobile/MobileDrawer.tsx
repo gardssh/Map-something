@@ -88,25 +88,24 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 						>
 							<div className="absolute inset-x-0 -top-8 h-8 bg-background" />
 							{/* Draggable header */}
-							<div className="p-4 border-b">
-								<motion.div
-									className="absolute inset-x-0 top-0 h-16 cursor-grab active:cursor-grabbing touch-none"
-									drag="y"
-									dragConstraints={{ top: 0, bottom: window.innerHeight }}
-									dragElastic={0.1}
-									dragMomentum={false}
-									onDragStart={handleDragStart}
-									onDragEnd={handleDragEnd}
-									style={{ touchAction: 'none' }}
-									onDrag={(e, info) => {
-										y.set(y.get() + info.delta.y);
-									}}
-								/>
+							<motion.div
+								className="p-4 border-b cursor-grab active:cursor-grabbing touch-none"
+								drag="y"
+								dragConstraints={{ top: 0, bottom: window.innerHeight }}
+								dragElastic={0.1}
+								dragMomentum={false}
+								onDragStart={handleDragStart}
+								onDragEnd={handleDragEnd}
+								style={{ touchAction: 'none' }}
+								onDrag={(e, info) => {
+									y.set(y.get() + info.delta.y);
+								}}
+							>
 								<div className="w-12 h-1.5 bg-muted-foreground/20 mx-auto rounded-full mb-4" />
 								<div className="flex justify-between items-center">
 									<h2 className="text-lg font-semibold">{title}</h2>
 								</div>
-							</div>
+							</motion.div>
 							{/* Scrollable content */}
 							<motion.div
 								className="overflow-auto overscroll-contain"
