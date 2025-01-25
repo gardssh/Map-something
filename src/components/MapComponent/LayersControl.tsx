@@ -125,12 +125,13 @@ export const LayersControl = ({
 			{isOpen && buttonRect && (
 				<>
 					{/* Add overlay */}
-					<div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
+					<div className="fixed inset-0 z-[10998]" onClick={() => setIsOpen(false)} />
 					<div
-						className="fixed bg-white rounded-md shadow-lg p-4 min-w-[200px] z-[9999]"
+						className="fixed bg-white rounded-md shadow-lg p-4 min-w-[200px] z-[10999] max-h-[calc(100vh-env(safe-area-inset-bottom,0px)-5rem)] overflow-y-auto"
 						style={{
 							right: window.innerWidth - buttonRect.left + 5,
 							top: buttonRect.top,
+							bottom: 'calc(5rem + env(safe-area-inset-bottom,0px))',
 						}}
 						onClick={(e) => e.stopPropagation()}
 					>
