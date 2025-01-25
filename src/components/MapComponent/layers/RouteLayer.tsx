@@ -55,7 +55,19 @@ export const RouteLayer = ({ routes, selectedRoute, visible = true }: RouteLayer
 				}}
 				paint={{
 					'line-color': '#000000',
-					'line-width': ['interpolate', ['linear'], ['zoom'], 0, 20, 10, 25, 15, 30, 20, 35],
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						0,
+						30, // At zoom level 0, width is 30px
+						10,
+						35, // At zoom level 10, width is 35px
+						15,
+						40, // At zoom level 15, width is 40px
+						20,
+						45, // At zoom level 20, width is 45px
+					],
 					'line-opacity': 0,
 				}}
 				beforeId="saved-routes-border"

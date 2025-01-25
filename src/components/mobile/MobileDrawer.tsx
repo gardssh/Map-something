@@ -1,7 +1,6 @@
 'use client';
 
 import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface MobileDrawerProps {
@@ -106,9 +105,6 @@ export const MobileDrawer = ({ isOpen, onClose, children, title }: MobileDrawerP
 								<div className="w-12 h-1.5 bg-muted-foreground/20 mx-auto rounded-full mb-4" />
 								<div className="flex justify-between items-center">
 									<h2 className="text-lg font-semibold">{title}</h2>
-									<button onClick={onClose} className="p-2 hover:bg-accent rounded-full">
-										<ChevronDown className="w-6 h-6" />
-									</button>
 								</div>
 							</div>
 							{/* Scrollable content */}
