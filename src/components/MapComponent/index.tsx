@@ -305,7 +305,6 @@ export const MapComponent = ({
 		(map: mapboxgl.Map) => {
 			if (is3DMode) {
 				// Enable 3D mode
-				map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
 				map.dragRotate.enable();
 				map.touchZoomRotate.enableRotation();
 				map.touchPitch.enable();
@@ -313,7 +312,6 @@ export const MapComponent = ({
 				map.easeTo({ pitch: 30, duration: 1000 });
 			} else {
 				// Disable 3D mode but keep rotation enabled
-				map.setTerrain(null);
 				map.dragRotate.enable();
 				map.touchZoomRotate.enableRotation();
 				map.touchPitch.disable();
@@ -628,86 +626,7 @@ export const MapComponent = ({
 				mapStyle={mapStyle}
 				onMoveEnd={() => updateVisibleIds()}
 				onMouseMove={onHover}
-				onClick={(e) => {
-					if (isDrawing) return;
-					if (isAddingWaypoint && !isMobile) {
-						// Handle waypoint placement on desktop
-						setNewWaypointCoords([e.lngLat.lng, e.lngLat.lat]);
-						setShowWaypointDialog(true);
-						setIsAddingWaypoint(false);
-						window.dispatchEvent(new CustomEvent('waypoint-dialog-open'));
-						return;
-					}
-
-					const features = e.features || [];
-
-					// Clear all selections first
-					setSelectedRouteId(null);
-					setSelectedRoute(null);
-					onRouteSelect?.(null);
-					onActivitySelect?.(null);
-					handleWaypointSelect?.(null);
-
-					if (features.length === 0) {
-						return;
-					}
-
-					const feature = features[0]; // Only handle the topmost feature
-					const properties = feature.properties;
-
-					if (!properties) return;
-
-					// Handle activity touches
-					if ((properties.isActivity && feature.layer) || feature.layer?.id.endsWith('-sports')) {
-						console.log('Activity touch detected:', {
-							layerId: feature.layer?.id,
-							properties,
-							matchingActivity: activities.find((a) => a.id === properties.id),
-						});
-
-						const activity = activities.find((a) => a.id === properties.id);
-						if (activity) {
-							setSelectedRouteId(activity.id);
-							onActivitySelect?.(activity);
-							if (isMobile) {
-								setActiveItem('nearby');
-								setShowDetailsDrawer(true);
-							}
-						}
-						return;
-					}
-
-					// Handle route touches
-					if (
-						feature.layer &&
-						(feature.layer.id === 'saved-routes-layer' ||
-							feature.layer.id === 'saved-routes-border' ||
-							feature.layer.id === 'saved-routes-touch')
-					) {
-						const route = routes?.find((r) => r.id === properties.id);
-						if (route) {
-							setSelectedRouteId(route.id);
-							setSelectedRoute(route);
-							onRouteSelect?.(route);
-							if ('coordinates' in route.geometry) {
-								handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
-							}
-						}
-						return;
-					}
-
-					// Handle waypoint touches
-					if (
-						feature.layer &&
-						(feature.layer.id === 'waypoints-layer' || feature.layer.id === 'waypoints-layer-touch')
-					) {
-						const waypoint = waypoints?.find((w) => w.id === properties.id);
-						if (waypoint) {
-							handleWaypointSelect?.(waypoint);
-						}
-						return;
-					}
-				}}
+				onClick={onClick}
 				onTouchStart={handleTouchStart}
 				onTouchEnd={handleTouchEnd}
 				{...mapSettings(isDrawing, is3DMode)}
@@ -754,7 +673,6 @@ export const MapComponent = ({
 						updateMapControls(map);
 					});
 				}}
-				terrain={is3DMode ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
 			>
 				<MapControls
 					layers={availableLayers}

@@ -17,7 +17,7 @@ export const TerrainLayer = ({ is3DMode }: TerrainLayerProps) => {
 
 		const updateTerrain = () => {
 			if (is3DMode) {
-				map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+				map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.1 });
 			} else {
 				map.setTerrain(null);
 			}
