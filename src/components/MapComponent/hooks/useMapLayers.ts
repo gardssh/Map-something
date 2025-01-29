@@ -18,69 +18,66 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 	});
 	const [isAddingLayers, setIsAddingLayers] = useState(false);
 
-	const addOverlayLayers = useCallback(() => {
+	const addOverlayLayers = useCallback(async () => {
 		if (!mapRef.current || isAddingLayers) return;
 		const map = mapRef.current.getMap();
 
 		setIsAddingLayers(true);
 
-		const checkStyleAndAddLayers = () => {
+		const checkStyleAndAddLayers = async () => {
 			if (!map.isStyleLoaded()) {
-				setTimeout(checkStyleAndAddLayers, 100);
-				return;
-			}
-
-			if (!map.areTilesLoaded()) {
 				setTimeout(checkStyleAndAddLayers, 100);
 				return;
 			}
 
 			try {
 				// Add or update overlay layers
-				Object.entries(overlayStates).forEach(([layerId, isVisible]) => {
+				for (const [layerId, isVisible] of Object.entries(overlayStates)) {
 					const layer = mapLayers.getOverlayLayer(layerId as OverlayLayerId);
-					if (!layer) return;
+					if (!layer) continue;
 
-					// First, remove any existing layers that use this source
 					const style = layer.style as StyleSpecification;
-					if (style?.layers) {
-						style.layers.forEach((layerDef: LayerSpecification) => {
+					if (!style?.sources || !style?.layers) continue;
+
+					// Add sources if they don't exist
+					for (const [sourceId, sourceConfig] of Object.entries(style.sources)) {
+						if (!map.getSource(sourceId)) {
+							map.addSource(sourceId, sourceConfig);
+						}
+					}
+
+					// Add or update layers
+					for (const layerDef of style.layers) {
+						const existingLayer = map.getLayer(layerDef.id);
+						
+						if (existingLayer) {
+							// Update visibility of existing layer
+							map.setLayoutProperty(
+								layerDef.id,
+								'visibility',
+								isVisible ? 'visible' : 'none'
+							);
+						} else if (isVisible) {
+							// Add new layer if it should be visible
+							map.addLayer({
+								...layerDef,
+								layout: {
+									...layerDef.layout,
+									visibility: 'visible'
+								}
+							});
+						}
+					}
+
+					// If layer is not visible, ensure all its layers are hidden
+					if (!isVisible) {
+						style.layers.forEach(layerDef => {
 							if (map.getLayer(layerDef.id)) {
-								map.removeLayer(layerDef.id);
+								map.setLayoutProperty(layerDef.id, 'visibility', 'none');
 							}
 						});
 					}
-
-					// Then remove the source
-					if (map.getSource(layerId)) {
-						map.removeSource(layerId);
-					}
-
-					// Add source and layer if style is defined and overlay is enabled
-					if (style?.sources && isVisible) {
-						// Add sources
-						Object.entries(style.sources).forEach(([sourceId, source]) => {
-							if (!map.getSource(sourceId)) {
-								map.addSource(sourceId, source);
-							}
-						});
-
-						// Add layers
-						style.layers?.forEach((layerDef: LayerSpecification) => {
-							if (!map.getLayer(layerDef.id)) {
-								map.addLayer({
-									...layerDef,
-									layout: {
-										...layerDef.layout,
-										visibility: 'visible'
-									}
-								});
-							} else {
-								map.setLayoutProperty(layerDef.id, 'visibility', 'visible');
-							}
-						});
-					}
-				});
+				}
 
 				setIsAddingLayers(false);
 			} catch (error) {
@@ -90,8 +87,8 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 			}
 		};
 
-		checkStyleAndAddLayers();
-	}, [overlayStates, isAddingLayers, mapRef]);
+		await checkStyleAndAddLayers();
+	}, [mapRef, overlayStates, isAddingLayers]);
 
 	const handleLayerToggle = useCallback((layerId: string, isVisible: boolean) => {
 		if (!mapRef.current) return;
@@ -117,35 +114,59 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 		}
 		// Handle overlay toggles
 		else if (mapLayers.getOverlayLayer(layerId as OverlayLayerId)) {
-			setOverlayStates(prev => ({
-				...prev,
-				[layerId]: isVisible
-			}));
-
 			const layer = mapLayers.getOverlayLayer(layerId as OverlayLayerId);
 			if (!layer) return;
 
 			const style = layer.style as StyleSpecification;
-			if (style?.layers) {
-				// If turning off, remove layers and sources
-				if (!isVisible) {
-					// First remove all layers
-					style.layers.forEach((layerDef: LayerSpecification) => {
-						if (map.getLayer(layerDef.id)) {
-							map.removeLayer(layerDef.id);
+			if (!style?.sources || !style?.layers) return;
+
+			// Update state
+			setOverlayStates(prev => {
+				const newState = {
+					...prev,
+					[layerId]: isVisible
+				};
+
+				// Immediately add sources if they don't exist
+				Object.entries(style.sources).forEach(([sourceId, sourceConfig]) => {
+					if (!map.getSource(sourceId)) {
+						try {
+							map.addSource(sourceId, sourceConfig);
+						} catch (error) {
+							console.error('Error adding source:', error);
 						}
-					});
-					// Then remove the source
-					if (map.getSource(layerId)) {
-						map.removeSource(layerId);
 					}
-				} else {
-					// If turning on, add the layer
-					addOverlayLayers();
-				}
-			}
+				});
+
+				// Immediately add or update layers
+				style.layers.forEach(layerDef => {
+					const existingLayer = map.getLayer(layerDef.id);
+					
+					if (existingLayer) {
+						map.setLayoutProperty(
+							layerDef.id,
+							'visibility',
+							isVisible ? 'visible' : 'none'
+						);
+					} else if (isVisible) {
+						try {
+							map.addLayer({
+								...layerDef,
+								layout: {
+									...layerDef.layout,
+									visibility: 'visible'
+								}
+							});
+						} catch (error) {
+							console.error('Error adding layer:', error);
+						}
+					}
+				});
+
+				return newState;
+			});
 		}
-	}, [addOverlayLayers, overlayStates, mapRef, currentBaseLayer]);
+	}, [mapRef, currentBaseLayer]);
 
 	// Initialize layers when map loads
 	useEffect(() => {
