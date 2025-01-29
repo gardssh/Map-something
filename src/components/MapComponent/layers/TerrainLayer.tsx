@@ -16,6 +16,29 @@ export const TerrainLayer = ({ is3DMode }: TerrainLayerProps) => {
 		const map = mapRef.getMap();
 
 		const updateTerrain = () => {
+			// Wait for both the style and the source to be ready
+			if (!map.isStyleLoaded()) {
+				setTimeout(updateTerrain, 100);
+				return;
+			}
+
+			// For custom styles (Norge layers), we need to ensure the source exists
+			if (!map.getSource('mapbox-dem')) {
+				// Add the source if it doesn't exist
+				try {
+					map.addSource('mapbox-dem', {
+						type: 'raster-dem',
+						url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+						tileSize: 512,
+						maxzoom: 14,
+					});
+				} catch (error) {
+					// Source might already exist or style might not be loaded yet
+					setTimeout(updateTerrain, 100);
+					return;
+				}
+			}
+
 			if (is3DMode) {
 				map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.1 });
 			} else {
@@ -23,20 +46,25 @@ export const TerrainLayer = ({ is3DMode }: TerrainLayerProps) => {
 			}
 		};
 
-		// Only update terrain after style is loaded
-		if (map.isStyleLoaded()) {
-			updateTerrain();
-		} else {
-			map.once('style.load', updateTerrain);
-		}
+		// Handle both initial load and style changes
+		const handleStyleData = () => {
+			// Add a delay to ensure the style is fully loaded
+			setTimeout(updateTerrain, 150);
+		};
+
+		// Set up event listeners
+		map.on('style.load', handleStyleData);
+		map.on('styledata', handleStyleData);
+
+		// Initial setup
+		handleStyleData();
 
 		return () => {
-			map.off('style.load', updateTerrain);
+			map.off('style.load', handleStyleData);
+			map.off('styledata', handleStyleData);
 		};
 	}, [mapRef, is3DMode]);
 
-	// Always render the source, but terrain effect is controlled by setTerrain
-	return (
-		<Source id="mapbox-dem" type="raster-dem" url="mapbox://mapbox.mapbox-terrain-dem-v1" tileSize={512} maxzoom={14} />
-	);
+	// Always add the source programmatically in the effect hook
+	return null;
 };

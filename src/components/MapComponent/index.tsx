@@ -417,6 +417,8 @@ export const MapComponent = ({
 							'saved-routes-layer',
 							'saved-routes-border',
 							'saved-routes-touch',
+							'dnt-cabins',
+							'dnt-cabins-touch',
 						],
 					});
 
@@ -496,6 +498,28 @@ export const MapComponent = ({
 						const waypoint = waypoints?.find((w) => w.id === properties.id);
 						if (waypoint) {
 							handleWaypointSelect?.(waypoint);
+							if (isMobile) {
+								setActiveItem('nearby');
+								setShowDetailsDrawer(true);
+							}
+						}
+						return;
+					}
+
+					// Handle cabin touches
+					if (feature.layer && (feature.layer.id === 'dnt-cabins' || feature.layer.id === 'dnt-cabins-touch')) {
+						const cabin = properties;
+						if (cabin) {
+							// Fly to the cabin location
+							if (mapRef.current) {
+								mapRef.current.getMap().flyTo({
+									center: [cabin.longitude, cabin.latitude],
+									zoom: 14,
+									duration: 1000,
+								});
+							}
+							// You might want to add additional cabin selection logic here
+							// such as showing cabin details in a drawer or popup
 							if (isMobile) {
 								setActiveItem('nearby');
 								setShowDetailsDrawer(true);
