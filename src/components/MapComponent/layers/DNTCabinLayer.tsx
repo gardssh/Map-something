@@ -15,6 +15,8 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 	const [selectedCabin, setSelectedCabin] = useState<CabinFeature | null>(null);
 	const [hoveredCabin, setHoveredCabin] = useState<CabinFeature | null>(null);
 	const { isMobile } = useResponsiveLayout();
+	const [touchStartPoint, setTouchStartPoint] = useState<{ x: number; y: number } | null>(null);
+	const [touchStartTime, setTouchStartTime] = useState<number | null>(null);
 
 	const handlePopupClose = useCallback(() => {
 		setSelectedCabin(null);
@@ -51,6 +53,51 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 		map.getCanvas().style.cursor = '';
 	}, [map]);
 
+	const handleTouchStart = useCallback((e: mapboxgl.MapLayerTouchEvent) => {
+		setTouchStartPoint({ x: e.point.x, y: e.point.y });
+		setTouchStartTime(Date.now());
+	}, []);
+
+	const handleTouchEnd = useCallback(
+		(e: mapboxgl.MapLayerTouchEvent) => {
+			if (!map) return;
+
+			// Check if this was a drag or a tap
+			if (touchStartPoint && touchStartTime) {
+				const dx = e.point.x - touchStartPoint.x;
+				const dy = e.point.y - touchStartPoint.y;
+				const distance = Math.sqrt(dx * dx + dy * dy);
+				const duration = Date.now() - touchStartTime;
+
+				// Reset touch tracking
+				setTouchStartPoint(null);
+				setTouchStartTime(null);
+
+				// If moved more than 10 pixels or took longer than 300ms, treat as drag and ignore
+				if (distance > 10 || duration > 300) {
+					return;
+				}
+
+				// Add a small delay to ensure map has finished moving
+				setTimeout(() => {
+					const features = map.queryRenderedFeatures(e.point, {
+						layers: ['dnt-cabins-touch', 'dnt-cabins-touch-mobile'],
+					});
+
+					if (features.length > 0) {
+						const cabin = features[0] as unknown as CabinFeature;
+						if (cabin.properties) {
+							setSelectedCabin(cabin);
+						}
+					} else {
+						setSelectedCabin(null);
+					}
+				}, 50);
+			}
+		},
+		[map, touchStartPoint, touchStartTime]
+	);
+
 	const handleMapClick = useCallback(
 		(e: mapboxgl.MapMouseEvent | mapboxgl.MapLayerTouchEvent) => {
 			if (!map) return;
@@ -74,17 +121,19 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 		if (!map) return;
 
 		map.on('click', handleMapClick);
-		map.on('touchend', handleMapClick);
+		map.on('touchstart', handleTouchStart);
+		map.on('touchend', handleTouchEnd);
 		map.on('mousemove', handleMouseMove);
 		map.on('mouseleave', handleMouseLeave);
 
 		return () => {
 			map.off('click', handleMapClick);
-			map.off('touchend', handleMapClick);
+			map.off('touchstart', handleTouchStart);
+			map.off('touchend', handleTouchEnd);
 			map.off('mousemove', handleMouseMove);
 			map.off('mouseleave', handleMouseLeave);
 		};
-	}, [map, handleMapClick, handleMouseMove, handleMouseLeave]);
+	}, [map, handleMapClick, handleTouchStart, handleTouchEnd, handleMouseMove, handleMouseLeave]);
 
 	if (!cabinData.features.length) return null;
 
@@ -216,26 +265,29 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 					onClose={handlePopupClose}
 					anchor="bottom"
 					className="p-0 overflow-hidden [&_.mapboxgl-popup-content]:p-0 [&_.mapboxgl-popup-close-button]:p-2 [&_.mapboxgl-popup-close-button]:mr-1"
+					maxWidth="300px"
 				>
-					<Card className="border-0 shadow-none">
-						<CardHeader>
-							<h3 className="text-lg font-semibold">{selectedCabin.properties.name}</h3>
-							<p className="text-sm text-muted-foreground">{selectedCabin.properties.serviceLevel}</p>
+					<Card className="border-0 shadow-none max-w-[300px]">
+						<CardHeader className="space-y-1">
+							<h3 className="text-lg font-semibold break-words">{selectedCabin.properties.name}</h3>
+							<p className="text-sm text-muted-foreground break-words">{selectedCabin.properties.serviceLevel}</p>
 						</CardHeader>
 						<CardContent>
 							<div className="flex flex-col gap-2">
 								<div className="flex items-center gap-2">
 									<span className="text-sm">Capacity: {selectedCabin.properties.capacity} beds</span>
-									{selectedCabin.properties.requiresKey && <Lock aria-label="Requires key" className="h-4 w-4" />}
+									{selectedCabin.properties.requiresKey && (
+										<Lock aria-label="Requires key" className="h-4 w-4 shrink-0" />
+									)}
 								</div>
 								<div className="flex items-center gap-2">
-									<span className="text-sm">{selectedCabin.properties.openingHours}</span>
+									<span className="text-sm break-words">{selectedCabin.properties.openingHours}</span>
 								</div>
 								<a
 									href={selectedCabin.properties.url}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="text-sm text-blue-600 hover:underline"
+									className="text-sm text-blue-600 hover:underline break-words"
 								>
 									View on ut.no
 								</a>
