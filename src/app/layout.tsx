@@ -15,6 +15,7 @@ export const viewport: Viewport = {
 	themeColor: '#000000',
 };
 
+
 export const metadata: Metadata = {
 	title: 'Villspor',
 	description: 'Et kart for meg som er på villspor',
