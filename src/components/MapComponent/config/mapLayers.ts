@@ -38,6 +38,12 @@ const baseLayers: LayerDefinition[] = [
           tiles: ['https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png'],
           tileSize: 256,
           attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
+        },
+        'mapbox-dem': {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
         }
       },
       layers: [
@@ -63,6 +69,12 @@ const baseLayers: LayerDefinition[] = [
           tiles: ['https://opencache.statkart.no/gatekeeper/gk/gk.open_nib_web_mercator_wmts_v2?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=Nibcache_web_mercator_v2&STYLE=default&FORMAT=image/png&TILEMATRIXSET=default028mm&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'],
           tileSize: 256,
           attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
+        },
+        'mapbox-dem': {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
         }
       },
       layers: [
