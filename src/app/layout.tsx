@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 	description: 'Et kart for meg som er på villspor',
 	icons: {
 		icon: '/favicon.svg',
-		apple: [{ url: '/icon-192.png' }, { url: '/icon-512.png', sizes: '512x512' }],
+		apple: [{ url: '/icon-192.png' }, { url: '5/icon-512.png', sizes: '512x512' }],
 	},
 	manifest: '/manifest.json',
 	appleWebApp: {
