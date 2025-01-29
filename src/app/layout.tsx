@@ -20,17 +20,23 @@ export const metadata: Metadata = {
 	description: 'Et kart for meg som er på villspor',
 	icons: {
 		icon: '/favicon.svg',
-		apple: [{ url: '/icon-192.png' }, { url: '5/icon-512.png', sizes: '512x512' }],
+		apple: [
+			{ url: '/icon-192.png', sizes: '192x192' },
+			{ url: '/icon-384.png', sizes: '384x384' },
+			{ url: '/icon-512.png', sizes: '512x512' },
+		],
 	},
 	manifest: '/manifest.json',
 	appleWebApp: {
 		capable: true,
 		statusBarStyle: 'default',
 		title: 'Villspor',
+		startupImage: [{ url: '/icon-512.png' }],
 	},
 	other: {
 		'mobile-web-app-capable': 'yes',
 		'apple-mobile-web-app-capable': 'yes',
+		'apple-touch-icon': '/icon-192.png',
 	},
 };
 
