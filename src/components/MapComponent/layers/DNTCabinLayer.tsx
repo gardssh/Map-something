@@ -15,6 +15,8 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 	const [selectedCabin, setSelectedCabin] = useState<CabinFeature | null>(null);
 	const [hoveredCabin, setHoveredCabin] = useState<CabinFeature | null>(null);
 	const { isMobile } = useResponsiveLayout();
+	const [touchStartPoint, setTouchStartPoint] = useState<{ x: number; y: number } | null>(null);
+	const [touchStartTime, setTouchStartTime] = useState<number | null>(null);
 
 	const handlePopupClose = useCallback(() => {
 		setSelectedCabin(null);
@@ -51,6 +53,51 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 		map.getCanvas().style.cursor = '';
 	}, [map]);
 
+	const handleTouchStart = useCallback((e: mapboxgl.MapLayerTouchEvent) => {
+		setTouchStartPoint({ x: e.point.x, y: e.point.y });
+		setTouchStartTime(Date.now());
+	}, []);
+
+	const handleTouchEnd = useCallback(
+		(e: mapboxgl.MapLayerTouchEvent) => {
+			if (!map) return;
+
+			// Check if this was a drag or a tap
+			if (touchStartPoint && touchStartTime) {
+				const dx = e.point.x - touchStartPoint.x;
+				const dy = e.point.y - touchStartPoint.y;
+				const distance = Math.sqrt(dx * dx + dy * dy);
+				const duration = Date.now() - touchStartTime;
+
+				// Reset touch tracking
+				setTouchStartPoint(null);
+				setTouchStartTime(null);
+
+				// If moved more than 10 pixels or took longer than 300ms, treat as drag and ignore
+				if (distance > 10 || duration > 300) {
+					return;
+				}
+
+				// Add a small delay to ensure map has finished moving
+				setTimeout(() => {
+					const features = map.queryRenderedFeatures(e.point, {
+						layers: ['dnt-cabins-touch', 'dnt-cabins-touch-mobile'],
+					});
+
+					if (features.length > 0) {
+						const cabin = features[0] as unknown as CabinFeature;
+						if (cabin.properties) {
+							setSelectedCabin(cabin);
+						}
+					} else {
+						setSelectedCabin(null);
+					}
+				}, 50);
+			}
+		},
+		[map, touchStartPoint, touchStartTime]
+	);
+
 	const handleMapClick = useCallback(
 		(e: mapboxgl.MapMouseEvent | mapboxgl.MapLayerTouchEvent) => {
 			if (!map) return;
@@ -74,17 +121,19 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 		if (!map) return;
 
 		map.on('click', handleMapClick);
-		map.on('touchend', handleMapClick);
+		map.on('touchstart', handleTouchStart);
+		map.on('touchend', handleTouchEnd);
 		map.on('mousemove', handleMouseMove);
 		map.on('mouseleave', handleMouseLeave);
 
 		return () => {
 			map.off('click', handleMapClick);
-			map.off('touchend', handleMapClick);
+			map.off('touchstart', handleTouchStart);
+			map.off('touchend', handleTouchEnd);
 			map.off('mousemove', handleMouseMove);
 			map.off('mouseleave', handleMouseLeave);
 		};
-	}, [map, handleMapClick, handleMouseMove, handleMouseLeave]);
+	}, [map, handleMapClick, handleTouchStart, handleTouchEnd, handleMouseMove, handleMouseLeave]);
 
 	if (!cabinData.features.length) return null;
 
