@@ -143,8 +143,25 @@ const overlayLayers: LayerDefinition[] = [
     isBase: false,
     style: {
       version: 8,
-      sources: {},
-      layers: []
+      sources: {
+        'peaks-2000m': {
+          type: 'vector',
+          url: 'mapbox://gardsh.dppfxauy'
+        }
+      },
+      layers: [
+        {
+          id: 'peaks-2000m-lines',
+          type: 'line',
+          source: 'peaks-2000m',
+          'source-layer': 'fixedmore-5dbb12',
+          paint: {
+            'line-color': '#FF3300',
+            'line-width': 2,
+            'line-opacity': 0.4
+          }
+        }
+      ]
     }
   }
 ];
