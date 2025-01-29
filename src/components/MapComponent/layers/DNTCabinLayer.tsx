@@ -265,26 +265,29 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 					onClose={handlePopupClose}
 					anchor="bottom"
 					className="p-0 overflow-hidden [&_.mapboxgl-popup-content]:p-0 [&_.mapboxgl-popup-close-button]:p-2 [&_.mapboxgl-popup-close-button]:mr-1"
+					maxWidth="300px"
 				>
-					<Card className="border-0 shadow-none">
-						<CardHeader>
-							<h3 className="text-lg font-semibold">{selectedCabin.properties.name}</h3>
-							<p className="text-sm text-muted-foreground">{selectedCabin.properties.serviceLevel}</p>
+					<Card className="border-0 shadow-none max-w-[300px]">
+						<CardHeader className="space-y-1">
+							<h3 className="text-lg font-semibold break-words">{selectedCabin.properties.name}</h3>
+							<p className="text-sm text-muted-foreground break-words">{selectedCabin.properties.serviceLevel}</p>
 						</CardHeader>
 						<CardContent>
 							<div className="flex flex-col gap-2">
 								<div className="flex items-center gap-2">
 									<span className="text-sm">Capacity: {selectedCabin.properties.capacity} beds</span>
-									{selectedCabin.properties.requiresKey && <Lock aria-label="Requires key" className="h-4 w-4" />}
+									{selectedCabin.properties.requiresKey && (
+										<Lock aria-label="Requires key" className="h-4 w-4 shrink-0" />
+									)}
 								</div>
 								<div className="flex items-center gap-2">
-									<span className="text-sm">{selectedCabin.properties.openingHours}</span>
+									<span className="text-sm break-words">{selectedCabin.properties.openingHours}</span>
 								</div>
 								<a
 									href={selectedCabin.properties.url}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="text-sm text-blue-600 hover:underline"
+									className="text-sm text-blue-600 hover:underline break-words"
 								>
 									View on ut.no
 								</a>
