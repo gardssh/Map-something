@@ -212,6 +212,8 @@ export const MapComponent = ({
 		isDrawing,
 		mapRef,
 		switchCoordinates,
+		handleWaypointSelect,
+		onActivitySelect,
 	});
 
 	useEffect(() => {

@@ -25,6 +25,7 @@ export const useMapConfig = ({ mapRef }: MapConfigOptions) => {
 			? []
 			: [
 					'waypoints-layer',
+					'waypoints-layer-touch',
 					'foot-sports',
 					'cycle-sports',
 					'water-sports',
