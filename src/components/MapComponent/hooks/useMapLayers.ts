@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import type { MapRef } from 'react-map-gl';
 import { mapLayers, DEFAULT_BASE_LAYER, type BaseLayerId, type OverlayLayerId } from '../config/mapLayers';
 import type { LayerSpecification, StyleSpecification } from 'mapbox-gl';
@@ -16,79 +16,120 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 		snoskred: false,
 		'custom-tileset': false
 	});
-	const [isAddingLayers, setIsAddingLayers] = useState(false);
+	const isProcessingRef = useRef(false);
 
-	const addOverlayLayers = useCallback(async () => {
-		if (!mapRef.current || isAddingLayers) return;
-		const map = mapRef.current.getMap();
+	// Function to get active overlays
+	const getActiveOverlays = useCallback(() => {
+		return Object.entries(overlayStates)
+			.filter(([_, isActive]) => isActive)
+			.map(([id]) => id as OverlayLayerId);
+	}, [overlayStates]);
 
-		setIsAddingLayers(true);
+	const waitForMapReady = useCallback((map: mapboxgl.Map) => {
+		return new Promise<void>((resolve) => {
+			const checkMapReady = () => {
+				if (!map.isStyleLoaded()) {
+					setTimeout(checkMapReady, 100);
+					return;
+				}
 
-		const checkStyleAndAddLayers = async () => {
-			if (!map.isStyleLoaded()) {
-				setTimeout(checkStyleAndAddLayers, 100);
-				return;
-			}
+				const style = map.getStyle();
+				if (!style) {
+					setTimeout(checkMapReady, 100);
+					return;
+				}
 
-			try {
-				// Add or update overlay layers
-				for (const [layerId, isVisible] of Object.entries(overlayStates)) {
-					const layer = mapLayers.getOverlayLayer(layerId as OverlayLayerId);
-					if (!layer) continue;
+				// For WMTS services, we don't need to wait for terrain
+				const isWMTS = style.sources && Object.values(style.sources).some(
+					source => (source as any).type === 'raster'
+				);
 
-					const style = layer.style as StyleSpecification;
-					if (!style?.sources || !style?.layers) continue;
-
-					// Add sources if they don't exist
-					for (const [sourceId, sourceConfig] of Object.entries(style.sources)) {
-						if (!map.getSource(sourceId)) {
-							map.addSource(sourceId, sourceConfig);
-						}
-					}
-
-					// Add or update layers
-					for (const layerDef of style.layers) {
-						const existingLayer = map.getLayer(layerDef.id);
-						
-						if (existingLayer) {
-							// Update visibility of existing layer
-							map.setLayoutProperty(
-								layerDef.id,
-								'visibility',
-								isVisible ? 'visible' : 'none'
-							);
-						} else if (isVisible) {
-							// Add new layer if it should be visible
-							map.addLayer({
-								...layerDef,
-								layout: {
-									...layerDef.layout,
-									visibility: 'visible'
-								}
-							});
-						}
-					}
-
-					// If layer is not visible, ensure all its layers are hidden
-					if (!isVisible) {
-						style.layers.forEach(layerDef => {
-							if (map.getLayer(layerDef.id)) {
-								map.setLayoutProperty(layerDef.id, 'visibility', 'none');
-							}
-						});
+				if (!isWMTS) {
+					const terrainSource = map.getSource('mapbox-dem');
+					if (style.terrain && !terrainSource) {
+						setTimeout(checkMapReady, 100);
+						return;
 					}
 				}
 
-				setIsAddingLayers(false);
-			} catch (error) {
-				console.error('Error adding overlay layers:', error);
-				setIsAddingLayers(false);
-				setTimeout(checkStyleAndAddLayers, 200);
-			}
-		};
+				resolve();
+			};
+			checkMapReady();
+		});
+	}, []);
 
-		await checkStyleAndAddLayers();
-	}, [mapRef, overlayStates, isAddingLayers]);
+	// Function to apply a single overlay
+	const applyOverlay = useCallback(async (map: mapboxgl.Map, layerId: OverlayLayerId) => {
+		const layer = mapLayers.getOverlayLayer(layerId);
+		if (!layer) return;
+
+		const style = layer.style as StyleSpecification;
+		if (!style?.sources || !style?.layers) return;
+
+		try {
+			// Remove existing overlay first to ensure clean state
+			const existingLayers = style.layers.map(l => l.id);
+			existingLayers.forEach(id => {
+				if (map.getLayer(id)) {
+					map.removeLayer(id);
+				}
+			});
+
+			Object.keys(style.sources).forEach(sourceId => {
+				if (map.getSource(sourceId)) {
+					map.removeSource(sourceId);
+				}
+			});
+
+			// Add sources
+			Object.entries(style.sources).forEach(([sourceId, sourceConfig]) => {
+				if (!map.getSource(sourceId)) {
+					map.addSource(sourceId, sourceConfig);
+				}
+			});
+
+			// Add layers
+			style.layers.forEach(layerDef => {
+				if (!map.getLayer(layerDef.id)) {
+					map.addLayer({
+						...layerDef,
+						layout: {
+							...layerDef.layout,
+							visibility: 'visible'
+						}
+					});
+				}
+			});
+		} catch (error) {
+			console.error(`Error applying overlay ${layerId}:`, error);
+		}
+	}, []);
+
+	const removeOverlay = useCallback((map: mapboxgl.Map, layerId: OverlayLayerId) => {
+		const layer = mapLayers.getOverlayLayer(layerId);
+		if (!layer) return;
+
+		const style = layer.style as StyleSpecification;
+		if (!style?.layers) return;
+
+		try {
+			style.layers.forEach(layerDef => {
+				if (map.getLayer(layerDef.id)) {
+					map.removeLayer(layerDef.id);
+				}
+			});
+
+			if (style.sources) {
+				Object.keys(style.sources).forEach(sourceId => {
+					if (map.getSource(sourceId)) {
+						map.removeSource(sourceId);
+					}
+				});
+			}
+		} catch (error) {
+			console.error(`Error removing overlay ${layerId}:`, error);
+		}
+	}, []);
 
 	const handleLayerToggle = useCallback((layerId: string, isVisible: boolean) => {
 		if (!mapRef.current) return;
@@ -97,107 +138,89 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 		// Handle base layer changes
 		if (mapLayers.getBaseLayer(layerId as BaseLayerId)) {
 			if (layerId !== currentBaseLayer) {
-				setCurrentBaseLayer(layerId as BaseLayerId);
-				const currentOverlayStates = { ...overlayStates };
 				const newStyle = mapLayers.getBaseLayer(layerId as BaseLayerId)?.style;
+				if (!newStyle) return;
 
-				if (newStyle) {
+				// Get currently active overlays before style change
+				const activeOverlays = getActiveOverlays();
+
+				// Set new base layer immediately
+				setCurrentBaseLayer(layerId as BaseLayerId);
+
+				// For WMTS services, we need to force a complete style rebuild
+				const isWMTS = (newStyle as StyleSpecification).sources && 
+					Object.values((newStyle as StyleSpecification).sources).some(
+						source => source.type === 'raster'
+					);
+
+				if (isWMTS) {
+					// Force complete style rebuild for WMTS
+					map.setStyle(newStyle, { diff: false, localIdeographFontFamily: '', localFontFamily: '' });
+				} else {
+					// Use style diffing for regular styles
 					map.setStyle(newStyle);
-					map.once('style.load', () => {
-						setOverlayStates(currentOverlayStates);
-						setTimeout(() => {
-							addOverlayLayers();
-						}, 200);
-					});
 				}
+
+				// Wait for style load and reapply overlays
+				const handleStyleLoad = async () => {
+					try {
+						await waitForMapReady(map);
+						
+						// Reapply each active overlay
+						for (const overlayId of activeOverlays) {
+							await applyOverlay(map, overlayId);
+						}
+					} catch (error) {
+						console.error('Error reapplying overlays:', error);
+					}
+				};
+
+				map.once('style.load', handleStyleLoad);
 			}
 		}
 		// Handle overlay toggles
 		else if (mapLayers.getOverlayLayer(layerId as OverlayLayerId)) {
-			const layer = mapLayers.getOverlayLayer(layerId as OverlayLayerId);
-			if (!layer) return;
-
-			const style = layer.style as StyleSpecification;
-			if (!style?.sources || !style?.layers) return;
-
-			// Update state
-			setOverlayStates(prev => {
-				const newState = {
-					...prev,
-					[layerId]: isVisible
-				};
-
-				// Immediately add sources if they don't exist
-				Object.entries(style.sources).forEach(([sourceId, sourceConfig]) => {
-					if (!map.getSource(sourceId)) {
-						try {
-							map.addSource(sourceId, sourceConfig);
-						} catch (error) {
-							console.error('Error adding source:', error);
-						}
-					}
-				});
-
-				// Immediately add or update layers
-				style.layers.forEach(layerDef => {
-					const existingLayer = map.getLayer(layerDef.id);
-					
-					if (existingLayer) {
-						map.setLayoutProperty(
-							layerDef.id,
-							'visibility',
-							isVisible ? 'visible' : 'none'
-						);
-					} else if (isVisible) {
-						try {
-							map.addLayer({
-								...layerDef,
-								layout: {
-									...layerDef.layout,
-									visibility: 'visible'
-								}
-							});
-						} catch (error) {
-							console.error('Error adding layer:', error);
-						}
-					}
-				});
-
-				return newState;
-			});
+			const overlayId = layerId as OverlayLayerId;
+			
+			setOverlayStates(prev => ({ ...prev, [overlayId]: isVisible }));
+			
+			if (isVisible) {
+				if (map.isStyleLoaded()) {
+					applyOverlay(map, overlayId);
+				} else {
+					map.once('style.load', () => applyOverlay(map, overlayId));
+				}
+			} else {
+				if (map.isStyleLoaded()) {
+					removeOverlay(map, overlayId);
+				}
+			}
 		}
-	}, [mapRef, currentBaseLayer]);
+	}, [mapRef, currentBaseLayer, getActiveOverlays, applyOverlay, removeOverlay, waitForMapReady]);
 
-	// Initialize layers when map loads
+	// Initialize overlays when map first loads
 	useEffect(() => {
 		if (!mapRef.current) return;
 		const map = mapRef.current.getMap();
 
-		const handleStyleData = () => {
-			const checkAndAddLayers = () => {
-				if (!map.isStyleLoaded() || !map.areTilesLoaded()) {
-					setTimeout(checkAndAddLayers, 100);
-					return;
+		const initializeOverlays = async () => {
+			try {
+				await waitForMapReady(map);
+				const activeOverlays = getActiveOverlays();
+				for (const overlayId of activeOverlays) {
+					await applyOverlay(map, overlayId);
 				}
-				addOverlayLayers();
-			};
-			checkAndAddLayers();
-		};
-
-		map.on('style.load', handleStyleData);
-		
-		if (map.isStyleLoaded()) {
-			if (map.areTilesLoaded()) {
-				addOverlayLayers();
-			} else {
-				map.once('idle', addOverlayLayers);
+			} catch (error) {
+				console.error('Error initializing overlays:', error);
 			}
-		}
-
-		return () => {
-			map.off('style.load', handleStyleData);
 		};
-	}, [addOverlayLayers, mapRef]);
+
+		if (map.isStyleLoaded()) {
+			initializeOverlays();
+		} else {
+			map.once('style.load', initializeOverlays);
+		}
+	}, [mapRef, getActiveOverlays, applyOverlay, waitForMapReady]);
 
 	return {
 		currentBaseLayer,

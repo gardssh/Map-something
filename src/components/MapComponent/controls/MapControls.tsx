@@ -39,6 +39,8 @@ interface MapControlsProps {
 	dntCabinsVisible: boolean;
 	onDNTCabinsToggle: (visible: boolean) => void;
 	activeItem: string;
+	onDrawToggle: (isDrawing: boolean) => void;
+	isDrawing: boolean;
 }
 
 const MapControls = ({
@@ -64,6 +66,8 @@ const MapControls = ({
 	dntCabinsVisible,
 	onDNTCabinsToggle,
 	activeItem,
+	onDrawToggle,
+	isDrawing,
 }: MapControlsProps) => {
 	const { isMobile } = useResponsiveLayout();
 
@@ -76,7 +80,7 @@ const MapControls = ({
 
 	return (
 		<div className="absolute top-4 right-4 flex flex-col gap-2">
-			<GeolocateControl position="top-right" />
+			<GeolocateControl position="top-right" showUserHeading={true} trackUserLocation={true} />
 			<NavigationControl position="top-right" visualizePitch={is3DMode} showZoom={true} showCompass={true} />
 			<LayersControl
 				layers={layers}

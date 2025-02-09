@@ -103,6 +103,7 @@ export const MapComponent = ({
 	const [localVisibleRoutesId, setLocalVisibleRoutesId] = useState<(string | number)[]>([]);
 	const [localVisibleWaypointsId, setLocalVisibleWaypointsId] = useState<(string | number)[]>([]);
 	const [isAddingWaypoint, setIsAddingWaypoint] = useState(false);
+	const [isSearching, setIsSearching] = useState(false);
 	const [mapCenter, setMapCenter] = useState({ lat: 61.375172, lng: 8.296987 });
 	const [waypointsVisible, setWaypointsVisible] = useState(true);
 	const [routesVisible, setRoutesVisible] = useState(true);
@@ -691,6 +692,8 @@ export const MapComponent = ({
 					dntCabinsVisible={dntCabinsVisible}
 					onDNTCabinsToggle={toggleDNTCabins}
 					activeItem={activeItem}
+					onDrawToggle={setIsDrawing}
+					isDrawing={isDrawing}
 				/>
 
 				<AddWaypointControl isActive={isAddingWaypoint} onClick={() => setIsAddingWaypoint(!isAddingWaypoint)} />
