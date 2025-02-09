@@ -80,7 +80,12 @@ const MapControls = ({
 
 	return (
 		<div className="absolute top-4 right-4 flex flex-col gap-2">
-			<GeolocateControl position="top-right" showUserHeading={true} trackUserLocation={true} />
+			<GeolocateControl
+				position="top-right"
+				showUserHeading={is3DMode}
+				trackUserLocation={true}
+				showAccuracyCircle={false}
+			/>
 			<NavigationControl position="top-right" visualizePitch={is3DMode} showZoom={true} showCompass={true} />
 			<LayersControl
 				layers={layers}

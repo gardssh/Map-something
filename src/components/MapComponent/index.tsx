@@ -222,6 +222,24 @@ export const MapComponent = ({
 			const map = mapRef.current.getMap();
 			onMapLoad(map);
 
+			// Request location permission on mount
+			if ('permissions' in navigator) {
+				navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+					if (result.state === 'prompt') {
+						navigator.geolocation.getCurrentPosition(
+							() => {
+								// Success - permission granted
+								console.log('Location permission granted');
+							},
+							() => {
+								// Error - permission denied
+								console.log('Location permission denied');
+							}
+						);
+					}
+				});
+			}
+
 			// Wait for the map to be idle before updating visible activities
 			const onIdle = () => {
 				updateVisibleIds();
