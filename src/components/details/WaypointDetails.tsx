@@ -60,7 +60,7 @@ export function WaypointDetails({ waypoint, onDelete, onEdit, onClose }: Waypoin
 								<Edit2 className="h-4 w-4" />
 							</Button>
 							<Button
-								variant="ghost"
+								variant="destructive"
 								size="icon"
 								onClick={() => {
 									if (!onDelete) return;

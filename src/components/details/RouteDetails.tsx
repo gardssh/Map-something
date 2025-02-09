@@ -192,7 +192,7 @@ export function RouteDetails({ route, onDelete, onEdit, onClose }: RouteDetailsP
 										<Edit2 className="h-4 w-4" />
 									</Button>
 									<Button
-										variant="ghost"
+										variant="destructive"
 										size="icon"
 										onClick={() => {
 											if (!onDelete) return;

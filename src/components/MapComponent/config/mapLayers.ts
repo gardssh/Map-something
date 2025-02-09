@@ -1,6 +1,6 @@
 import type { StyleSpecification } from 'mapbox-gl';
 
-export type BaseLayerId = 'outdoors' | 'satellite' | 'norge-topo' | 'norge-flyfoto';
+export type BaseLayerId = 'outdoors' | 'satellite' | 'norge-topo' | 'norge-flyfoto' | 'finnish-terrain' | 'finnish-aerial' | 'sverige-topo';
 export type OverlayLayerId = 'bratthet' | 'snoskred' | 'custom-tileset';
 export type LayerId = BaseLayerId | OverlayLayerId;
 
@@ -9,6 +9,7 @@ export interface LayerDefinition {
   name: string;
   isBase: boolean;
   style: string | StyleSpecification;
+  group?: string;
 }
 
 // Base layer definitions
@@ -26,9 +27,127 @@ const baseLayers: LayerDefinition[] = [
     style: 'mapbox://styles/mapbox/satellite-v9'
   },
   {
+    id: 'sverige-topo',
+    name: 'Sverige Topo',
+    isBase: true,
+    group: 'Local Maps',
+    style: {
+      version: 8,
+      glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+      sources: {
+        'sverige-topo': {
+          type: 'raster',
+          tiles: [
+            '/api/maps/sweden?layer=topowebb&z={z}&x={x}&y={y}'
+          ],
+          tileSize: 256,
+          attribution: '&copy; <a href="https://www.lantmateriet.se/">Lantmäteriet</a>',
+          minzoom: 0,
+          maxzoom: 14,
+          bounds: [10.5, 55.2, 24.2, 69.1]  // Sweden bounds
+        },
+        'mapbox-dem': {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
+        }
+      },
+      layers: [
+        {
+          id: 'sverige-topo-layer',
+          type: 'raster',
+          source: 'sverige-topo',
+          paint: { 'raster-opacity': 1 }
+        }
+      ],
+      terrain: {
+        source: 'mapbox-dem',
+        exaggeration: 1.5
+      }
+    }
+  },
+  {
+    id: 'finnish-terrain',
+    name: 'Finnish Terrain',
+    isBase: true,
+    group: 'Local Maps',
+    style: {
+      version: 8,
+      glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+      sources: {
+        'finnish-terrain': {
+          type: 'raster',
+          tiles: [
+            'https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=' + process.env.NEXT_PUBLIC_FINNISH_MAP_API_KEY
+          ],
+          tileSize: 256,
+          attribution: '&copy; <a href="https://www.maanmittauslaitos.fi/">Maanmittauslaitos</a>'
+        },
+        'mapbox-dem': {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
+        }
+      },
+      layers: [
+        {
+          id: 'finnish-terrain-layer',
+          type: 'raster',
+          source: 'finnish-terrain',
+          paint: { 'raster-opacity': 1 }
+        }
+      ],
+      terrain: {
+        source: 'mapbox-dem',
+        exaggeration: 1.5
+      }
+    }
+  },
+  {
+    id: 'finnish-aerial',
+    name: 'Finnish Aerial',
+    isBase: true,
+    group: 'Local Maps',
+    style: {
+      version: 8,
+      glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+      sources: {
+        'finnish-aerial': {
+          type: 'raster',
+          tiles: [
+            'https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/ortokuva/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.jpg?api-key=' + process.env.NEXT_PUBLIC_FINNISH_MAP_API_KEY
+          ],
+          tileSize: 256,
+          attribution: '&copy; <a href="https://www.maanmittauslaitos.fi/">Maanmittauslaitos</a>'
+        },
+        'mapbox-dem': {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
+        }
+      },
+      layers: [
+        {
+          id: 'finnish-aerial-layer',
+          type: 'raster',
+          source: 'finnish-aerial',
+          paint: { 'raster-opacity': 1 }
+        }
+      ],
+      terrain: {
+        source: 'mapbox-dem',
+        exaggeration: 1.5
+      }
+    }
+  },
+  {
     id: 'norge-topo',
     name: 'Norge Topo',
     isBase: true,
+    group: 'Local Maps',
     style: {
       version: 8,
       glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
@@ -60,6 +179,7 @@ const baseLayers: LayerDefinition[] = [
     id: 'norge-flyfoto',
     name: 'Norge Flyfoto',
     isBase: true,
+    group: 'Local Maps',
     style: {
       version: 8,
       glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",

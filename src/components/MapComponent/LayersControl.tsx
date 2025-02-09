@@ -10,6 +10,7 @@ interface LayerOption {
 	name: string;
 	isBase?: boolean;
 	icon?: JSX.Element;
+	group?: string;
 }
 
 interface LayersControlProps {
@@ -31,6 +32,7 @@ const defaultLayers: LayerOption[] = [
 	{ id: 'default', name: 'Outdoors', isBase: true },
 	{ id: 'satellite', name: 'Satellite', isBase: true },
 	{ id: 'norge-topo', name: 'Norge Topo', isBase: true },
+	{ id: 'norge-flyfoto', name: 'Norge Flyfoto', isBase: true },
 	{ id: 'bratthet', name: 'Bratthet' },
 	{ id: 'snoskred', name: 'Snøskred' },
 	{ id: 'custom-tileset', name: 'Heatmap 2000m Norge' },
@@ -54,6 +56,28 @@ export const LayersControl = ({
 	const overlayLayers = layers?.filter((l) => !l.isBase) || [];
 	const [isOpen, setIsOpen] = useState(false);
 	const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
+	const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+		'Local Maps': true, // Default expanded state for Local Maps
+	});
+
+	// Group base layers
+	const groupedBaseLayers = baseLayers.reduce(
+		(acc, layer) => {
+			if (layer.group) {
+				if (!acc[layer.group]) {
+					acc[layer.group] = [];
+				}
+				acc[layer.group].push(layer);
+			} else {
+				if (!acc['ungrouped']) {
+					acc['ungrouped'] = [];
+				}
+				acc['ungrouped'].push(layer);
+			}
+			return acc;
+		},
+		{} as Record<string, LayerOption[]>
+	);
 
 	useEffect(() => {
 		const container = document.createElement('div');
@@ -139,7 +163,8 @@ export const LayersControl = ({
 						<div className="mb-6">
 							<div className="text-sm font-semibold text-gray-500 mb-3">Base Maps</div>
 							<div className="flex flex-col space-y-2">
-								{baseLayers.map((layer) => (
+								{/* Render ungrouped base layers first */}
+								{groupedBaseLayers['ungrouped']?.map((layer) => (
 									<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
 										<input
 											type="radio"
@@ -151,6 +176,48 @@ export const LayersControl = ({
 										<span className="text-sm text-gray-700">{layer.name}</span>
 									</label>
 								))}
+
+								{/* Render grouped base layers */}
+								{Object.entries(groupedBaseLayers).map(([groupName, groupLayers]) => {
+									if (groupName === 'ungrouped') return null;
+									return (
+										<div key={groupName} className="ml-0">
+											<button
+												onClick={() => setExpandedGroups((prev) => ({ ...prev, [groupName]: !prev[groupName] }))}
+												className="flex items-center space-x-2 w-full text-left text-sm text-gray-700 hover:bg-gray-50 rounded px-1"
+											>
+												<svg
+													className={`h-4 w-4 transform transition-transform ${expandedGroups[groupName] ? 'rotate-90' : ''}`}
+													viewBox="0 0 20 20"
+													fill="currentColor"
+												>
+													<path
+														fillRule="evenodd"
+														d="M7.293 4.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L10.586 9 7.293 5.707a1 1 0 010-1.414z"
+														clipRule="evenodd"
+													/>
+												</svg>
+												<span className="font-medium">{groupName}</span>
+											</button>
+											{expandedGroups[groupName] && (
+												<div className="ml-6 mt-1 space-y-1">
+													{groupLayers.map((layer) => (
+														<label key={layer.id} className="flex items-center space-x-2 cursor-pointer">
+															<input
+																type="radio"
+																name="baseLayer"
+																checked={currentBaseLayer === layer.id}
+																onChange={() => onLayerToggle(layer.id, true)}
+																className="form-radio h-4 w-4 text-blue-600"
+															/>
+															<span className="text-sm text-gray-700">{layer.name}</span>
+														</label>
+													))}
+												</div>
+											)}
+										</div>
+									);
+								})}
 							</div>
 						</div>
 

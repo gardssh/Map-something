@@ -1,7 +1,7 @@
 import type { LineString } from 'geojson';
 import type { DbRoute } from './supabase';
 
-export type DrawnRoute = {
+export interface DrawnRoute {
     id: string;
     name: string;
     user_id: string;
@@ -9,12 +9,12 @@ export type DrawnRoute = {
         type: 'LineString';
         coordinates: [number, number][];
     };
-    comments: string | null;
     created_at: string;
     updated_at: string;
+    comments: string | null;
     distance: number;
     source: 'draw' | 'gpx_upload';
-};
+}
 
 export interface RouteWithDistance extends DbRoute {
     distance: number;
