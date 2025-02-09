@@ -10,6 +10,10 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import * as turf from '@turf/turf';
 import { ActivityCategory } from '@/lib/categories';
+import { Button } from '@/components/ui/button';
+import { Upload } from 'lucide-react';
+import { GpxUpload } from '@/components/MapComponent/controls/GpxUpload';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MobileViewProps {
 	isOnline: boolean;
@@ -185,6 +189,7 @@ export function MobileView({
 	setSelectedWaypoint,
 }: MobileViewProps) {
 	const [forecasts, setForecasts] = useState<AvalancheForecast[]>([]);
+	const { user } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedCategories, setSelectedCategories] = useState<ActivityCategory[]>([
@@ -325,30 +330,51 @@ export function MobileView({
 								</div>
 							)}
 							{activeItem === `routes` && (
-								<div className="space-y-4">
-									{routes.map((route) => (
-										<div
-											key={route.id}
-											className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
-											onClick={() => {
-												handleRouteSelect(route);
-												setSelectedRoute(route);
-												setSelectedRouteId(route.id);
-												setShowDetailsDrawer(true);
-											}}
-										>
-											<div className="flex justify-between items-start">
-												<div>
-													<h3 className="font-medium">{route.name}</h3>
-													<p className="text-sm text-muted-foreground">
-														Distance: {(route.distance || calculateRouteDistance(route)).toFixed(1)} km
-													</p>
-													{route.comments && <p className="text-sm text-muted-foreground mt-2">{route.comments}</p>}
+								<>
+									<div className="space-y-4 pb-20">
+										{routes.map((route) => (
+											<div
+												key={route.id}
+												className="p-4 border rounded-lg cursor-pointer hover:bg-accent"
+												onClick={() => {
+													handleRouteSelect(route);
+													setSelectedRoute(route);
+													setSelectedRouteId(route.id);
+													setShowDetailsDrawer(true);
+												}}
+											>
+												<div className="flex justify-between items-start">
+													<div>
+														<h3 className="font-medium">{route.name}</h3>
+														<p className="text-sm text-muted-foreground">
+															Distance: {(route.distance || calculateRouteDistance(route)).toFixed(1)} km
+														</p>
+														{route.comments && <p className="text-sm text-muted-foreground mt-2">{route.comments}</p>}
+													</div>
 												</div>
 											</div>
+										))}
+									</div>
+									<div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+										<div className="relative">
+											<Button
+												variant="secondary"
+												className="w-full flex items-center justify-center gap-2"
+												disabled={!user?.id || !handleRouteSave}
+											>
+												<Upload className="h-4 w-4" />
+												Upload GPX File
+											</Button>
+											{user?.id && handleRouteSave && (
+												<GpxUpload
+													onRouteSave={handleRouteSave}
+													userId={user.id}
+													className="absolute inset-0 opacity-0 cursor-pointer"
+												/>
+											)}
 										</div>
-									))}
-								</div>
+									</div>
+								</>
 							)}
 							{activeItem === `waypoints` && (
 								<div className="space-y-4">
