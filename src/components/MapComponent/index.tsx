@@ -86,7 +86,6 @@ export const MapComponent = ({
 }: MapComponentProps) => {
 	const mapContainerRef = useRef<HTMLDivElement>(null);
 	const mapRef = useRef<MapRef>();
-	const geolocateControlRef = useRef<any>(null);
 	const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
 	const [selectedRoute, setSelectedRoute] = useState<DbRoute | null>(null);
 	const [localRoutes, setLocalRoutes] = useState<DbRoute[]>(routes || []);
@@ -222,33 +221,6 @@ export const MapComponent = ({
 		if (mapRef.current && onMapLoad) {
 			const map = mapRef.current.getMap();
 			onMapLoad(map);
-
-			// Request location permission on mount
-			if ('permissions' in navigator) {
-				navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-					if (result.state === 'prompt') {
-						navigator.geolocation.getCurrentPosition(
-							() => {
-								// Success - permission granted
-								console.log('Location permission granted');
-								// Trigger geolocation control
-								if (geolocateControlRef.current) {
-									geolocateControlRef.current.trigger();
-								}
-							},
-							() => {
-								// Error - permission denied
-								console.log('Location permission denied');
-							}
-						);
-					} else if (result.state === 'granted') {
-						// Permission was already granted, trigger geolocation
-						if (geolocateControlRef.current) {
-							geolocateControlRef.current.trigger();
-						}
-					}
-				});
-			}
 
 			// Wait for the map to be idle before updating visible activities
 			const onIdle = () => {
@@ -722,7 +694,6 @@ export const MapComponent = ({
 					activeItem={activeItem}
 					onDrawToggle={setIsDrawing}
 					isDrawing={isDrawing}
-					geolocateControlRef={geolocateControlRef}
 				/>
 
 				<AddWaypointControl isActive={isAddingWaypoint} onClick={() => setIsAddingWaypoint(!isAddingWaypoint)} />

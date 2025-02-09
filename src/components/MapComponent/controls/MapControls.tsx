@@ -1,7 +1,6 @@
 'use client';
 
 import { GeolocateControl, NavigationControl } from 'react-map-gl';
-import type { GeolocateControl as GeolocateControlRef } from 'mapbox-gl';
 import { LayersControl } from '../LayersControl';
 import DrawControl from './DrawControl';
 import { ViewModeControl } from './ViewModeControl';
@@ -42,7 +41,6 @@ interface MapControlsProps {
 	activeItem: string;
 	onDrawToggle: (isDrawing: boolean) => void;
 	isDrawing: boolean;
-	geolocateControlRef: React.RefObject<GeolocateControlRef>;
 }
 
 const MapControls = ({
@@ -70,7 +68,6 @@ const MapControls = ({
 	activeItem,
 	onDrawToggle,
 	isDrawing,
-	geolocateControlRef,
 }: MapControlsProps) => {
 	const { isMobile } = useResponsiveLayout();
 
@@ -83,13 +80,7 @@ const MapControls = ({
 
 	return (
 		<div className="absolute top-4 right-4 flex flex-col gap-2">
-			<GeolocateControl
-				ref={geolocateControlRef}
-				position="top-right"
-				showUserHeading={true}
-				trackUserLocation={true}
-				showAccuracyCircle={false}
-			/>
+			<GeolocateControl position="top-right" showUserHeading={true} trackUserLocation={true} />
 			<NavigationControl position="top-right" visualizePitch={is3DMode} showZoom={true} showCompass={true} />
 			<LayersControl
 				layers={layers}
