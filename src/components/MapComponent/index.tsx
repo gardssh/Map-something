@@ -86,6 +86,7 @@ export const MapComponent = ({
 }: MapComponentProps) => {
 	const mapContainerRef = useRef<HTMLDivElement>(null);
 	const mapRef = useRef<MapRef>();
+	const geolocateControlRef = useRef<any>(null);
 	const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
 	const [selectedRoute, setSelectedRoute] = useState<DbRoute | null>(null);
 	const [localRoutes, setLocalRoutes] = useState<DbRoute[]>(routes || []);
@@ -230,12 +231,21 @@ export const MapComponent = ({
 							() => {
 								// Success - permission granted
 								console.log('Location permission granted');
+								// Trigger geolocation control
+								if (geolocateControlRef.current) {
+									geolocateControlRef.current.trigger();
+								}
 							},
 							() => {
 								// Error - permission denied
 								console.log('Location permission denied');
 							}
 						);
+					} else if (result.state === 'granted') {
+						// Permission was already granted, trigger geolocation
+						if (geolocateControlRef.current) {
+							geolocateControlRef.current.trigger();
+						}
 					}
 				});
 			}
@@ -712,6 +722,7 @@ export const MapComponent = ({
 					activeItem={activeItem}
 					onDrawToggle={setIsDrawing}
 					isDrawing={isDrawing}
+					geolocateControlRef={geolocateControlRef}
 				/>
 
 				<AddWaypointControl isActive={isAddingWaypoint} onClick={() => setIsAddingWaypoint(!isAddingWaypoint)} />
