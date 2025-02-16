@@ -172,7 +172,11 @@ const baseLayers: LayerDefinition[] = [
           source: 'norge-topo',
           paint: { 'raster-opacity': 1 }
         }
-      ]
+      ],
+      terrain: {
+        source: 'mapbox-dem',
+        exaggeration: 1.5
+      }
     }
   },
   {
