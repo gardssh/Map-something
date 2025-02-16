@@ -1,6 +1,6 @@
 import type { StyleSpecification } from 'mapbox-gl';
 
-export type BaseLayerId = 'outdoors' | 'satellite' | 'norge-topo' | 'norge-flyfoto' | 'finnish-terrain' | 'finnish-aerial' | 'sverige-topo';
+export type BaseLayerId = 'outdoors' | 'satellite' | 'norge-topo' | 'norge-flyfoto' | 'finnish-terrain' | 'finnish-aerial' | 'sverige-topo' | 'norge-ocean';
 export type OverlayLayerId = 'bratthet' | 'snoskred' | 'custom-tileset';
 export type LayerId = BaseLayerId | OverlayLayerId;
 
@@ -202,6 +202,38 @@ const baseLayers: LayerDefinition[] = [
           id: 'norge-flyfoto-layer',
           type: 'raster',
           source: 'norge-flyfoto',
+          paint: { 'raster-opacity': 1 }
+        }
+      ]
+    }
+  },
+  {
+    id: 'norge-ocean',
+    name: 'Norge Ocean',
+    isBase: true,
+    group: 'Local Maps',
+    style: {
+      version: 8,
+      glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+      sources: {
+        'norge-ocean': {
+          type: 'raster',
+          tiles: ['https://cache.kartverket.no/v1/wmts/1.0.0/sjokartraster/default/webmercator/{z}/{y}/{x}.png'],
+          tileSize: 256,
+          attribution: '&copy; <a href="http://www.kartverket.no/">Kartverket</a>'
+        },
+        'mapbox-dem': {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14
+        }
+      },
+      layers: [
+        {
+          id: 'norge-ocean-layer',
+          type: 'raster',
+          source: 'norge-ocean',
           paint: { 'raster-opacity': 1 }
         }
       ]

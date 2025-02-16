@@ -710,6 +710,8 @@ export const MapComponent = ({
 
 				<WaypointLayer waypoints={waypoints} selectedWaypoint={selectedWaypoint} visible={waypointsVisible} />
 
+				<DNTCabinLayer visible={dntCabinsVisible} />
+
 				<MapUI
 					activities={activities}
 					selectedCategories={selectedCategories}
@@ -726,8 +728,6 @@ export const MapComponent = ({
 				{isAddingWaypoint && isMobile && (
 					<CrosshairOverlay onConfirm={handleWaypointPlacementConfirm} onCancel={() => setIsAddingWaypoint(false)} />
 				)}
-
-				<DNTCabinLayer visible={dntCabinsVisible} />
 			</Map>
 
 			{isMobile && !isAddingWaypoint && (

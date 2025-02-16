@@ -88,7 +88,24 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 				}
 			});
 
-			// Add layers
+			// Find the first activity layer to use as reference for insertion
+			const activityLayers = [
+				'foot-sports',
+				'cycle-sports',
+				'water-sports',
+				'winter-sports',
+				'other-sports'
+			];
+
+			let beforeLayerId: string | undefined;
+			for (const layerId of activityLayers) {
+				if (map.getLayer(layerId)) {
+					beforeLayerId = layerId;
+					break;
+				}
+			}
+
+			// Add layers before activity layers
 			style.layers.forEach(layerDef => {
 				if (!map.getLayer(layerDef.id)) {
 					map.addLayer({
@@ -97,7 +114,7 @@ export const useMapLayers = ({ mapRef }: UseMapLayersProps) => {
 							...layerDef.layout,
 							visibility: 'visible'
 						}
-					});
+					}, beforeLayerId); // Add before the first activity layer
 				}
 			});
 		} catch (error) {
