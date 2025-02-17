@@ -5,8 +5,15 @@ import { toast } from 'sonner';
 import { Layer, Source, useMap } from 'react-map-gl';
 import { RecordControl } from '../MapComponent/controls/RecordControl';
 import { RecordingInfo } from './RecordingInfo';
+import * as turf from '@turf/turf';
+import type { DrawnRoute } from '@/types/route';
 
-export const ActivityRecorder: React.FC = () => {
+interface ActivityRecorderProps {
+	onRouteSave?: (route: DrawnRoute) => void;
+	userId: string;
+}
+
+export const ActivityRecorder: React.FC<ActivityRecorderProps> = ({ onRouteSave, userId }) => {
 	const { current: map } = useMap();
 	const [isMapReady, setIsMapReady] = useState(false);
 	const {
@@ -47,6 +54,7 @@ export const ActivityRecorder: React.FC = () => {
 		}
 
 		try {
+			// Save as activity
 			const activity = processRecordedActivity(
 				positions,
 				distance,
@@ -57,6 +65,29 @@ export const ActivityRecorder: React.FC = () => {
 			);
 
 			await saveActivity(activity);
+
+			// Save as route
+			if (onRouteSave) {
+				const route: DrawnRoute = {
+					id: `record-${Date.now()}`,
+					name: activityName || 'Recorded Activity',
+					user_id: userId,
+					geometry: {
+						type: 'LineString',
+						coordinates: positions.map((pos) => [pos.longitude, pos.latitude]),
+					},
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+					comments: null,
+					distance: turf.length(turf.lineString(positions.map((pos) => [pos.longitude, pos.latitude])), {
+						units: 'kilometers',
+					}),
+					source: 'record',
+				};
+
+				await onRouteSave(route);
+			}
+
 			toast.success('Activity saved successfully');
 			resetRecording();
 			setShowSaveDialog(false);
@@ -104,8 +135,16 @@ export const ActivityRecorder: React.FC = () => {
 				type="line"
 				paint={{
 					'line-color': '#FF0000',
-					'line-width': 3,
+					'line-width': 4,
 					'line-opacity': 0.8,
+				}}
+			/>
+			<Layer
+				id="recording-points"
+				type="circle"
+				paint={{
+					'circle-radius': 4,
+					'circle-color': '#FF0000',
 				}}
 			/>
 		</Source>

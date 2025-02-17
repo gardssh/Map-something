@@ -13,7 +13,7 @@ export interface DrawnRoute {
     updated_at: string;
     comments: string | null;
     distance: number;
-    source: 'draw' | 'gpx_upload';
+    source: 'draw' | 'gpx_upload' | 'record';
 }
 
 export interface RouteWithDistance extends DbRoute {

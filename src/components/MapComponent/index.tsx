@@ -607,7 +607,7 @@ export const MapComponent = ({
 				<Image src="/api_logo_cptblWith_strava_horiz_light.svg" alt="Strava API" width={100} height={15} priority />
 			</div>
 			<SearchBox mapRef={mapRef as React.RefObject<MapRef>} />
-			<ActivityRecorder />
+			<ActivityRecorder onRouteSave={onRouteSave} userId={user?.id || ''} />
 			<Map
 				ref={mapRef as React.RefObject<MapRef>}
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
