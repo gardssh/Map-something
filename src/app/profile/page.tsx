@@ -284,6 +284,24 @@ export default function ProfilePage() {
 				</CardContent>
 			</Card>
 
+			{/* Activity Recording */}
+			<Card className="mb-8">
+				<CardHeader>
+					<CardTitle>Activity Recording</CardTitle>
+					<CardDescription>Record activities directly from your device</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="flex flex-col space-y-4">
+						<p className="text-sm text-muted-foreground">
+							Record activities using your device's GPS. Track your route, speed, elevation, and more.
+						</p>
+						<Link href="/record">
+							<Button className="w-full">Start Recording</Button>
+						</Link>
+					</div>
+				</CardContent>
+			</Card>
+
 			{/* Password Settings */}
 			<Card className="mb-8">
 				<CardHeader>
