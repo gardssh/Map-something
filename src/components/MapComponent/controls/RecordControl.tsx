@@ -7,31 +7,35 @@ interface RecordControlProps {
 
 export const RecordControl = ({ isRecording, onClick }: RecordControlProps) => {
 	const createControl = useCallback(() => {
-		// Remove any existing record controls first
-		const existingControls = document.querySelectorAll('.mapboxgl-ctrl-record-container');
-		existingControls.forEach((control) => control.remove());
+		// Find or create the record control group
+		let controlGroup = document.querySelector('.mapboxgl-ctrl-record-group');
+		if (!controlGroup) {
+			controlGroup = document.createElement('div');
+			controlGroup.className = 'mapboxgl-ctrl mapboxgl-ctrl-group mapboxgl-ctrl-record-group';
+		}
 
-		const container = document.createElement('div');
-		container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group mapboxgl-ctrl-record-container';
+		// Create the button if it doesn't exist
+		let button = controlGroup.querySelector('.mapboxgl-ctrl-record') as HTMLButtonElement;
+		if (!button) {
+			button = document.createElement('button');
+			button.className = 'mapboxgl-ctrl-record';
+			button.style.cssText = `
+				width: 29px;
+				height: 29px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: white;
+				border: none;
+				cursor: pointer;
+				padding: 0;
+				border-radius: 4px;
+			`;
+			controlGroup.appendChild(button);
+		}
 
-		// Create the button
-		const button = document.createElement('button');
-		button.className = 'mapboxgl-ctrl-record';
-		button.style.cssText = `
-			width: 29px;
-			height: 29px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background: white;
-			border: none;
-			cursor: pointer;
-			padding: 0;
-			border-radius: 4px;
-		`;
+		// Update button appearance
 		button.title = isRecording ? 'Stop Recording (Click to save or discard)' : 'Start Recording';
-
-		// Update button appearance based on recording state
 		const color = '#ef4444';
 		button.innerHTML = isRecording
 			? `<svg width="20" height="20" viewBox="0 0 24 24" fill="${color}" stroke="none">
@@ -51,11 +55,11 @@ export const RecordControl = ({ isRecording, onClick }: RecordControlProps) => {
 			}
 		};
 
+		button.removeEventListener('click', handleClick);
 		button.addEventListener('click', handleClick);
-		container.appendChild(button);
 
 		return {
-			container,
+			controlGroup,
 			button,
 			handleClick,
 		};
@@ -64,34 +68,37 @@ export const RecordControl = ({ isRecording, onClick }: RecordControlProps) => {
 	useEffect(() => {
 		let cleanup: (() => void) | undefined;
 
-		// Function to add the control
 		const addControl = () => {
 			const topRightControls = document.querySelector('.mapboxgl-ctrl-top-right');
 			if (!topRightControls) {
-				// If controls container isn't ready, try again in a moment
 				setTimeout(addControl, 100);
 				return;
 			}
 
-			const { container, button, handleClick } = createControl();
-			topRightControls.appendChild(container);
+			const { controlGroup, button, handleClick } = createControl();
+
+			// Ensure the control group is in the correct position (after navigation controls)
+			const navigationControl = topRightControls.querySelector('.mapboxgl-ctrl-group');
+			if (navigationControl && navigationControl.nextSibling) {
+				topRightControls.insertBefore(controlGroup, navigationControl.nextSibling);
+			} else {
+				topRightControls.appendChild(controlGroup);
+			}
 
 			cleanup = () => {
 				button.removeEventListener('click', handleClick);
-				container.remove();
+				controlGroup.remove();
 			};
 		};
 
-		// Start the process of adding the control
 		addControl();
 
-		// Cleanup function
 		return () => {
 			if (cleanup) {
 				cleanup();
 			}
 		};
-	}, [createControl, isRecording]); // Only re-run when recording state changes
+	}, [createControl]);
 
 	return null;
 };
