@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useActivityRecording } from '@/hooks/useActivityRecording';
 import { processRecordedActivity, saveActivity } from '@/services/activity';
 import { toast } from 'sonner';
-import { Layer, Source } from 'react-map-gl';
+import { Layer, Source, useMap } from 'react-map-gl';
 import { RecordControl } from '../MapComponent/controls/RecordControl';
 import { RecordingInfo } from './RecordingInfo';
 
 export const ActivityRecorder: React.FC = () => {
+	const { current: map } = useMap();
+	const [isMapReady, setIsMapReady] = useState(false);
 	const {
 		isRecording,
 		currentPosition,
@@ -18,13 +20,20 @@ export const ActivityRecorder: React.FC = () => {
 		startRecording,
 		stopRecording,
 		resetRecording,
-		error
+		error,
 	} = useActivityRecording();
 
 	const [activityName, setActivityName] = useState('');
 	const [activityType, setActivityType] = useState('Run');
 	const [showSaveDialog, setShowSaveDialog] = useState(false);
 	const [isExpanded, setIsExpanded] = useState(true);
+
+	// Check if map is ready
+	useEffect(() => {
+		if (map && !isMapReady) {
+			setIsMapReady(true);
+		}
+	}, [map, isMapReady]);
 
 	const handleStopRecording = () => {
 		stopRecording();
@@ -74,32 +83,38 @@ export const ActivityRecorder: React.FC = () => {
 		}
 	};
 
-	// Create GeoJSON for the recorded path only if we have positions
-	const pathGeoJSON = positions.length > 0 ? {
-		type: 'Feature',
-		properties: {},
-		geometry: {
-			type: 'LineString',
-			coordinates: positions.map((pos) => [pos.longitude, pos.latitude]),
-		},
-	} : null;
+	// Create GeoJSON for the recorded path only if we have positions and map is ready
+	const pathGeoJSON =
+		isMapReady && positions.length > 0
+			? {
+					type: 'Feature',
+					properties: {},
+					geometry: {
+						type: 'LineString',
+						coordinates: positions.map((pos) => [pos.longitude, pos.latitude]),
+					},
+				}
+			: null;
+
+	// Only render the Source and Layer components when map and data are ready
+	const renderPath = isMapReady && pathGeoJSON && (
+		<Source type="geojson" data={pathGeoJSON}>
+			<Layer
+				id="recording-path"
+				type="line"
+				paint={{
+					'line-color': '#FF0000',
+					'line-width': 3,
+					'line-opacity': 0.8,
+				}}
+			/>
+		</Source>
+	);
 
 	return (
 		<>
 			{/* Map overlay for the recorded path */}
-			{pathGeoJSON && (
-				<Source type="geojson" data={pathGeoJSON}>
-					<Layer
-						id="recording-path"
-						type="line"
-						paint={{
-							'line-color': '#FF0000',
-							'line-width': 3,
-							'line-opacity': 0.8,
-						}}
-					/>
-				</Source>
-			)}
+			{renderPath}
 
 			{/* Recording button */}
 			<RecordControl isRecording={isRecording} onClick={handleRecordToggle} />
