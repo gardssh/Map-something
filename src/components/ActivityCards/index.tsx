@@ -301,7 +301,18 @@ export function ActivityCards({
 				waypoints: visibleWaypointsId,
 			});
 		}
-	}, [mapCenter, visibleActivitiesId, visibleRoutesId, visibleWaypointsId]);
+	}, [
+		showCards,
+		mapCenter,
+		lastMapCenter,
+		visibleActivitiesId,
+		visibleRoutesId,
+		visibleWaypointsId,
+		lastVisibleIds,
+		onActivityHighlight,
+		onRouteHighlight,
+		onWaypointHighlight,
+	]);
 
 	if (!showCards) {
 		return (
