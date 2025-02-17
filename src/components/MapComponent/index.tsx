@@ -202,19 +202,45 @@ export const MapComponent = ({
 		};
 	}, [updateVisibleIds]);
 
-	const { onHover, onClick } = useMapEvents({
-		activities,
-		routes,
-		waypoints,
-		setSelectedRouteId,
-		setSelectedRoute,
+	const handleActivityHighlight = useCallback(
+		(activity: Activity) => {
+			setSelectedActivity(activity);
+			setSelectedRouteId(activity.id);
+		},
+		[setSelectedRouteId]
+	);
+
+	const handleRouteHighlight = useCallback(
+		(route: DbRoute) => {
+			setSelectedRoute(route);
+			setSelectedRouteId(route.id);
+		},
+		[setSelectedRouteId]
+	);
+
+	const handleWaypointHighlight = useCallback((waypoint: Waypoint) => {
+		setSelectedWaypoint(waypoint);
+	}, []);
+
+	const handleActivitySelect = useCallback(
+		(activity: Activity) => {
+			handleActivityHighlight(activity);
+			onActivitySelect?.(activity);
+		},
+		[handleActivityHighlight, onActivitySelect]
+	);
+
+	const { onHover, handleClick } = useMapEvents({
+		isMobile,
+		onActivitySelect: handleActivitySelect,
 		onRouteSelect,
+		onWaypointSelect: handleWaypointSelect,
+		setSelectedRouteId,
 		setHoverInfo,
 		isDrawing,
-		mapRef,
-		switchCoordinates,
-		handleWaypointSelect,
-		onActivitySelect,
+		isAddingWaypoint,
+		setNewWaypointCoords,
+		setShowWaypointDialog,
 	});
 
 	useEffect(() => {
@@ -343,34 +369,6 @@ export const MapComponent = ({
 	useEffect(() => {
 		setSelectedWaypoint(parentSelectedWaypoint || null);
 	}, [parentSelectedWaypoint]);
-
-	const handleActivityHighlight = useCallback(
-		(activity: Activity) => {
-			setSelectedActivity(activity);
-			setSelectedRouteId(activity.id);
-		},
-		[setSelectedRouteId]
-	);
-
-	const handleRouteHighlight = useCallback(
-		(route: DbRoute) => {
-			setSelectedRoute(route);
-			setSelectedRouteId(route.id);
-		},
-		[setSelectedRouteId]
-	);
-
-	const handleWaypointHighlight = useCallback((waypoint: Waypoint) => {
-		setSelectedWaypoint(waypoint);
-	}, []);
-
-	const handleActivitySelect = useCallback(
-		(activity: Activity) => {
-			handleActivityHighlight(activity);
-			onActivitySelect?.(activity);
-		},
-		[handleActivityHighlight, onActivitySelect]
-	);
 
 	const handleTouchStart = useCallback((e: MapLayerTouchEvent) => {
 		setTouchStartPoint({ x: e.point.x, y: e.point.y });
@@ -621,7 +619,7 @@ export const MapComponent = ({
 				mapStyle={mapStyle}
 				onMoveEnd={() => updateVisibleIds()}
 				onMouseMove={onHover}
-				onClick={onClick}
+				onClick={handleClick}
 				onTouchStart={handleTouchStart}
 				onTouchEnd={handleTouchEnd}
 				{...mapSettings(isDrawing, is3DMode)}
