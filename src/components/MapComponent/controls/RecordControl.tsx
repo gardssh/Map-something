@@ -22,29 +22,52 @@ export const RecordControl = ({ isRecording, onClick }: RecordControlProps) => {
 			// Create the button
 			const button = document.createElement('button');
 			button.className = 'mapboxgl-ctrl-record';
-			button.style.cssText =
-				'width: 29px; height: 29px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; padding: 0;';
+			button.style.cssText = `
+				width: 29px;
+				height: 29px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: white;
+				border: none;
+				cursor: pointer;
+				padding: 0;
+				border-radius: 4px;
+			`;
 			button.title = isRecording ? 'Stop Recording (Click to save or discard)' : 'Start Recording';
 
 			// Update button appearance based on recording state
 			const updateButtonAppearance = () => {
+				const color = isRecording ? '#ef4444' : '#ef4444';
 				button.innerHTML = isRecording
-					? `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="text-red-500">
+					? `<svg width="20" height="20" viewBox="0 0 24 24" fill="${color}" stroke="none">
 						 <rect x="6" y="6" width="12" height="12" rx="1"/>
 					   </svg>`
-					: `<svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" class="text-red-500">
+					: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2">
 						 <circle cx="12" cy="12" r="8"/>
 					   </svg>`;
 			};
 
 			updateButtonAppearance();
-			button.addEventListener('click', onClick);
-			container.appendChild(button);
-		}
 
-		return () => {
-			container.remove();
-		};
+			const handleClick = (e: Event) => {
+				e.preventDefault();
+				e.stopPropagation();
+				try {
+					onClick();
+				} catch (error) {
+					console.error('Error in record button click:', error);
+				}
+			};
+
+			button.addEventListener('click', handleClick);
+			container.appendChild(button);
+
+			return () => {
+				button.removeEventListener('click', handleClick);
+				container.remove();
+			};
+		}
 	}, [isRecording, onClick]);
 
 	return null;
