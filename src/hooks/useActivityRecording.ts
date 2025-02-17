@@ -18,6 +18,7 @@ interface ActivityRecording {
   distance: number;
   averageSpeed: number;
   currentSpeed: number | null;
+  error: string | null;
 }
 
 export const useActivityRecording = () => {
@@ -30,6 +31,7 @@ export const useActivityRecording = () => {
     distance: 0,
     averageSpeed: 0,
     currentSpeed: null,
+    error: null
   });
 
   const [watchId, setWatchId] = useState<number | null>(null);
@@ -64,18 +66,15 @@ export const useActivityRecording = () => {
         const positions = [...prev.positions, newPosition];
         let distance = prev.distance;
 
-        // Calculate distance if we have at least two positions
         if (positions.length > 1) {
           const lastPos = positions[positions.length - 2];
           distance += calculateDistance(lastPos, newPosition);
         }
 
-        // Calculate elapsed time
         const elapsedTime = prev.startTime
           ? (position.timestamp - prev.startTime) / 1000
           : 0;
 
-        // Calculate average speed (m/s)
         const averageSpeed = elapsedTime > 0 ? distance / elapsedTime : 0;
 
         return {
@@ -86,39 +85,67 @@ export const useActivityRecording = () => {
           elapsedTime,
           averageSpeed,
           currentSpeed: newPosition.speed,
+          error: null
         };
       });
     },
     []
   );
 
-  const startRecording = useCallback(() => {
-    if (!navigator.geolocation) {
-      console.error('Geolocation is not supported by this browser.');
-      return;
-    }
-
-    const id = navigator.geolocation.watchPosition(
-      handlePositionUpdate,
-      (error) => {
-        console.error('Error getting location:', error);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
+  const startRecording = useCallback(async () => {
+    try {
+      if (!navigator.geolocation) {
+        throw new Error('Geolocation is not supported by your browser');
       }
-    );
 
-    setWatchId(id);
-    setRecording((prev) => ({
-      ...prev,
-      isRecording: true,
-      startTime: Date.now(),
-      positions: [],
-      distance: 0,
-      elapsedTime: 0,
-    }));
+      // First, request permission
+      const permission = await navigator.permissions.query({ name: 'geolocation' });
+      if (permission.state === 'denied') {
+        throw new Error('Location permission denied. Please enable location services to record activities.');
+      }
+
+      // Get initial position to verify it works
+      await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
+        });
+      });
+
+      const id = navigator.geolocation.watchPosition(
+        handlePositionUpdate,
+        (error) => {
+          console.error('Error getting location:', error);
+          setRecording(prev => ({
+            ...prev,
+            error: `Location error: ${error.message}`
+          }));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
+        }
+      );
+
+      setWatchId(id);
+      setRecording((prev) => ({
+        ...prev,
+        isRecording: true,
+        startTime: Date.now(),
+        positions: [],
+        distance: 0,
+        elapsedTime: 0,
+        error: null
+      }));
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      setRecording(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to start recording'
+      }));
+    }
   }, [handlePositionUpdate]);
 
   const stopRecording = useCallback(() => {
@@ -130,6 +157,7 @@ export const useActivityRecording = () => {
     setRecording((prev) => ({
       ...prev,
       isRecording: false,
+      error: null
     }));
   }, [watchId]);
 
@@ -143,10 +171,10 @@ export const useActivityRecording = () => {
       distance: 0,
       averageSpeed: 0,
       currentSpeed: null,
+      error: null
     });
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (watchId !== null) {

@@ -18,6 +18,7 @@ export const ActivityRecorder: React.FC = () => {
 		startRecording,
 		stopRecording,
 		resetRecording,
+		error
 	} = useActivityRecording();
 
 	const [activityName, setActivityName] = useState('');
@@ -57,28 +58,36 @@ export const ActivityRecorder: React.FC = () => {
 		}
 	};
 
-	const handleRecordToggle = () => {
+	const handleRecordToggle = async () => {
 		if (isRecording) {
 			handleStopRecording();
 		} else {
-			startRecording();
+			try {
+				await startRecording();
+				if (error) {
+					toast.error(error);
+				}
+			} catch (err) {
+				toast.error('Failed to start recording');
+				console.error('Error starting recording:', err);
+			}
 		}
 	};
 
-	// Create GeoJSON for the recorded path
-	const pathGeoJSON = {
+	// Create GeoJSON for the recorded path only if we have positions
+	const pathGeoJSON = positions.length > 0 ? {
 		type: 'Feature',
 		properties: {},
 		geometry: {
 			type: 'LineString',
 			coordinates: positions.map((pos) => [pos.longitude, pos.latitude]),
 		},
-	};
+	} : null;
 
 	return (
 		<>
 			{/* Map overlay for the recorded path */}
-			{positions.length > 0 && (
+			{pathGeoJSON && (
 				<Source type="geojson" data={pathGeoJSON}>
 					<Layer
 						id="recording-path"
