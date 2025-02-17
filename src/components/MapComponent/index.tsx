@@ -32,6 +32,7 @@ import { useDNTCabins } from './hooks/useDNTCabins';
 import { mapLayers } from './config/mapLayers';
 import { SearchBox } from './controls/SearchBox';
 import { ActivityCategory } from '@/lib/categories';
+import { ActivityRecorder } from '@/components/recording/ActivityRecorder';
 
 declare global {
 	interface Window {
@@ -606,6 +607,7 @@ export const MapComponent = ({
 				<Image src="/api_logo_cptblWith_strava_horiz_light.svg" alt="Strava API" width={100} height={15} priority />
 			</div>
 			<SearchBox mapRef={mapRef as React.RefObject<MapRef>} />
+			<ActivityRecorder />
 			<Map
 				ref={mapRef as React.RefObject<MapRef>}
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
