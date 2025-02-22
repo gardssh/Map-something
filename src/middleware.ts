@@ -4,18 +4,44 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   try {
-    // Debug logs
+    // Create a response early so we can modify headers
+    const res = NextResponse.next()
+    
+    // Debug logs for request
+    console.log('Request URL:', request.url)
     console.log('Cookie header:', request.headers.get('cookie'))
     console.log('Auth header:', request.headers.get('authorization'))
-    console.log('Request URL:', request.url)
-
-    const res = NextResponse.next()
+    
+    // Create client
     const supabase = createMiddlewareClient({ req: request, res })
-
-    // Refresh the session if possible
+    
+    // Try to get the session first
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     if (sessionError) {
       console.error('Session error:', sessionError)
+    }
+    console.log('Session found:', !!session)
+
+    // Get the access token from cookie
+    const accessToken = request.cookies.get('sb-access-token')?.value
+    console.log('Access token found in cookie:', !!accessToken)
+
+    if (accessToken) {
+      try {
+        // Try to set the session with the token
+        const { data: { user }, error: setSessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: '',
+        })
+        
+        if (setSessionError) {
+          console.error('Error setting session:', setSessionError)
+        } else {
+          console.log('Session set successfully with token')
+        }
+      } catch (error) {
+        console.error('Error in setSession:', error)
+      }
     }
 
     // Get the user - this is key for validation
@@ -23,24 +49,12 @@ export async function middleware(request: NextRequest) {
     if (userError) {
       console.error('User error:', userError)
     }
-
-    // Check for token in cookie
-    const accessToken = request.cookies.get('sb-access-token')?.value
-    if (accessToken) {
-      console.log('Found access token in cookie')
-      try {
-        await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: '',
-        })
-      } catch (error) {
-        console.error('Error setting session from cookie:', error)
-      }
-    }
+    console.log('User found:', !!user)
 
     // Define public routes that don't require authentication
     const isPublicRoute = request.nextUrl.pathname.startsWith('/login') ||
                          request.nextUrl.pathname.startsWith('/signup') ||
+                         request.nextUrl.pathname === '/' ||
                          request.nextUrl.pathname.startsWith('/auth/callback')
 
     // If no user and trying to access protected route, redirect to login
@@ -66,8 +80,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - public folder
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
 } 
+
 
