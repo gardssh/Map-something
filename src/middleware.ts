@@ -13,40 +13,36 @@ export async function middleware(request: NextRequest) {
     const url = new URL(request.url)
     console.log('Request domain:', url.hostname)
     console.log('Cookie header:', request.headers.get('cookie'))
-    console.log('Auth header:', request.headers.get('authorization'))
 
     // Create client
     const supabase = createMiddlewareClient({ req: request, res })
-    
-    // Try to get the session first
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    console.log('Initial session check:', { found: !!session, error: sessionError?.message })
 
-    // Get the token only from the valid domain
+    // Get the token from cookie
     const accessToken = request.cookies.get('sb-access-token')?.value
     console.log('Found access token:', !!accessToken)
 
+    let user = null
     if (accessToken) {
       try {
-        // Try to set the session with the token
-        const { data: { user }, error: setSessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: '',
-        })
+        // Try to get user directly first
+        const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser(accessToken)
+        console.log('Get user result:', { found: !!currentUser, error: userError?.message })
         
-        if (setSessionError) {
-          console.error('Error setting session:', setSessionError)
-        } else {
-          console.log('Session set successfully with token, user:', !!user)
+        if (currentUser) {
+          user = currentUser
+        } else if (userError) {
+          // If error, try to refresh the session
+          const { data: { session }, error: refreshError } = await supabase.auth.refreshSession()
+          console.log('Refresh session result:', { found: !!session, error: refreshError?.message })
+          
+          if (session) {
+            user = session.user
+          }
         }
       } catch (error) {
-        console.error('Error in setSession:', error)
+        console.error('Error validating token:', error)
       }
     }
-
-    // Final user check
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    console.log('Final user check:', { found: !!user, error: userError?.message })
 
     // Define public routes that don't require authentication
     const isPublicRoute = request.nextUrl.pathname.startsWith('/login') ||
