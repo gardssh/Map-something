@@ -80,7 +80,15 @@ function ProfileContent({ user }: { user: any }) {
 	const [stravaToken, setStravaToken] = useState<any>(null);
 	const [activitiesCount, setActivitiesCount] = useState(0);
 	const [memberSince, setMemberSince] = useState<string | null>(null);
+	const [isWebView, setIsWebView] = useState(false);
 	const supabase = createClient();
+
+	// Detect if we're in a WebView
+	useEffect(() => {
+		const userAgent = window.navigator.userAgent.toLowerCase();
+		setIsWebView(userAgent.includes('villspor') || // Check for your app's WebView identifier
+			         window.location.search.includes('webview=true')); // Check for query parameter
+	}, []);
 
 	// Load initial values and data
 	useEffect(() => {
@@ -230,14 +238,16 @@ function ProfileContent({ user }: { user: any }) {
 
 	return (
 		<div className="container max-w-2xl mx-auto p-4 pt-20">
-			<div className="mb-6">
-				<Link href="/">
-					<Button variant="ghost" className="gap-2">
-						<ArrowLeft className="h-4 w-4" />
-						Back to Map
-					</Button>
-				</Link>
-			</div>
+			{!isWebView && (
+				<div className="mb-6">
+					<Link href="/">
+						<Button variant="ghost" className="gap-2">
+							<ArrowLeft className="h-4 w-4" />
+							Back to Map
+						</Button>
+					</Link>
+				</div>
+			)}
 			<h1 className="text-3xl font-bold mb-8">Profile Settings</h1>
 
 			{/* Profile Overview */}
