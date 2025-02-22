@@ -1,5 +1,8 @@
 'use client';
 
+// Add dynamic route configuration
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
