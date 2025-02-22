@@ -34,22 +34,43 @@ export async function middleware(request: NextRequest) {
     let user = null
     if (accessToken) {
       try {
-        // First try to set the session with both tokens
-        if (refreshToken) {
-          console.log('Setting session with both tokens...')
-          const { error: sessionError } = await supabase.auth.setSession({
+        // First try to get the current session
+        const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession()
+        console.log('Existing session:', { found: !!existingSession, error: sessionError?.message })
+
+        if (!existingSession && refreshToken) {
+          console.log('No existing session, setting session with tokens...')
+          // Set session with both tokens
+          const { error: setError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken
           })
-          if (sessionError) {
-            console.error('Error setting session:', sessionError.message)
+          if (setError) {
+            console.error('Error setting session:', setError.message)
           } else {
             console.log('Session set successfully')
+            
+            // Set cookies with correct attributes
+            res.cookies.set('sb-access-token', accessToken, {
+              path: '/',
+              sameSite: 'lax',
+              secure: true,
+              domain: VALID_DOMAIN
+            })
+            
+            if (refreshToken) {
+              res.cookies.set('sb-refresh-token', refreshToken, {
+                path: '/',
+                sameSite: 'lax',
+                secure: true,
+                domain: VALID_DOMAIN
+              })
+            }
           }
         }
 
         // Try to get user with the token
-        const { data: { user: tokenUser }, error: userError } = await supabase.auth.getUser(accessToken)
+        const { data: { user: tokenUser }, error: userError } = await supabase.auth.getUser()
         console.log('Get user result:', { found: !!tokenUser, error: userError?.message })
 
         if (tokenUser) {

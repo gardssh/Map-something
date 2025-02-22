@@ -14,50 +14,69 @@ export default async function ProfilePage() {
 	const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
 	try {
-		// Get tokens from cookies
+		// First check if we have an existing session
+		const {
+			data: { session: existingSession },
+			error: sessionError,
+		} = await supabase.auth.getSession();
+		console.log('Existing session check:', { found: !!existingSession, error: sessionError?.message });
+
+		if (existingSession?.user) {
+			console.log('Using existing session user:', existingSession.user.email);
+			return <ClientProfile user={existingSession.user} />;
+		}
+
+		// If no session, try to get tokens from cookies
 		const accessToken = cookieStore.get('sb-access-token')?.value;
 		const refreshToken = cookieStore.get('sb-refresh-token')?.value;
+		const projectToken = cookieStore.get('sb-kmespwkiycekritowlfo-auth-token')?.value;
 
 		console.log('Profile page tokens:', {
 			hasAccessToken: !!accessToken,
 			hasRefreshToken: !!refreshToken,
+			hasProjectToken: !!projectToken,
 		});
 
-		// Try to set session if we have both tokens
-		if (accessToken && refreshToken) {
-			console.log('Setting session with tokens...');
-			const { error: sessionError } = await supabase.auth.setSession({
-				access_token: accessToken,
-				refresh_token: refreshToken,
-			});
-
-			if (sessionError) {
-				console.error('Error setting session:', sessionError);
-				redirect('/login');
-			}
-			console.log('Session set successfully');
+		if (!accessToken) {
+			console.log('No access token found, redirecting to login');
+			redirect('/login');
 		}
 
-		// Get the user
+		// Try to get user with the token first
 		const {
 			data: { user },
 			error: userError,
-		} = await supabase.auth.getUser();
+		} = await supabase.auth.getUser(accessToken);
+
+		if (user) {
+			console.log('User found with token:', user.email);
+
+			// If we have both tokens, try to set the session
+			if (refreshToken) {
+				console.log('Setting session with tokens...');
+				const { error: setError } = await supabase.auth.setSession({
+					access_token: accessToken,
+					refresh_token: refreshToken,
+				});
+
+				if (setError) {
+					console.error('Error setting session:', setError);
+					// Continue anyway since we have a valid user
+				} else {
+					console.log('Session set successfully');
+				}
+			}
+
+			return <ClientProfile user={user} />;
+		}
 
 		if (userError) {
 			console.error('Error getting user:', userError);
 			redirect('/login');
 		}
 
-		if (!user) {
-			console.log('No user found, redirecting to login');
-			redirect('/login');
-		}
-
-		console.log('User found:', user.email);
-
-		// Render the client component with user data
-		return <ClientProfile user={user} />;
+		console.log('No user found, redirecting to login');
+		redirect('/login');
 	} catch (error) {
 		console.error('Error in ProfilePage:', error);
 		redirect('/login');
