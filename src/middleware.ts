@@ -26,59 +26,75 @@ export async function middleware(request: NextRequest) {
     // Get both access and refresh tokens
     const accessToken = request.cookies.get('sb-access-token')?.value
     const refreshToken = request.cookies.get('sb-refresh-token')?.value
+    const projectToken = request.cookies.get('sb-kmespwkiycekritowlfo-auth-token')?.value
+    
     console.log('Tokens found:', { 
       hasAccessToken: !!accessToken,
-      hasRefreshToken: !!refreshToken
+      hasRefreshToken: !!refreshToken,
+      hasProjectToken: !!projectToken
     })
 
     let user = null
     if (accessToken) {
       try {
-        // First try to get the current session
-        const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession()
-        console.log('Existing session:', { found: !!existingSession, error: sessionError?.message })
+        // Try to get user with the token directly first
+        const { data: { user: tokenUser }, error: userError } = await supabase.auth.getUser(accessToken)
+        console.log('Get user result:', { found: !!tokenUser, error: userError?.message })
 
-        if (!existingSession && refreshToken) {
-          console.log('No existing session, setting session with tokens...')
-          // Set session with both tokens
-          const { error: setError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-          })
-          if (setError) {
-            console.error('Error setting session:', setError.message)
-          } else {
-            console.log('Session set successfully')
-            
-            // Set cookies with correct attributes
-            res.cookies.set('sb-access-token', accessToken, {
-              path: '/',
-              sameSite: 'lax',
-              secure: true,
-              domain: VALID_DOMAIN
+        if (tokenUser) {
+          user = tokenUser
+          console.log('User found with token:', tokenUser.email)
+          
+          // Set auth header
+          res.headers.set('Authorization', `Bearer ${accessToken}`)
+
+          // Now try to establish the session
+          if (refreshToken) {
+            console.log('Setting session for found user...')
+            const { error: setError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
             })
-            
-            if (refreshToken) {
+            if (setError) {
+              console.error('Error setting session:', setError.message)
+            } else {
+              console.log('Session set successfully')
+              
+              // Set cookies with correct attributes
+              res.cookies.set('sb-access-token', accessToken, {
+                path: '/',
+                sameSite: 'lax',
+                secure: true,
+                domain: VALID_DOMAIN
+              })
+              
               res.cookies.set('sb-refresh-token', refreshToken, {
                 path: '/',
                 sameSite: 'lax',
                 secure: true,
                 domain: VALID_DOMAIN
               })
+
+              if (projectToken) {
+                res.cookies.set('sb-kmespwkiycekritowlfo-auth-token', projectToken, {
+                  path: '/',
+                  sameSite: 'lax',
+                  secure: true,
+                  domain: VALID_DOMAIN
+                })
+              }
             }
           }
-        }
-
-        // Try to get user with the token
-        const { data: { user: tokenUser }, error: userError } = await supabase.auth.getUser()
-        console.log('Get user result:', { found: !!tokenUser, error: userError?.message })
-
-        if (tokenUser) {
-          user = tokenUser
-          console.log('User found:', tokenUser.email)
-          
-          // Set auth header
-          res.headers.set('Authorization', `Bearer ${accessToken}`)
+        } else if (userError?.message === 'Auth session missing!') {
+          // If session is missing but we have tokens, try to refresh
+          console.log('Attempting to refresh session...')
+          const { data: { session }, error: refreshError } = await supabase.auth.refreshSession()
+          if (session?.user) {
+            user = session.user
+            console.log('Session refreshed, user found:', user.email)
+          } else if (refreshError) {
+            console.error('Error refreshing session:', refreshError.message)
+          }
         }
       } catch (error) {
         console.error('Error in auth flow:', error)
