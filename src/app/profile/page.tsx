@@ -1,3 +1,4 @@
+// Server Component imports
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -5,7 +6,37 @@ import { redirect } from 'next/navigation';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // Disable all caching for this page
 
-// Add dynamic route configuration
+// Server-side component
+export default async function ProfilePage() {
+	const cookieStore = cookies();
+	const supabase = createServerComponentClient({ cookies: () => cookieStore });
+
+	try {
+		// Check session server-side
+		const {
+			data: { session },
+			error: sessionError,
+		} = await supabase.auth.getSession();
+
+		if (sessionError) {
+			console.error('Error getting session:', sessionError);
+			redirect('/login');
+		}
+
+		if (!session) {
+			redirect('/login');
+		}
+
+		return <ClientProfile user={session.user} />;
+	} catch (error) {
+		console.error('Error in ProfilePage:', error);
+		redirect('/login');
+	}
+}
+
+// Client Component in a separate file - ClientProfile.tsx
+('use client');
+
 import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -30,7 +61,6 @@ import {
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-// Token handler component
 function TokenHandler() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
@@ -75,7 +105,6 @@ function TokenHandler() {
 	return null;
 }
 
-// Main profile component
 function ProfileContent({ user }: { user: any }) {
 	const { refreshSession, signOut } = useAuth();
 	const router = useRouter();
@@ -413,42 +442,7 @@ function ProfileContent({ user }: { user: any }) {
 	);
 }
 
-// Server-side component
-export default async function ProfilePage() {
-	const cookieStore = cookies();
-	const supabase = createServerComponentClient({ cookies: () => cookieStore });
-
-	try {
-		// Check session server-side
-		const {
-			data: { session },
-			error: sessionError,
-		} = await supabase.auth.getSession();
-
-		if (sessionError) {
-			console.error('Error getting session:', sessionError);
-			redirect('/login');
-		}
-
-		if (!session) {
-			redirect('/login');
-		}
-
-		return (
-			<Suspense fallback={<div>Loading...</div>}>
-				<ClientProfileContent user={session.user} />
-			</Suspense>
-		);
-	} catch (error) {
-		console.error('Error in ProfilePage:', error);
-		redirect('/login');
-	}
-}
-
-// Move the client components to a separate component
-('use client');
-
-function ClientProfileContent({ user }: { user: any }) {
+function ClientProfile({ user }: { user: any }) {
 	return (
 		<Suspense fallback={<div>Loading...</div>}>
 			<TokenHandler />
