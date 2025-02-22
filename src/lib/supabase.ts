@@ -5,7 +5,14 @@ let supabaseClient: ReturnType<typeof createClientComponentClient<Database>> | n
 
 export const createClient = () => {
   if (!supabaseClient) {
-    supabaseClient = createClientComponentClient<Database>();
+    supabaseClient = createClientComponentClient<Database>({
+      cookieOptions: {
+        name: 'sb-token',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+      },
+    });
   }
   return supabaseClient;
 } 

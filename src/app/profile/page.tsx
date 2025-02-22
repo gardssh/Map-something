@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+// Add dynamic route configuration
+export const dynamic = 'force-dynamic';
+
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +14,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { StravaConnectionStatus } from '@/features/strava-auth/components/StravaConnectionStatus';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -24,7 +27,53 @@ import {
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-export default function ProfilePage() {
+// Token handler component
+function TokenHandler() {
+	const searchParams = useSearchParams();
+	const router = useRouter();
+	const { refreshSession } = useAuth();
+	const supabase = createClient();
+
+	useEffect(() => {
+		const token = searchParams.get('token');
+		if (token) {
+			const handleToken = async () => {
+				try {
+					const {
+						data: { session },
+						error,
+					} = await supabase.auth.setSession({
+						access_token: token,
+						refresh_token: '',
+					});
+
+					if (error) {
+						console.error('Error setting session:', error);
+						router.push('/login');
+						return;
+					}
+
+					// Remove token from URL but keep user on profile page
+					const newUrl = new URL(window.location.href);
+					newUrl.searchParams.delete('token');
+					window.history.replaceState({}, '', newUrl);
+
+					// Refresh the session to update the UI
+					await refreshSession();
+				} catch (error) {
+					console.error('Error handling token:', error);
+					router.push('/login');
+				}
+			};
+			handleToken();
+		}
+	}, [searchParams]);
+
+	return null;
+}
+
+// Main profile component
+function ProfileContent() {
 	const { user, refreshSession, signOut } = useAuth();
 	const router = useRouter();
 	const [firstName, setFirstName] = useState('');
@@ -358,5 +407,15 @@ export default function ProfilePage() {
 				<p className={`mt-4 text-sm ${message.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>{message}</p>
 			)}
 		</div>
+	);
+}
+
+// Main page component with Suspense
+export default function ProfilePage() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<TokenHandler />
+			<ProfileContent />
+		</Suspense>
 	);
 }
