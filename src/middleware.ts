@@ -11,41 +11,56 @@ export async function middleware(request: NextRequest) {
     
     // Debug logs for request
     const url = new URL(request.url)
-    console.log('Request URL:', request.url)
-    console.log('Request domain:', url.hostname)
+    console.log('=== Request Info ===')
+    console.log('URL:', request.url)
+    console.log('Method:', request.method)
+    console.log('Domain:', url.hostname)
+    
+    // Log all cookies for debugging
+    const allCookies = request.cookies.getAll()
+    console.log('All cookies:', allCookies.map(c => ({ name: c.name, value: c.value.substring(0, 10) + '...' })))
 
     // Create client
     const supabase = createMiddlewareClient({ req: request, res })
 
+    // Try to get existing session first
+    console.log('Checking existing session...')
+    const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession()
+    console.log('Existing session:', { found: !!existingSession, error: sessionError?.message })
+
     // Get the token from cookie
     const accessToken = request.cookies.get('sb-access-token')?.value
-    console.log('Found access token:', !!accessToken)
+    const refreshToken = request.cookies.get('sb-refresh-token')?.value
+    console.log('Auth tokens in cookies:', { 
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken
+    })
 
     let user = null
-    if (accessToken) {
+    if (accessToken && !existingSession) {
       try {
-        // First set the session with the token
-        const { data: { session }, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: ''
-        })
-        console.log('Set session result:', { success: !!session, error: sessionError?.message })
+        console.log('No existing session, trying to create one with token')
+        // Try to get user with the token
+        const { data: { user: tokenUser }, error: userError } = await supabase.auth.getUser(accessToken)
+        console.log('Get user result:', { found: !!tokenUser, error: userError?.message })
 
-        if (session) {
-          // If session was set successfully, get the user
-          const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser()
-          console.log('Get user result:', { found: !!currentUser, error: userError?.message })
+        if (tokenUser) {
+          user = tokenUser
+          console.log('User found with token:', tokenUser.email)
           
-          if (currentUser) {
-            user = currentUser
-            console.log('User found:', currentUser.email)
-          }
-        } else {
-          console.log('Failed to set session:', sessionError?.message)
+          // Set session explicitly
+          const { error: setError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || ''
+          })
+          console.log('Set session result:', { error: setError?.message })
         }
       } catch (error) {
         console.error('Error in auth flow:', error)
       }
+    } else if (existingSession) {
+      user = existingSession.user
+      console.log('Using existing session user:', user.email)
     }
 
     // Define public routes that don't require authentication
@@ -53,6 +68,12 @@ export async function middleware(request: NextRequest) {
                          request.nextUrl.pathname.startsWith('/signup') ||
                          request.nextUrl.pathname === '/' ||
                          request.nextUrl.pathname.startsWith('/auth/callback')
+
+    console.log('Route info:', {
+      path: request.nextUrl.pathname,
+      isPublic: isPublicRoute,
+      hasUser: !!user
+    })
 
     // If no user and trying to access protected route, redirect to login
     if (!user && !isPublicRoute) {
@@ -62,9 +83,11 @@ export async function middleware(request: NextRequest) {
 
     // Set auth header if we have a user
     if (user) {
+      console.log('Setting auth header for user:', user.email)
       res.headers.set('Authorization', `Bearer ${accessToken}`)
     }
 
+    console.log('=== Request End ===')
     return res
   } catch (error) {
     console.error('Middleware error:', error)
