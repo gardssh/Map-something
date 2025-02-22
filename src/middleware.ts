@@ -23,44 +23,45 @@ export async function middleware(request: NextRequest) {
     // Create client
     const supabase = createMiddlewareClient({ req: request, res })
 
-    // Try to get existing session first
-    console.log('Checking existing session...')
-    const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession()
-    console.log('Existing session:', { found: !!existingSession, error: sessionError?.message })
-
-    // Get the token from cookie
+    // Get both access and refresh tokens
     const accessToken = request.cookies.get('sb-access-token')?.value
     const refreshToken = request.cookies.get('sb-refresh-token')?.value
-    console.log('Auth tokens in cookies:', { 
+    console.log('Tokens found:', { 
       hasAccessToken: !!accessToken,
       hasRefreshToken: !!refreshToken
     })
 
     let user = null
-    if (accessToken && !existingSession) {
+    if (accessToken) {
       try {
-        console.log('No existing session, trying to create one with token')
+        // First try to set the session with both tokens
+        if (refreshToken) {
+          console.log('Setting session with both tokens...')
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          })
+          if (sessionError) {
+            console.error('Error setting session:', sessionError.message)
+          } else {
+            console.log('Session set successfully')
+          }
+        }
+
         // Try to get user with the token
         const { data: { user: tokenUser }, error: userError } = await supabase.auth.getUser(accessToken)
         console.log('Get user result:', { found: !!tokenUser, error: userError?.message })
 
         if (tokenUser) {
           user = tokenUser
-          console.log('User found with token:', tokenUser.email)
+          console.log('User found:', tokenUser.email)
           
-          // Set session explicitly
-          const { error: setError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || ''
-          })
-          console.log('Set session result:', { error: setError?.message })
+          // Set auth header
+          res.headers.set('Authorization', `Bearer ${accessToken}`)
         }
       } catch (error) {
         console.error('Error in auth flow:', error)
       }
-    } else if (existingSession) {
-      user = existingSession.user
-      console.log('Using existing session user:', user.email)
     }
 
     // Define public routes that don't require authentication
@@ -79,12 +80,6 @@ export async function middleware(request: NextRequest) {
     if (!user && !isPublicRoute) {
       console.log('No user found, redirecting to login')
       return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    // Set auth header if we have a user
-    if (user) {
-      console.log('Setting auth header for user:', user.email)
-      res.headers.set('Authorization', `Bearer ${accessToken}`)
     }
 
     console.log('=== Request End ===')
