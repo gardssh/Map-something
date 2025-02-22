@@ -9,7 +9,6 @@ import type { DbRoute } from '@/types/supabase';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import HelpButton from '@/components/HelpButton';
 import { ActivityCategory } from '@/lib/categories';
-import { ActivityRecorder } from '@/components/recording/ActivityRecorder';
 
 interface Layer {
 	id: string;

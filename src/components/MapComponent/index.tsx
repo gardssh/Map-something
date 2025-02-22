@@ -32,7 +32,6 @@ import { useDNTCabins } from './hooks/useDNTCabins';
 import { mapLayers } from './config/mapLayers';
 import { SearchBox } from './controls/SearchBox';
 import { ActivityCategory } from '@/lib/categories';
-import { ActivityRecorder } from '@/components/recording/ActivityRecorder';
 
 declare global {
 	interface Window {
@@ -203,45 +202,19 @@ export const MapComponent = ({
 		};
 	}, [updateVisibleIds]);
 
-	const handleActivityHighlight = useCallback(
-		(activity: Activity) => {
-			setSelectedActivity(activity);
-			setSelectedRouteId(activity.id);
-		},
-		[setSelectedRouteId]
-	);
-
-	const handleRouteHighlight = useCallback(
-		(route: DbRoute) => {
-			setSelectedRoute(route);
-			setSelectedRouteId(route.id);
-		},
-		[setSelectedRouteId]
-	);
-
-	const handleWaypointHighlight = useCallback((waypoint: Waypoint) => {
-		setSelectedWaypoint(waypoint);
-	}, []);
-
-	const handleActivitySelect = useCallback(
-		(activity: Activity) => {
-			handleActivityHighlight(activity);
-			onActivitySelect?.(activity);
-		},
-		[handleActivityHighlight, onActivitySelect]
-	);
-
-	const { onHover, handleClick } = useMapEvents({
-		isMobile,
-		onActivitySelect: handleActivitySelect,
-		onRouteSelect,
-		onWaypointSelect: handleWaypointSelect,
+	const { onHover, onClick } = useMapEvents({
+		activities,
+		routes,
+		waypoints,
 		setSelectedRouteId,
+		setSelectedRoute,
+		onRouteSelect,
 		setHoverInfo,
 		isDrawing,
-		isAddingWaypoint,
-		setNewWaypointCoords,
-		setShowWaypointDialog,
+		mapRef,
+		switchCoordinates,
+		handleWaypointSelect,
+		onActivitySelect,
 	});
 
 	useEffect(() => {
@@ -370,6 +343,34 @@ export const MapComponent = ({
 	useEffect(() => {
 		setSelectedWaypoint(parentSelectedWaypoint || null);
 	}, [parentSelectedWaypoint]);
+
+	const handleActivityHighlight = useCallback(
+		(activity: Activity) => {
+			setSelectedActivity(activity);
+			setSelectedRouteId(activity.id);
+		},
+		[setSelectedRouteId]
+	);
+
+	const handleRouteHighlight = useCallback(
+		(route: DbRoute) => {
+			setSelectedRoute(route);
+			setSelectedRouteId(route.id);
+		},
+		[setSelectedRouteId]
+	);
+
+	const handleWaypointHighlight = useCallback((waypoint: Waypoint) => {
+		setSelectedWaypoint(waypoint);
+	}, []);
+
+	const handleActivitySelect = useCallback(
+		(activity: Activity) => {
+			handleActivityHighlight(activity);
+			onActivitySelect?.(activity);
+		},
+		[handleActivityHighlight, onActivitySelect]
+	);
 
 	const handleTouchStart = useCallback((e: MapLayerTouchEvent) => {
 		setTouchStartPoint({ x: e.point.x, y: e.point.y });
@@ -607,7 +608,6 @@ export const MapComponent = ({
 				<Image src="/api_logo_cptblWith_strava_horiz_light.svg" alt="Strava API" width={100} height={15} priority />
 			</div>
 			<SearchBox mapRef={mapRef as React.RefObject<MapRef>} />
-			<ActivityRecorder onRouteSave={onRouteSave} userId={user?.id || ''} />
 			<Map
 				ref={mapRef as React.RefObject<MapRef>}
 				mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_TOKEN}
@@ -621,7 +621,7 @@ export const MapComponent = ({
 				mapStyle={mapStyle}
 				onMoveEnd={() => updateVisibleIds()}
 				onMouseMove={onHover}
-				onClick={handleClick}
+				onClick={onClick}
 				onTouchStart={handleTouchStart}
 				onTouchEnd={handleTouchEnd}
 				{...mapSettings(isDrawing, is3DMode)}

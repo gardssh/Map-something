@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { StravaConnectionStatus } from '@/features/strava-auth/components/StravaConnectionStatus';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -27,6 +27,7 @@ import {
 export default function ProfilePage() {
 	const { user, refreshSession, signOut } = useAuth();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
 	const [password, setPassword] = useState('');
@@ -37,6 +38,42 @@ export default function ProfilePage() {
 	const [activitiesCount, setActivitiesCount] = useState(0);
 	const [memberSince, setMemberSince] = useState<string | null>(null);
 	const supabase = createClient();
+
+	// Handle token from URL
+	useEffect(() => {
+		const token = searchParams.get('token');
+		if (token) {
+			const handleToken = async () => {
+				try {
+					const {
+						data: { session },
+						error,
+					} = await supabase.auth.setSession({
+						access_token: token,
+						refresh_token: '',
+					});
+
+					if (error) {
+						console.error('Error setting session:', error);
+						router.push('/login');
+						return;
+					}
+
+					// Remove token from URL but keep user on profile page
+					const newUrl = new URL(window.location.href);
+					newUrl.searchParams.delete('token');
+					window.history.replaceState({}, '', newUrl);
+
+					// Refresh the session to update the UI
+					await refreshSession();
+				} catch (error) {
+					console.error('Error handling token:', error);
+					router.push('/login');
+				}
+			};
+			handleToken();
+		}
+	}, [searchParams]);
 
 	// Load initial values and data
 	useEffect(() => {

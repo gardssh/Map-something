@@ -1,121 +1,211 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { MapLayerMouseEvent, MapLayerTouchEvent } from 'react-map-gl';
-import type { Activity } from '@/types/activity';
+import type { MapLayerMouseEvent } from 'react-map-gl';
 import type { DbRoute } from '@/types/supabase';
+import type { Activity, HoverInfo } from '@/types/activity';
+import type { RoutePoints } from '@/components/activities/switchCor';
+import { handleBounds } from '../utils/mapUtils';
+import type { MapRef } from 'react-map-gl';
+import { formatTime } from '@/lib/timeFormat';
 import type { Waypoint } from '@/types/waypoint';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 interface UseMapEventsProps {
-	isMobile: boolean;
-	onActivitySelect?: (activity: Activity) => void;
-	onRouteSelect?: (route: DbRoute) => void;
-	onWaypointSelect?: (waypoint: Waypoint) => void;
-	setSelectedRouteId?: (id: string | number | null) => void;
-	setHoverInfo?: (info: any) => void;
-	isDrawing?: boolean;
-	isAddingWaypoint?: boolean;
-	setNewWaypointCoords?: (coords: [number, number] | null) => void;
-	setShowWaypointDialog?: (show: boolean) => void;
+	activities: Activity[];
+	routes?: DbRoute[];
+	waypoints?: Waypoint[];
+	setSelectedRouteId: (id: string | number | null) => void;
+	setSelectedRoute: (route: DbRoute | null) => void;
+	onRouteSelect?: (route: DbRoute | null) => void;
+	setHoverInfo: (info: HoverInfo | null) => void;
+	isDrawing: boolean;
+	mapRef: React.MutableRefObject<MapRef | undefined> | React.RefObject<MapRef>;
+	switchCoordinates: (activity: Activity) => RoutePoints;
+	handleWaypointSelect?: (waypoint: Waypoint | null) => void;
+	onActivitySelect?: (activity: Activity | null) => void;
 }
 
 export const useMapEvents = ({
-	isMobile,
-	onActivitySelect,
-	onRouteSelect,
-	onWaypointSelect,
+	activities,
+	routes,
+	waypoints,
 	setSelectedRouteId,
+	setSelectedRoute,
+	onRouteSelect,
 	setHoverInfo,
 	isDrawing,
-	isAddingWaypoint,
-	setNewWaypointCoords,
-	setShowWaypointDialog,
+	mapRef,
+	switchCoordinates,
+	handleWaypointSelect,
+	onActivitySelect,
 }: UseMapEventsProps) => {
-	const handleClick = useCallback(
-		(event: MapLayerMouseEvent | MapLayerTouchEvent) => {
-			if (isDrawing) return;
-
-			if (isAddingWaypoint) {
-				const [lng, lat] = event.lngLat.toArray();
-				setNewWaypointCoords?.([lng, lat]);
-				setShowWaypointDialog?.(true);
-				return;
-			}
-
-			const features = event.features;
-			if (!features?.length) {
-				setSelectedRouteId?.(null);
-				return;
-			}
-
-			const feature = features[0];
-			const properties = feature.properties;
-			const layerId = feature.layer?.id;
-
-			if (!properties || !layerId) return;
-
-			switch (layerId) {
-				case 'foot-sports':
-				case 'cycle-sports':
-				case 'water-sports':
-				case 'winter-sports':
-				case 'other-sports':
-				case 'unknown-sports':
-					onActivitySelect?.(properties as Activity);
-					break;
-				case 'saved-routes-layer':
-				case 'saved-routes-border':
-				case 'saved-routes-touch':
-					onRouteSelect?.(properties as DbRoute);
-					break;
-				case 'waypoints-layer':
-				case 'waypoints-layer-touch':
-					onWaypointSelect?.(properties as Waypoint);
-					break;
-				default:
-					break;
-			}
-		},
-		[
-			isDrawing,
-			isAddingWaypoint,
-			setNewWaypointCoords,
-			setShowWaypointDialog,
-			setSelectedRouteId,
-			onActivitySelect,
-			onRouteSelect,
-			onWaypointSelect,
-		]
-	);
+	const { isMobile } = useResponsiveLayout();
 
 	const onHover = useCallback(
 		(event: MapLayerMouseEvent) => {
-			if (isDrawing || isAddingWaypoint || isMobile) return;
+			const map = mapRef.current?.getMap();
+			if (!map) return;
 
-			const features = event.features;
-			if (!features?.length) {
-				setHoverInfo?.(null);
+			// Don't show hover info when drawing or on mobile
+			if (isDrawing || isMobile) {
+				setHoverInfo(null);
+				map.getCanvas().style.cursor = '';
+				return;
+			}
+
+			const features = event.features || [];
+			if (features.length === 0) {
+				setHoverInfo(null);
+				map.getCanvas().style.cursor = '';
 				return;
 			}
 
 			const feature = features[0];
-			const properties = feature.properties;
-			const layerId = feature.layer?.id;
+			const properties = feature?.properties;
+			if (!feature || !properties) {
+				setHoverInfo(null);
+				map.getCanvas().style.cursor = '';
+				return;
+			}
 
-			if (!properties || !layerId) return;
+			// Set pointer cursor for interactive features
+			map.getCanvas().style.cursor = 'pointer';
 
-			setHoverInfo?.({
-				x: event.point.x,
-				y: event.point.y,
-				feature: properties,
-				type: layerId,
-			});
+			// Handle activity hover
+			if (properties.isActivity) {
+				const activity = activities.find(a => a.id === properties.id);
+				if (activity) {
+					setHoverInfo({
+						id: activity.id,
+						name: activity.name,
+						type: activity.sport_type,
+						time: activity.moving_time ? formatTime(activity.moving_time) : '0:00',
+						longitude: event.lngLat.lng,
+						latitude: event.lngLat.lat,
+					});
+					return;
+				}
+			}
+
+			// Handle route hover
+			if (feature.layer?.id === 'saved-routes-layer' || feature.layer?.id === 'saved-routes-border') {
+				const route = routes?.find(r => r.id === properties.id);
+				if (route) {
+					setHoverInfo({
+						id: route.id,
+						name: route.name,
+						type: 'Route',
+						time: new Date(route.created_at).toLocaleDateString(),
+						longitude: event.lngLat.lng,
+						latitude: event.lngLat.lat,
+					});
+					return;
+				}
+			}
+
+			// Handle waypoint hover
+			if (feature.layer?.id === 'waypoints-layer') {
+				const waypoint = waypoints?.find(w => w.id === properties.id);
+				if (waypoint) {
+					setHoverInfo({
+						id: waypoint.id,
+						name: waypoint.name,
+						type: 'Waypoint',
+						time: new Date(waypoint.created_at).toLocaleDateString(),
+						longitude: event.lngLat.lng,
+						latitude: event.lngLat.lat,
+					});
+					return;
+				}
+			}
+
+			setHoverInfo(null);
+			map.getCanvas().style.cursor = '';
 		},
-		[isDrawing, isAddingWaypoint, isMobile, setHoverInfo]
+		[activities, routes, waypoints, isDrawing, setHoverInfo, mapRef]
+	);
+
+	const onClick = useCallback(
+		(event: MapLayerMouseEvent) => {
+			console.log('Click event:', event);
+			const features = event.features || [];
+			console.log('Number of features:', features.length);
+
+			if (features.length === 0) {
+				setSelectedRouteId(null);
+				setSelectedRoute(null);
+				onRouteSelect?.(null);
+				onActivitySelect?.(null);
+				handleWaypointSelect?.(null);
+				return;
+			}
+
+			const feature = features[0];
+			const properties = feature?.properties;
+			console.log('Selected feature:', feature);
+			console.log('Feature properties:', properties);
+
+			if (!feature || !properties) return;
+
+			// Handle activity clicks
+			if (properties.isActivity) {
+				console.log('Clicked on activity with ID:', properties.id);
+				const activity = activities.find(a => a.id === properties.id);
+				console.log('Found activity:', activity);
+				if (activity) {
+					setSelectedRouteId(activity.id);
+					setSelectedRoute(null);
+					onActivitySelect?.(activity);
+					const routePoints = switchCoordinates(activity);
+					handleBounds(mapRef as React.RefObject<MapRef>, routePoints.coordinates);
+				}
+				return;
+			}
+
+			// Handle route clicks
+			if (feature.layer?.id === 'saved-routes-layer' || feature.layer?.id === 'saved-routes-border') {
+				console.log('Clicked on route with ID:', properties.id);
+				const route = routes?.find(r => r.id === properties.id);
+				console.log('Found route:', route);
+				if (route) {
+					setSelectedRouteId(route.id);
+					setSelectedRoute(route);
+					onRouteSelect?.(route);
+					if ('coordinates' in route.geometry) {
+						handleBounds(mapRef as React.RefObject<MapRef>, route.geometry.coordinates as [number, number][]);
+					}
+				}
+				return;
+			}
+
+			// Handle waypoint clicks
+			if (feature.layer?.id === 'waypoints-layer') {
+				console.log('Clicked on waypoint with ID:', properties.id);
+				const waypoint = waypoints?.find(w => w.id === properties.id);
+				console.log('Found waypoint:', waypoint);
+				if (waypoint) {
+					handleWaypointSelect?.(waypoint);
+				}
+				return;
+			}
+		},
+		[
+			activities,
+			routes,
+			waypoints,
+			setSelectedRouteId,
+			setSelectedRoute,
+			onRouteSelect,
+			onActivitySelect,
+			mapRef,
+			switchCoordinates,
+			handleWaypointSelect,
+		]
 	);
 
 	return {
-		handleClick,
 		onHover,
+		onClick,
 	};
 }; 
