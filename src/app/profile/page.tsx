@@ -1,8 +1,11 @@
-'use client';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; // Disable all caching for this page
 
 // Add dynamic route configuration
-export const dynamic = 'force-dynamic';
-
 import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -73,8 +76,8 @@ function TokenHandler() {
 }
 
 // Main profile component
-function ProfileContent() {
-	const { user, refreshSession, signOut } = useAuth();
+function ProfileContent({ user }: { user: any }) {
+	const { refreshSession, signOut } = useAuth();
 	const router = useRouter();
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
@@ -410,12 +413,46 @@ function ProfileContent() {
 	);
 }
 
-// Main page component with Suspense
-export default function ProfilePage() {
+// Server-side component
+export default async function ProfilePage() {
+	const cookieStore = cookies();
+	const supabase = createServerComponentClient({ cookies: () => cookieStore });
+
+	try {
+		// Check session server-side
+		const {
+			data: { session },
+			error: sessionError,
+		} = await supabase.auth.getSession();
+
+		if (sessionError) {
+			console.error('Error getting session:', sessionError);
+			redirect('/login');
+		}
+
+		if (!session) {
+			redirect('/login');
+		}
+
+		return (
+			<Suspense fallback={<div>Loading...</div>}>
+				<ClientProfileContent user={session.user} />
+			</Suspense>
+		);
+	} catch (error) {
+		console.error('Error in ProfilePage:', error);
+		redirect('/login');
+	}
+}
+
+// Move the client components to a separate component
+('use client');
+
+function ClientProfileContent({ user }: { user: any }) {
 	return (
 		<Suspense fallback={<div>Loading...</div>}>
 			<TokenHandler />
-			<ProfileContent />
+			<ProfileContent user={user} />
 		</Suspense>
 	);
 }
