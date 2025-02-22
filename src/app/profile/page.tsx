@@ -14,23 +14,24 @@ export default async function ProfilePage() {
 	const supabase = createServerComponentClient({ cookies: () => cookieStore });
 
 	try {
-		// Check session server-side
+		// Get the user directly instead of checking session
 		const {
-			data: { session },
-			error: sessionError,
-		} = await supabase.auth.getSession();
+			data: { user },
+			error: userError,
+		} = await supabase.auth.getUser();
 
-		if (sessionError) {
-			console.error('Error getting session:', sessionError);
+		if (userError) {
+			console.error('Error getting user:', userError);
 			redirect('/login');
 		}
 
-		if (!session) {
+		if (!user) {
+			console.log('No user found, redirecting to login');
 			redirect('/login');
 		}
 
 		// Render the client component with user data
-		return <ClientProfile user={session.user} />;
+		return <ClientProfile user={user} />;
 	} catch (error) {
 		console.error('Error in ProfilePage:', error);
 		redirect('/login');
