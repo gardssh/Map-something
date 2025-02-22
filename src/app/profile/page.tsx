@@ -3,7 +3,7 @@
 // Add dynamic route configuration
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,22 +27,13 @@ import {
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-export default function ProfilePage() {
-	const { user, refreshSession, signOut } = useAuth();
-	const router = useRouter();
+// Token handler component
+function TokenHandler() {
 	const searchParams = useSearchParams();
-	const [firstName, setFirstName] = useState('');
-	const [lastName, setLastName] = useState('');
-	const [password, setPassword] = useState('');
-	const [confirmPassword, setConfirmPassword] = useState('');
-	const [message, setMessage] = useState('');
-	const [loading, setLoading] = useState(false);
-	const [stravaToken, setStravaToken] = useState<any>(null);
-	const [activitiesCount, setActivitiesCount] = useState(0);
-	const [memberSince, setMemberSince] = useState<string | null>(null);
+	const router = useRouter();
+	const { refreshSession } = useAuth();
 	const supabase = createClient();
 
-	// Handle token from URL
 	useEffect(() => {
 		const token = searchParams.get('token');
 		if (token) {
@@ -77,6 +68,24 @@ export default function ProfilePage() {
 			handleToken();
 		}
 	}, [searchParams]);
+
+	return null;
+}
+
+// Main profile component
+function ProfileContent() {
+	const { user, refreshSession, signOut } = useAuth();
+	const router = useRouter();
+	const [firstName, setFirstName] = useState('');
+	const [lastName, setLastName] = useState('');
+	const [password, setPassword] = useState('');
+	const [confirmPassword, setConfirmPassword] = useState('');
+	const [message, setMessage] = useState('');
+	const [loading, setLoading] = useState(false);
+	const [stravaToken, setStravaToken] = useState<any>(null);
+	const [activitiesCount, setActivitiesCount] = useState(0);
+	const [memberSince, setMemberSince] = useState<string | null>(null);
+	const supabase = createClient();
 
 	// Load initial values and data
 	useEffect(() => {
@@ -398,5 +407,15 @@ export default function ProfilePage() {
 				<p className={`mt-4 text-sm ${message.includes('Error') ? 'text-red-500' : 'text-green-500'}`}>{message}</p>
 			)}
 		</div>
+	);
+}
+
+// Main page component with Suspense
+export default function ProfilePage() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<TokenHandler />
+			<ProfileContent />
+		</Suspense>
 	);
 }
