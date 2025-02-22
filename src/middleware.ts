@@ -2,29 +2,29 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+const VALID_DOMAIN = 'kart.gardsh.no'
+
 export async function middleware(request: NextRequest) {
   try {
     // Create a response early so we can modify headers
     const res = NextResponse.next()
     
     // Debug logs for request
-    console.log('Request URL:', request.url)
+    const url = new URL(request.url)
+    console.log('Request domain:', url.hostname)
     console.log('Cookie header:', request.headers.get('cookie'))
     console.log('Auth header:', request.headers.get('authorization'))
-    
+
     // Create client
     const supabase = createMiddlewareClient({ req: request, res })
     
     // Try to get the session first
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError) {
-      console.error('Session error:', sessionError)
-    }
-    console.log('Session found:', !!session)
+    console.log('Initial session check:', { found: !!session, error: sessionError?.message })
 
-    // Get the access token from cookie
+    // Get the token only from the valid domain
     const accessToken = request.cookies.get('sb-access-token')?.value
-    console.log('Access token found in cookie:', !!accessToken)
+    console.log('Found access token:', !!accessToken)
 
     if (accessToken) {
       try {
@@ -37,19 +37,16 @@ export async function middleware(request: NextRequest) {
         if (setSessionError) {
           console.error('Error setting session:', setSessionError)
         } else {
-          console.log('Session set successfully with token')
+          console.log('Session set successfully with token, user:', !!user)
         }
       } catch (error) {
         console.error('Error in setSession:', error)
       }
     }
 
-    // Get the user - this is key for validation
+    // Final user check
     const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError) {
-      console.error('User error:', userError)
-    }
-    console.log('User found:', !!user)
+    console.log('Final user check:', { found: !!user, error: userError?.message })
 
     // Define public routes that don't require authentication
     const isPublicRoute = request.nextUrl.pathname.startsWith('/login') ||
@@ -63,6 +60,20 @@ export async function middleware(request: NextRequest) {
       const redirectUrl = new URL('/login', request.url)
       redirectUrl.searchParams.set('next', request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
+    }
+
+    // Set the token in the response headers if we have a user
+    if (user && accessToken) {
+      res.headers.set('Authorization', `Bearer ${accessToken}`)
+      
+      // Ensure cookie is set for the correct domain
+      res.cookies.set('sb-access-token', accessToken, {
+        domain: VALID_DOMAIN,
+        path: '/',
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 1 week
+      })
     }
 
     return res
