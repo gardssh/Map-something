@@ -209,16 +209,31 @@ export function MobileView({
 			}
 
 			const center = mapInstance.getCenter();
-			const response = await fetch(
-				`/api/avalanche-by-coordinates?x=${center.lng.toFixed(6)}&y=${center.lat.toFixed(6)}`
-			);
-			const result = await response.json();
+			console.log('Fetching forecast with coordinates:', { lng: center.lng, lat: center.lat });
 
-			if (!result.success) {
-				throw new Error(result.message || 'Failed to fetch forecast');
+			const url = `/api/avalanche-by-coordinates?x=${center.lng.toFixed(6)}&y=${center.lat.toFixed(6)}`;
+			console.log('Fetching from URL:', url);
+
+			const response = await fetch(url, {
+				headers: {
+					Accept: 'application/json',
+					'Cache-Control': 'no-cache',
+				},
+			});
+
+			// Log the full response for debugging
+			const responseData = await response.json();
+			console.log('Full response from API:', responseData);
+
+			if (!response.ok) {
+				throw new Error(responseData.message || `Failed to fetch forecast: ${response.status} ${response.statusText}`);
 			}
 
-			const forecastData = Array.isArray(result.data) ? result.data : [result.data];
+			if (!responseData.success) {
+				throw new Error(responseData.message || 'Failed to fetch forecast');
+			}
+
+			const forecastData = Array.isArray(responseData.data) ? responseData.data : [responseData.data];
 			if (forecastData.length === 0) {
 				setError('No forecast available for this location');
 				setForecasts([]);

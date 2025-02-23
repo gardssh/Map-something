@@ -4,22 +4,27 @@ import type { NextRequest } from 'next/server'
 
 const VALID_DOMAIN = 'kart.gardsh.no'
 
+// Define paths that don't require authentication
+const PUBLIC_PATHS = [
+  '/api/avalanche-by-coordinates',
+  '/api/activities',
+  '/api/cabins',
+  '/avalanche/',
+  '/data/dnt-cabins'
+]
+
 export async function middleware(request: NextRequest) {
   try {
     // Create a response early so we can modify headers
     const res = NextResponse.next()
     
-    // Debug logs for request
     const url = new URL(request.url)
-    console.log('=== Request Info ===')
-    console.log('URL:', request.url)
-    console.log('Method:', request.method)
-    console.log('Domain:', url.hostname)
-    
-    // Log all cookies for debugging
-    const allCookies = request.cookies.getAll()
-    console.log('All cookies:', allCookies.map(c => ({ name: c.name, value: c.value.substring(0, 10) + '...' })))
 
+    // Skip middleware for public paths that don't require auth
+    if (PUBLIC_PATHS.some(path => url.pathname.startsWith(path))) {
+      return NextResponse.next()
+    }
+    
     // Create client
     const supabase = createMiddlewareClient({ req: request, res })
 
@@ -28,11 +33,11 @@ export async function middleware(request: NextRequest) {
     const refreshToken = request.cookies.get('sb-refresh-token')?.value
     const projectToken = request.cookies.get('sb-kmespwkiycekritowlfo-auth-token')?.value
     
-    console.log('Tokens found:', { 
-      hasAccessToken: !!accessToken,
-      hasRefreshToken: !!refreshToken,
-      hasProjectToken: !!projectToken
-    })
+    // console.log('Tokens found:', { 
+    //   hasAccessToken: !!accessToken,
+    //   hasRefreshToken: !!refreshToken,
+    //   hasProjectToken: !!projectToken
+    // })
 
     let user = null
     if (accessToken) {
@@ -107,19 +112,19 @@ export async function middleware(request: NextRequest) {
                          request.nextUrl.pathname === '/' ||
                          request.nextUrl.pathname.startsWith('/auth/callback')
 
-    console.log('Route info:', {
-      path: request.nextUrl.pathname,
-      isPublic: isPublicRoute,
-      hasUser: !!user
-    })
+    //console.log('Route info:', {
+    //  path: request.nextUrl.pathname,
+    //  isPublic: isPublicRoute,
+    //  hasUser: !!user
+    //})
 
     // If no user and trying to access protected route, redirect to login
     if (!user && !isPublicRoute) {
-      console.log('No user found, redirecting to login')
+      //console.log('No user found, redirecting to login')
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    console.log('=== Request End ===')
+    //console.log('=== Request End ===')
     return res
   } catch (error) {
     console.error('Middleware error:', error)
@@ -136,8 +141,10 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - avalanche folder (static avalanche images)
+     * - data folder (DNT cabins data)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public/|avalanche/|data/).*)',
   ],
 } 
 

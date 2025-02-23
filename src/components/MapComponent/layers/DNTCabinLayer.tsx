@@ -17,6 +17,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 	const { isMobile } = useResponsiveLayout();
 	const [touchStartPoint, setTouchStartPoint] = useState<{ x: number; y: number } | null>(null);
 	const [touchStartTime, setTouchStartTime] = useState<number | null>(null);
+	const [layersInitialized, setLayersInitialized] = useState(false);
 
 	const handlePopupClose = useCallback(() => {
 		setSelectedCabin(null);
@@ -24,10 +25,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 
 	const handleMouseMove = useCallback(
 		(e: mapboxgl.MapMouseEvent) => {
-			if (!map || isMobile) return;
-
-			// Check if the layer exists before querying features
-			if (!map.getLayer('dnt-cabins-touch')) return;
+			if (!map || isMobile || !layersInitialized) return;
 
 			const features = map.queryRenderedFeatures(e.point, {
 				layers: ['dnt-cabins-touch'],
@@ -44,7 +42,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 				map.getCanvas().style.cursor = '';
 			}
 		},
-		[map, isMobile]
+		[map, isMobile, layersInitialized]
 	);
 
 	const handleMouseLeave = useCallback(() => {
@@ -60,7 +58,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 
 	const handleTouchEnd = useCallback(
 		(e: mapboxgl.MapLayerTouchEvent) => {
-			if (!map) return;
+			if (!map || !layersInitialized) return;
 
 			// Check if this was a drag or a tap
 			if (touchStartPoint && touchStartTime) {
@@ -95,12 +93,12 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 				}, 50);
 			}
 		},
-		[map, touchStartPoint, touchStartTime]
+		[map, touchStartPoint, touchStartTime, layersInitialized]
 	);
 
 	const handleMapClick = useCallback(
 		(e: mapboxgl.MapMouseEvent | mapboxgl.MapLayerTouchEvent) => {
-			if (!map) return;
+			if (!map || !layersInitialized) return;
 			const features = map.queryRenderedFeatures(e.point, {
 				layers: ['dnt-cabins-touch', 'dnt-cabins-touch-mobile'],
 			});
@@ -114,26 +112,62 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 				setSelectedCabin(null);
 			}
 		},
-		[map]
+		[map, layersInitialized]
 	);
 
 	useEffect(() => {
-		if (!map) return;
+		if (!map || !cabinData.features.length) return;
 
-		map.on('click', handleMapClick);
-		map.on('touchstart', handleTouchStart);
-		map.on('touchend', handleTouchEnd);
-		map.on('mousemove', handleMouseMove);
-		map.on('mouseleave', handleMouseLeave);
+		// Wait for the source and layers to be added
+		const checkLayers = () => {
+			const hasSource = map.getSource('dnt-cabins');
+			const hasMainLayer = map.getLayer('dnt-cabins');
+			const hasTouchLayer = map.getLayer('dnt-cabins-touch');
+			const hasTouchMobileLayer = map.getLayer('dnt-cabins-touch-mobile');
+			const hasLabelLayer = map.getLayer('dnt-cabins-label');
+
+			if (hasSource && hasMainLayer && hasTouchLayer && hasTouchMobileLayer && hasLabelLayer) {
+				setLayersInitialized(true);
+			}
+		};
+
+		// Check when source data or style changes
+		map.on('sourcedata', checkLayers);
+		map.on('styledata', checkLayers);
+
+		// Initial check
+		checkLayers();
+
+		// Add event listeners only after initialization
+		if (layersInitialized) {
+			map.on('click', handleMapClick);
+			map.on('touchstart', handleTouchStart);
+			map.on('touchend', handleTouchEnd);
+			map.on('mousemove', handleMouseMove);
+			map.on('mouseleave', handleMouseLeave);
+		}
 
 		return () => {
-			map.off('click', handleMapClick);
-			map.off('touchstart', handleTouchStart);
-			map.off('touchend', handleTouchEnd);
-			map.off('mousemove', handleMouseMove);
-			map.off('mouseleave', handleMouseLeave);
+			map.off('sourcedata', checkLayers);
+			map.off('styledata', checkLayers);
+			if (layersInitialized) {
+				map.off('click', handleMapClick);
+				map.off('touchstart', handleTouchStart);
+				map.off('touchend', handleTouchEnd);
+				map.off('mousemove', handleMouseMove);
+				map.off('mouseleave', handleMouseLeave);
+			}
 		};
-	}, [map, handleMapClick, handleTouchStart, handleTouchEnd, handleMouseMove, handleMouseLeave]);
+	}, [
+		map,
+		cabinData.features.length,
+		layersInitialized,
+		handleMapClick,
+		handleTouchStart,
+		handleTouchEnd,
+		handleMouseMove,
+		handleMouseLeave,
+	]);
 
 	if (!cabinData.features.length) return null;
 
@@ -150,19 +184,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 					}}
 					paint={{
 						'circle-color': '#000000',
-						'circle-radius': [
-							'interpolate',
-							['linear'],
-							['zoom'],
-							0,
-							25, // At zoom level 0, radius is 25px
-							10,
-							30, // At zoom level 10, radius is 30px
-							15,
-							35, // At zoom level 15, radius is 35px
-							20,
-							40, // At zoom level 20, radius is 40px
-						],
+						'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 25, 10, 30, 15, 35, 20, 40],
 						'circle-opacity': 0,
 					}}
 					minzoom={0}
@@ -179,19 +201,7 @@ export function DNTCabinLayer({ visible = false }: { visible?: boolean }) {
 					}}
 					paint={{
 						'circle-color': '#000000',
-						'circle-radius': [
-							'interpolate',
-							['linear'],
-							['zoom'],
-							0,
-							15, // At zoom level 0, radius is 15px
-							10,
-							20, // At zoom level 10, radius is 20px
-							15,
-							25, // At zoom level 15, radius is 25px
-							20,
-							30, // At zoom level 20, radius is 30px
-						],
+						'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 15, 10, 20, 15, 25, 20, 30],
 						'circle-opacity': 0,
 					}}
 					minzoom={0}

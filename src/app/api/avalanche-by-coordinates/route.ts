@@ -18,46 +18,99 @@ export async function GET(request: Request) {
     const endDate = tomorrow.toISOString().split('T')[0];
 
     try {
-        console.log(`Fetching forecast for coordinates: lat=${lat}, lng=${lng}`);
+        const debugInfo = {
+            coordinates: { lat, lng },
+            dates: { startDate, endDate },
+            requestInfo: { headers: {} } as any,
+            responseInfo: { headers: {}, status: 0, rawResponse: '' } as any
+        };
         
-        // Switch the order: latitude first, then longitude
-        const response = await fetch(
-            `https://api01.nve.no/hydrology/forecast/avalanche/v6.3.0/api/AvalancheWarningByCoordinates/Detail/${lat}/${lng}/1/${startDate}/${endDate}`,
-            {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            }
-        );
+        const url = `https://api01.nve.no/hydrology/forecast/avalanche/v6.3.0/api/AvalancheWarningByCoordinates/Detail/${lat}/${lng}/1/${startDate}/${endDate}`;
+        debugInfo.requestInfo.url = url;
+        
+        const response = await fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'User-Agent': 'MapViewer/1.0 (https://kart.gardsh.no)',
+                'Origin': 'https://www.varsom.no',
+                'Referer': 'https://www.varsom.no/',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            cache: 'no-cache'
+        });
 
-        if (!response.ok) {
-            console.error(`API error: ${response.status} ${response.statusText}`);
-            throw new Error(`API responded with status: ${response.status}`);
+        debugInfo.responseInfo.status = response.status;
+        debugInfo.responseInfo.headers = Object.fromEntries(response.headers.entries());
+        
+        // Get the raw response text first
+        const rawResponse = await response.text();
+        debugInfo.responseInfo.rawResponse = rawResponse.substring(0, 1000); // First 1000 characters
+
+        // Check if the response looks like HTML
+        if (rawResponse.trim().toLowerCase().startsWith('<!doctype') || rawResponse.includes('<html')) {
+            return NextResponse.json({ 
+                success: false, 
+                message: 'Received HTML response instead of JSON',
+                debug: debugInfo
+            }, { status: 500 });
         }
 
-        const data = await response.json();
-        console.log('API response data:', data);
-
-        // Ensure we have valid data
+        // Try to parse the response as JSON
+        let data;
+        try {
+            data = JSON.parse(rawResponse);
+        } catch (parseError: any) {
+            return NextResponse.json({ 
+                success: false, 
+                message: 'Failed to parse JSON response',
+                debug: debugInfo,
+                parseError: parseError.message
+            }, { status: 500 });
+        }
+        
         if (!data) {
-            return NextResponse.json({ success: false, message: 'No data received from API' }, { status: 404 });
+            return NextResponse.json({ 
+                success: false, 
+                message: 'No data received from API',
+                debug: debugInfo
+            }, { status: 404 });
         }
 
-        // If data is an array, return it directly; if it's a single object, wrap it in an array
         const processedData = Array.isArray(data) ? data : [data];
 
-        // Validate that we have the expected data structure
         if (!processedData.every(forecast => forecast && typeof forecast === 'object' && 'ValidFrom' in forecast)) {
-            console.error('Invalid forecast data structure:', processedData);
-            return NextResponse.json({ success: false, message: 'Invalid forecast data structure' }, { status: 500 });
+            return NextResponse.json({ 
+                success: false, 
+                message: 'Invalid forecast data structure',
+                debug: debugInfo,
+                receivedData: processedData
+            }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true, data: processedData });
+        return NextResponse.json({ 
+            success: true, 
+            data: processedData,
+            debug: debugInfo
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'public, max-age=3600'
+            }
+        });
     } catch (error) {
-        console.error('Error fetching avalanche forecast:', error);
-        return NextResponse.json(
-            { success: false, message: error instanceof Error ? error.message : 'Failed to fetch forecast' },
-            { status: 500 }
-        );
+        return NextResponse.json({
+            success: false, 
+            message: error instanceof Error ? error.message : 'Failed to fetch forecast',
+            error: error instanceof Error ? {
+                message: error.message,
+                stack: error.stack
+            } : error
+        }, { 
+            status: 500,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
     }
 } 
