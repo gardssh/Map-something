@@ -604,8 +604,15 @@ export const MapComponent = ({
 				touchAction: 'none',
 			}}
 		>
-			<div className="absolute top-4 left-4 z-10 bg-white/90 p-2 rounded-lg shadow-sm">
-				<Image src="/api_logo_cptblWith_strava_horiz_light.svg" alt="Strava API" width={100} height={15} priority />
+			<div className="absolute top-4 left-4 z-10 bg-white/90 p-2 rounded-lg shadow-sm hidden md:block">
+				<Image
+					src="/api_logo_cptblWith_strava_horiz_light.svg"
+					alt="Strava API"
+					width={100}
+					height={15}
+					priority
+					className="w-auto h-auto"
+				/>
 			</div>
 			<SearchBox mapRef={mapRef as React.RefObject<MapRef>} />
 			<Map
