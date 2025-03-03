@@ -37,8 +37,11 @@ export default async function ProfilePage() {
 			hasProjectToken: !!projectToken,
 		});
 
-		if (!accessToken) {
-			console.log('No access token found, redirecting to login');
+		// Try to use any available token
+		const tokenToUse = accessToken || projectToken;
+
+		if (!tokenToUse) {
+			console.log('No tokens found, redirecting to login');
 			redirect('/login');
 		}
 
@@ -46,7 +49,7 @@ export default async function ProfilePage() {
 		const {
 			data: { user },
 			error: userError,
-		} = await supabase.auth.getUser(accessToken);
+		} = await supabase.auth.getUser(tokenToUse);
 
 		if (user) {
 			console.log('User found with token:', user.email);
@@ -55,7 +58,7 @@ export default async function ProfilePage() {
 			if (refreshToken) {
 				console.log('Setting session with tokens...');
 				const { error: setError } = await supabase.auth.setSession({
-					access_token: accessToken,
+					access_token: tokenToUse,
 					refresh_token: refreshToken,
 				});
 

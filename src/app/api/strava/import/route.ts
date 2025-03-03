@@ -118,33 +118,64 @@ async function formatStravaActivity(activity: any): Promise<Activity> {
 
 export async function POST(request: Request) {
     try {
+        console.log('Strava import API called');
+        
         // Get Supabase client and verify authentication
         const cookieStore = cookies()
         const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
         
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
+        if (sessionError) {
+            console.error('Session error:', sessionError);
+            return NextResponse.json({ error: 'Authentication error', details: sessionError.message }, { status: 401 });
+        }
+        
         if (!session?.user) {
-            console.error('No session found:', sessionError)
+            console.error('No session found');
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const { access_token, page = 1 } = await request.json()
+        // Parse request body
+        let requestBody;
+        try {
+            requestBody = await request.json();
+        } catch (error) {
+            console.error('Error parsing request body:', error);
+            return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+        }
+        
+        const { access_token, page = 1 } = requestBody;
+        
         if (!access_token) {
+            console.error('Missing access token');
             return NextResponse.json({ error: 'Missing access token' }, { status: 400 })
         }
 
         // Fetch one page of activities from Strava
-        console.log('Fetching Strava activities...')
-        const activities = await getAllActivities(access_token, page)
-        console.log(`Fetched ${activities.length} activities from Strava`)
+        console.log(`Fetching Strava activities for page ${page}...`);
+        let activities;
+        try {
+            activities = await getAllActivities(access_token, page);
+            console.log(`Fetched ${activities.length} activities from Strava`);
+        } catch (error) {
+            console.error('Error fetching activities from Strava:', error);
+            return NextResponse.json({ 
+                error: 'Failed to fetch activities from Strava', 
+                details: error instanceof Error ? error.message : String(error) 
+            }, { status: 500 });
+        }
 
         // If no activities returned, we're done
         if (activities.length === 0) {
             return NextResponse.json({
                 message: 'Import completed',
                 hasMore: false,
-                nextPage: null
+                nextPage: null,
+                stats: {
+                    total: 0,
+                    success: 0
+                }
             })
         }
 

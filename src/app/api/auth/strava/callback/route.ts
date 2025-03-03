@@ -10,11 +10,18 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {
+    console.log('Strava callback received:', request.url);
     const url = new URL(REDIRECT_BASE)
     const searchParams = new URL(request.url).searchParams
     const code = searchParams.get('code')
     const state = searchParams.get('state')
     const error = searchParams.get('error')
+    
+    console.log('Strava callback params:', { 
+      code: code ? 'present' : 'missing', 
+      state: state ? 'present' : 'missing',
+      error: error || 'none'
+    });
     
     // Handle Strava OAuth errors
     if (error) {
@@ -23,10 +30,12 @@ export async function GET(request: Request) {
     }
 
     if (!code) {
+      console.error('Missing code in Strava callback');
       return NextResponse.redirect(new URL('/profile?error=missing_code', REDIRECT_BASE))
     }
 
     // Exchange the authorization code for tokens
+    console.log('Exchanging code for tokens...');
     const tokenResponse = await fetch('https://www.strava.com/oauth/token', {
       method: 'POST',
       headers: {
@@ -41,6 +50,14 @@ export async function GET(request: Request) {
     })
 
     const tokenData = await tokenResponse.json()
+    console.log('Token exchange response:', { 
+      status: tokenResponse.status, 
+      ok: tokenResponse.ok,
+      error: tokenData.error || 'none',
+      hasAccessToken: !!tokenData.access_token,
+      hasRefreshToken: !!tokenData.refresh_token,
+      hasAthlete: !!tokenData.athlete
+    });
 
     if (!tokenResponse.ok) {
       console.error('Token exchange failed:', tokenData)
@@ -48,9 +65,16 @@ export async function GET(request: Request) {
     }
 
     // Get the current user from Supabase
+    console.log('Getting current user from Supabase...');
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    console.log('Auth user result:', { 
+      found: !!user, 
+      error: authError?.message || 'none',
+      userId: user?.id
+    });
 
     if (authError || !user) {
       console.error('Auth error:', authError)

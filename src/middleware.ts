@@ -10,7 +10,9 @@ const PUBLIC_PATHS = [
   '/api/activities',
   '/api/cabins',
   '/avalanche/',
-  '/data/dnt-cabins'
+  '/data/dnt-cabins',
+  '/api/auth/strava/callback',
+  '/api/strava/import'
 ]
 
 export async function middleware(request: NextRequest) {
@@ -110,7 +112,8 @@ export async function middleware(request: NextRequest) {
     const isPublicRoute = request.nextUrl.pathname.startsWith('/login') ||
                          request.nextUrl.pathname.startsWith('/signup') ||
                          request.nextUrl.pathname === '/' ||
-                         request.nextUrl.pathname.startsWith('/auth/callback')
+                         request.nextUrl.pathname.startsWith('/auth/callback') ||
+                         request.nextUrl.pathname.startsWith('/api/auth/strava/callback')
 
     //console.log('Route info:', {
     //  path: request.nextUrl.pathname,
@@ -120,7 +123,23 @@ export async function middleware(request: NextRequest) {
 
     // If no user and trying to access protected route, redirect to login
     if (!user && !isPublicRoute) {
-      //console.log('No user found, redirecting to login')
+      console.log('No user found, redirecting to login from:', request.nextUrl.pathname)
+      
+      // Special case for profile page - check if we have any tokens at all
+      if (request.nextUrl.pathname.startsWith('/profile')) {
+        console.log('Profile page access attempt with tokens:', {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          hasProjectToken: !!projectToken
+        })
+        
+        // If we have any token, let the profile page handle auth instead of redirecting
+        if (accessToken || refreshToken || projectToken) {
+          console.log('Has some tokens, allowing profile page to handle auth')
+          return res
+        }
+      }
+      
       return NextResponse.redirect(new URL('/login', request.url))
     }
 

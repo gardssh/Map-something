@@ -81,6 +81,8 @@ export async function importActivitiesInBatches(accessToken: string, onProgress?
 
   while (hasMore) {
     try {
+      console.log(`Importing activities batch page ${page}...`);
+      
       const response = await fetch('/api/strava/import', {
         method: 'POST',
         headers: {
@@ -89,11 +91,37 @@ export async function importActivitiesInBatches(accessToken: string, onProgress?
         body: JSON.stringify({ access_token: accessToken, page }),
       });
 
+      // Log the response status
+      console.log(`Import API response status: ${response.status}`);
+      
+      // If response is not OK, try to get more details
       if (!response.ok) {
-        throw new Error('Failed to import activities');
+        const contentType = response.headers.get('content-type');
+        console.log(`Response content type: ${contentType}`);
+        
+        // Handle different response types
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          console.error('Import API error (JSON):', errorData);
+          throw new Error(`Failed to import activities: ${JSON.stringify(errorData)}`);
+        } else {
+          // For HTML or other responses, just log the text
+          const errorText = await response.text();
+          console.error('Import API error (non-JSON):', errorText.substring(0, 200) + '...');
+          throw new Error('Failed to import activities: Server returned non-JSON response');
+        }
       }
 
-      const data = await response.json();
+      // Parse the JSON response
+      let data;
+      try {
+        data = await response.json();
+        console.log('Import API response data:', data);
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        throw new Error('Failed to parse import response');
+      }
+      
       totalImported += data.stats.success;
       
       if (onProgress) {
@@ -107,7 +135,9 @@ export async function importActivitiesInBatches(accessToken: string, onProgress?
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       console.error('Error importing activities:', error);
-      throw error;
+      // Don't rethrow the error, just break the loop to stop importing
+      hasMore = false;
+      break;
     }
   }
 

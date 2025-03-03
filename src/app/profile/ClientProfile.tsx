@@ -23,6 +23,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import React from 'react';
 
 function TokenHandler() {
 	const searchParams = useSearchParams();
@@ -30,11 +31,36 @@ function TokenHandler() {
 	const { refreshSession } = useAuth();
 	const supabase = createClient();
 
+	// Add a ref to track if we've already refreshed to prevent infinite loops
+	const hasRefreshed = React.useRef(false);
+
+	// Add a useEffect to refresh the session when the component mounts, but only once
+	useEffect(() => {
+		const refreshOnMount = async () => {
+			// Skip if we've already refreshed to prevent infinite loops
+			if (hasRefreshed.current) {
+				return;
+			}
+
+			try {
+				console.log('TokenHandler: Refreshing session on mount (once)');
+				hasRefreshed.current = true;
+				await refreshSession();
+				console.log('TokenHandler: Session refreshed successfully');
+			} catch (error) {
+				console.error('TokenHandler: Error refreshing session on mount:', error);
+			}
+		};
+
+		refreshOnMount();
+	}, [refreshSession]);
+
 	useEffect(() => {
 		const token = searchParams.get('token');
 		if (token) {
 			const handleToken = async () => {
 				try {
+					console.log('TokenHandler: Handling token from URL');
 					const {
 						data: { session },
 						error,
@@ -56,6 +82,7 @@ function TokenHandler() {
 
 					// Refresh the session to update the UI
 					await refreshSession();
+					console.log('TokenHandler: Session refreshed after handling token');
 				} catch (error) {
 					console.error('Error handling token:', error);
 					router.push('/login');
@@ -86,8 +113,10 @@ function ProfileContent({ user }: { user: any }) {
 	// Detect if we're in a WebView
 	useEffect(() => {
 		const userAgent = window.navigator.userAgent.toLowerCase();
-		setIsWebView(userAgent.includes('villspor') || // Check for your app's WebView identifier
-			         window.location.search.includes('webview=true')); // Check for query parameter
+		setIsWebView(
+			userAgent.includes('villspor') || // Check for your app's WebView identifier
+				window.location.search.includes('webview=true')
+		); // Check for query parameter
 	}, []);
 
 	// Load initial values and data

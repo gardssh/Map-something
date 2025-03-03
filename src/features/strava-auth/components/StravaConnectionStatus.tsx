@@ -56,17 +56,48 @@ function StravaConnectionStatusInner({ isConnected, onDisconnect, athleteId, las
 			setImporting(true);
 			setError(null);
 
+			console.log('Starting Strava activity import...');
+
 			// Get the access token
-			const { data: tokenData } = await supabase.from('strava_tokens').select('access_token').single();
+			const { data: tokenData, error: tokenError } = await supabase
+				.from('strava_tokens')
+				.select('access_token')
+				.single();
+
+			if (tokenError) {
+				console.error('Error fetching Strava token:', tokenError);
+				throw new Error(`Failed to get Strava token: ${tokenError.message}`);
+			}
 
 			if (!tokenData?.access_token) {
+				console.error('No Strava access token found');
 				throw new Error('No access token found');
 			}
+
+			console.log('Strava token retrieved, starting import...');
 
 			// Start the batched import
 			const totalImported = await importActivitiesInBatches(tokenData.access_token, (progress) => {
 				setImportProgress(progress);
 			});
+
+			console.log(`Import completed, ${totalImported} activities imported`);
+
+			// Try to update the last sync time in the database
+			try {
+				const { error: updateError } = await supabase
+					.from('strava_tokens')
+					.update({ last_sync: new Date().toISOString() })
+					.eq('access_token', tokenData.access_token);
+
+				if (updateError) {
+					console.error('Error updating last sync time:', updateError);
+					// Don't throw an error here, just log it and continue
+				}
+			} catch (updateError) {
+				console.error('Exception updating last sync time:', updateError);
+				// Don't throw an error here, just log it and continue
+			}
 
 			setSuccess(`Successfully imported ${totalImported} activities from Strava!`);
 		} catch (error: any) {
